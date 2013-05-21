@@ -215,18 +215,18 @@ daemon :: run(bool daemonize,
     while (recv(&conn, &msg))
     {
         assert(msg.get());
-        wtf_network_msgtype mt = WTF_NOP;
+        wtf_network_msgtype mt = WTFNET_NOP;
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
         up = up >> mt;
 
         switch (mt)
         {
-            case WTF_NOP:
+            case WTFNET_NOP:
                 break;
-            case WTF_GET:
+            case WTFNET_GET:
                 process_get(conn, msg, up);
                 break;
-            case WTF_PUT:
+            case WTFNET_PUT:
                 process_put(conn, msg, up);
                 break;
             default:

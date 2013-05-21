@@ -36,9 +36,10 @@ namespace wtf
 
 enum wtf_network_msgtype
 {
-    WTF_NOP,
-    WTF_GET,
-    WTF_PUT
+    WTFNET_NOP,
+    WTFNET_GET,
+    WTFNET_PUT,
+    WTFNET_COMMAND_RESPONSE
 };
 
 std::ostream&

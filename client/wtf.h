@@ -44,14 +44,24 @@
 enum wtf_returncode
 {
     WTF_SUCCESS   = 4864,
+    /* send/wait-specific values */
+    WTF_NAME_TOO_LONG = 4880,
     /* loop-specific values */
     WTF_NONE_PENDING  = 4896,
     /* loop/send/wait-specific values */
+    WTF_BACKOFF               = 4912,
     WTF_INTERNAL_ERROR        = 4913,
     WTF_INTERRUPTED           = 4914,
     WTF_MISBEHAVING_SERVER    = 4915,
+    WTF_NEED_BOOTSTRAP        = 4916,
     WTF_TIMEOUT               = 4917,
     /* command-specific values */
+    WTF_BAD_LIBRARY       = 4928,
+    WTF_COND_DESTROYED    = 4929,
+    WTF_COND_NOT_FOUND    = 4930,
+    WTF_FUNC_NOT_FOUND    = 4931,
+    WTF_OBJ_EXIST         = 4932,
+    WTF_OBJ_NOT_FOUND     = 4933,
     WTF_SERVER_ERROR      = 4934,
     /* predictable uninitialized value */
     WTF_GARBAGE   = 5119
@@ -79,9 +89,7 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
-        int64_t send(const char* object,
-                     const char* func,
-                     const char* data, size_t data_sz,
+        int64_t send(const char* data, size_t data_sz,
                      wtf_returncode* status,
                      const char** output, size_t* output_sz);
         int64_t wait(const char* object,
@@ -130,11 +138,11 @@ class wtf_client
         std::auto_ptr<wtf::mapper> m_busybee_mapper;
         std::auto_ptr<class busybee_st> m_busybee;
         std::auto_ptr<wtf::configuration> m_config;
-        po6::net::hostname m_bootstrap;
         uint64_t m_token;
         uint64_t m_nonce;
         command_map m_commands;
         command_map m_complete;
+        command_map m_resend;
         const char* m_last_error_desc;
         const char* m_last_error_file;
         uint64_t m_last_error_line;

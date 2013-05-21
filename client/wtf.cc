@@ -34,7 +34,6 @@
 #include <busybee_st.h>
 
 // WTF
-#include "common/bootstrap.h"
 #include "common/configuration.h"
 #include "common/macros.h"
 #include "common/mapper.h"
@@ -57,7 +56,7 @@ using namespace wtf;
 
 #define WTFSETSUCCESS WTFSETERROR(WTF_SUCCESS, "operation succeeded")
 
-#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(WTFNET_COMMAND_SUBMIT) + 4 * sizeof(uint64_t))
+#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(WTFNET_PUT) + 4 * sizeof(uint64_t))
 
 #define BUSYBEE_ERROR(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
@@ -101,10 +100,8 @@ wtf_client :: wtf_client(const char* host, in_port_t port)
     : m_busybee_mapper(new wtf::mapper())
     , m_busybee(new busybee_st(m_busybee_mapper.get(), 0))
     , m_config(new wtf::configuration())
-    , m_bootstrap(host, port)
     , m_token(0x4141414141414141ULL)
     , m_nonce(1)
-    , m_state(WTFCL_DISCONNECTED)
     , m_commands()
     , m_complete()
     , m_resend()
@@ -124,10 +121,6 @@ wtf_client :: send(const char* data, size_t data_sz,
                    wtf_returncode* status,
                    const char** output, size_t* output_sz)
 {
-    if (ret < 0)
-    {
-        return ret;
-    }
 
     // Pack the message to send
     uint64_t nonce = m_nonce;
@@ -135,36 +128,11 @@ wtf_client :: send(const char* data, size_t data_sz,
     size_t sz = COMMAND_HEADER_SIZE + data_sz;
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
     e::buffer::packer pa = msg->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << WTF_PUT << m_token << nonce;
+    pa = pa << WTFNET_PUT << m_token << nonce;
     pa = pa.copy(e::slice(data, data_sz));
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
-    return send_to_preferred_chain_position(cmd, status);
-}
-
-int64_t
-wtf_client :: wait(const char* obj,
-                         const char* cond,
-                         uint64_t state,
-                         wtf_returncode* status)
-{
-    uint64_t nonce = m_nonce;
-    ++m_nonce;
-    uint64_t object;
-    OBJ_STR2NUM(obj, object);
-    uint64_t condition;
-    OBJ_STR2NUM(cond, condition);
-    size_t sz = BUSYBEE_HEADER_SIZE
-              + pack_size(WTFNET_CONDITION_WAIT)
-              + sizeof(uint64_t) /*nonce*/
-              + sizeof(uint64_t) /*object*/
-              + sizeof(uint64_t) /*cond*/
-              + sizeof(uint64_t) /*state*/;
-    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-    msg->pack_at(BUSYBEE_HEADER_SIZE)
-        << WTFNET_CONDITION_WAIT << nonce << object << condition << state;
-    e::intrusive_ptr<command> cmd = new command(status, nonce, msg, NULL, 0);
     return send_to_preferred_chain_position(cmd, status);
 }
 
@@ -263,13 +231,8 @@ wtf_client :: poll_fd()
 int64_t
 wtf_client :: inner_loop(wtf_returncode* status)
 {
-    int64_t ret = maintain_connection(status);
 
-    if (ret != 0)
-    {
-        return ret;
-    }
-
+    int64_t ret = -1;
     // Resend all those that need it
     while (!m_resend.empty())
     {
@@ -339,39 +302,12 @@ wtf_client :: inner_loop(wtf_returncode* status)
     switch (mt)
     {
         case WTFNET_COMMAND_RESPONSE:
-        case WTFNET_CONDITION_NOTIFY:
             if ((ret = handle_command_response(from, msg, up, status)) < 0)
             {
                 return ret;
             }
             break;
-        case WTFNET_INFORM:
-            if ((ret = handle_inform(from, msg, up, status)) < 0)
-            {
-                return ret;
-            }
-            break;
-        case WTFNET_CLIENT_UNKNOWN:
-            reset_to_disconnected();
-            break;
         WTF_UNEXPECTED(NOP);
-        WTF_UNEXPECTED(BOOTSTRAP);
-        WTF_UNEXPECTED(SERVER_REGISTER);
-        WTF_UNEXPECTED(SERVER_REGISTER_FAILED);
-        WTF_UNEXPECTED(CONFIG_PROPOSE);
-        WTF_UNEXPECTED(CONFIG_ACCEPT);
-        WTF_UNEXPECTED(CONFIG_REJECT);
-        WTF_UNEXPECTED(CLIENT_REGISTER);
-        WTF_UNEXPECTED(CLIENT_DISCONNECT);
-        WTF_UNEXPECTED(COMMAND_SUBMIT);
-        WTF_UNEXPECTED(COMMAND_ISSUE);
-        WTF_UNEXPECTED(COMMAND_ACK);
-        WTF_UNEXPECTED(HEAL_REQ);
-        WTF_UNEXPECTED(HEAL_RESP);
-        WTF_UNEXPECTED(HEAL_DONE);
-        WTF_UNEXPECTED(CONDITION_WAIT);
-        WTF_UNEXPECTED(PING);
-        WTF_UNEXPECTED(PONG);
         default:
             WTFSETERROR(WTF_MISBEHAVING_SERVER, "invalid message type");
             m_last_error_host = from;
@@ -379,134 +315,6 @@ wtf_client :: inner_loop(wtf_returncode* status)
     }
 
     return 0;
-}
-
-int64_t
-wtf_client :: send_token_registration(wtf_returncode* status)
-{
-    size_t sz = BUSYBEE_HEADER_SIZE
-              + pack_size(WTFNET_CLIENT_REGISTER)
-              + sizeof(uint64_t);
-    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-    msg->pack_at(BUSYBEE_HEADER_SIZE) << WTFNET_CLIENT_REGISTER << m_token;
-    int64_t ret = send_to_chain_head(msg, status);
-
-    if (ret >= 0)
-    {
-        m_state = WTFCL_REGISTER_SENT;
-    }
-
-    return ret;
-}
-
-int64_t
-wtf_client :: wait_for_token_registration(wtf_returncode* status)
-{
-    while (true)
-    {
-        uint64_t token;
-        std::auto_ptr<e::buffer> msg;
-        busybee_returncode rc = m_busybee->recv(&token, &msg);
-
-        switch (rc)
-        {
-            case BUSYBEE_SUCCESS:
-                break;
-            case BUSYBEE_TIMEOUT:
-                WTFSETERROR(WTF_TIMEOUT, "operation timed out");
-                return -1;
-            case BUSYBEE_INTERRUPTED:
-                WTFSETERROR(WTF_INTERRUPTED, "signal received");
-                return -1;
-            BUSYBEE_ERROR_DISCONNECT(NEED_BOOTSTRAP, DISRUPTED);
-            BUSYBEE_ERROR_DISCONNECT(INTERNAL_ERROR, SHUTDOWN);
-            BUSYBEE_ERROR_DISCONNECT(INTERNAL_ERROR, POLLFAILED);
-            BUSYBEE_ERROR_DISCONNECT(INTERNAL_ERROR, ADDFDFAIL);
-            BUSYBEE_ERROR_DISCONNECT(INTERNAL_ERROR, EXTERNAL);
-            default:
-                WTFSETERROR(WTF_INTERNAL_ERROR, "BusyBee returned unknown error");
-                reset_to_disconnected();
-                return -1;
-        }
-
-        const chain_node* node = m_config->node_from_token(token);
-
-        if (!node)
-        {
-            WTFSETERROR(WTF_NEED_BOOTSTRAP, "server we were introduced to is not a cluster member");
-            reset_to_disconnected();
-            return -1;
-        }
-
-        po6::net::location from = node->address;
-        e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
-        wtf_network_msgtype mt;
-        up = up >> mt;
-
-        if (up.error())
-        {
-            WTFSETERROR(WTF_MISBEHAVING_SERVER, "unpack failed");
-            m_last_error_host = from;
-            reset_to_disconnected();
-            return -1;
-        }
-
-        switch (mt)
-        {
-            case WTFNET_COMMAND_RESPONSE:
-                break;
-            WTF_UNEXPECTED_DISCONNECT(NOP);
-            WTF_UNEXPECTED_DISCONNECT(BOOTSTRAP);
-            WTF_UNEXPECTED_DISCONNECT(INFORM);
-            WTF_UNEXPECTED_DISCONNECT(SERVER_REGISTER);
-            WTF_UNEXPECTED_DISCONNECT(SERVER_REGISTER_FAILED);
-            WTF_UNEXPECTED_DISCONNECT(CONFIG_PROPOSE);
-            WTF_UNEXPECTED_DISCONNECT(CONFIG_ACCEPT);
-            WTF_UNEXPECTED_DISCONNECT(CONFIG_REJECT);
-            WTF_UNEXPECTED_DISCONNECT(CLIENT_REGISTER);
-            WTF_UNEXPECTED_DISCONNECT(CLIENT_DISCONNECT);
-            WTF_UNEXPECTED_DISCONNECT(CLIENT_UNKNOWN);
-            WTF_UNEXPECTED_DISCONNECT(COMMAND_SUBMIT);
-            WTF_UNEXPECTED_DISCONNECT(COMMAND_ISSUE);
-            WTF_UNEXPECTED_DISCONNECT(COMMAND_ACK);
-            WTF_UNEXPECTED_DISCONNECT(HEAL_REQ);
-            WTF_UNEXPECTED_DISCONNECT(HEAL_RESP);
-            WTF_UNEXPECTED_DISCONNECT(HEAL_DONE);
-            WTF_UNEXPECTED_DISCONNECT(CONDITION_WAIT);
-            WTF_UNEXPECTED_DISCONNECT(CONDITION_NOTIFY);
-            WTF_UNEXPECTED_DISCONNECT(PING);
-            WTF_UNEXPECTED_DISCONNECT(PONG);
-            default:
-                WTFSETERROR(WTF_MISBEHAVING_SERVER, "invalid message type");
-                m_last_error_host = from;
-                reset_to_disconnected();
-                return -1;
-        }
-
-        uint64_t nonce;
-        wtf::response_returncode rrc;
-        up = up >> nonce >> rrc;
-
-        if (up.error())
-        {
-            WTFSETERROR(WTF_MISBEHAVING_SERVER, "unpack of BOOTSTRAP failed");
-            m_last_error_host = from;
-            reset_to_disconnected();
-            return -1;
-        }
-
-        if (rrc == wtf::RESPONSE_SUCCESS)
-        {
-            m_state = WTFCL_REGISTERED;
-            return 0;
-        }
-        else
-        {
-            WTFSETERROR(WTF_NEED_BOOTSTRAP, "could not register with the server");
-            reset_to_disconnected();
-            return -1;
-        }
-    }
 }
 
 int64_t
