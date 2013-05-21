@@ -25,6 +25,7 @@ Makefile
 Makefile.in
 missing
 wtf
+wtf-cli
 wtf-daemon
 wtf.pc
 stamp-h1

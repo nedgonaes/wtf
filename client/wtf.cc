@@ -117,7 +117,9 @@ wtf_client :: ~wtf_client() throw ()
 }
 
 int64_t
-wtf_client :: send(wtf_network_msgtype msgtype, const char* data, size_t data_sz,
+wtf_client :: send(const char* host, in_port_t port, uint64_t token,
+                   wtf_network_msgtype msgtype,
+                   const char* data, size_t data_sz,
                    wtf_returncode* status,
                    const char** output, size_t* output_sz)
 {
@@ -133,6 +135,7 @@ wtf_client :: send(wtf_network_msgtype msgtype, const char* data, size_t data_sz
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
+    cmd->set_sent_to(chain_node(token, po6::net::location(host, port)));
     return send_to_preferred_chain_position(cmd, status);
 }
 
@@ -318,6 +321,47 @@ wtf_client :: inner_loop(wtf_returncode* status)
 }
 
 int64_t
+wtf_client :: send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
+                                               wtf_returncode* status)
+{
+    bool sent = false;
+
+    std::auto_ptr<e::buffer> msg(cmd->request()->copy());
+    chain_node send_to = cmd->sent_to();
+    m_busybee_mapper->set(send_to);
+    busybee_returncode rc = m_busybee->send(send_to.token, msg);
+
+    switch (rc)
+    {
+        case BUSYBEE_SUCCESS:
+            sent = true;
+            break;
+        case BUSYBEE_DISRUPTED:
+            handle_disruption(send_to, status);
+            WTFSETERROR(WTF_BACKOFF, "backoff before retrying");
+            BUSYBEE_ERROR(INTERNAL_ERROR, SHUTDOWN);
+            BUSYBEE_ERROR(INTERNAL_ERROR, POLLFAILED);
+            BUSYBEE_ERROR(INTERNAL_ERROR, ADDFDFAIL);
+            BUSYBEE_ERROR(INTERNAL_ERROR, TIMEOUT);
+            BUSYBEE_ERROR(INTERNAL_ERROR, EXTERNAL);
+            BUSYBEE_ERROR(INTERNAL_ERROR, INTERRUPTED);
+        default:
+            WTFSETERROR(WTF_INTERNAL_ERROR, "BusyBee returned unknown error");
+    }
+
+    if (sent)
+    {
+        m_commands[cmd->nonce()] = cmd;
+        return cmd->clientid();
+    }
+    else
+    {
+        // We have an error captured by REPLSETERROR above.
+        return -1;
+    }
+}
+
+int64_t
 wtf_client :: handle_command_response(const po6::net::location& from,
                                             std::auto_ptr<e::buffer> msg,
                                             e::unpacker up,
@@ -457,6 +501,27 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     map->erase(it);
     m_complete.insert(std::make_pair(c->nonce(), c));
     return 0;
+}
+
+void
+wtf_client :: handle_disruption(const chain_node& from,
+                                      wtf_returncode*)
+{
+    for (command_map::iterator it = m_commands.begin(); it != m_commands.end(); )
+    {
+        e::intrusive_ptr<command> c = it->second;
+
+        // If this op wasn't sent to the failed host, then skip it
+        if (c->sent_to() != from)
+        {
+            ++it;
+            continue;
+        }
+
+        m_resend.insert(*it);
+        m_commands.erase(it);
+        it = m_commands.begin();
+    }
 }
 
 uint64_t

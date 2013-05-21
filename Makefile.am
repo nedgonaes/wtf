@@ -48,6 +48,8 @@ noinst_HEADERS = \
 
 bin_PROGRAMS = wtf
 
+noinst_PROGRAMS = wtf-cli
+
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 wtfexec_PROGRAMS = \
 			wtf-daemon
@@ -78,6 +80,8 @@ libwtf_la_SOURCES = \
 			client/wtf.cc
 libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS)
 
+wtf_cli_SOURCES = tools/cli.cc
+wtf_cli_LDADD = libwtf.la
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wtf.pc

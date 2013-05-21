@@ -41,8 +41,7 @@ class configuration
         configuration(uint64_t cluster,
                       uint64_t prev_token,
                       uint64_t this_token,
-                      uint64_t version,
-                      const chain_node& head);
+                      uint64_t version);
         ~configuration() throw ();
 
     // metadata
@@ -65,24 +64,10 @@ class configuration
         bool is_member(const chain_node& node) const;
         const chain_node* node_from_token(uint64_t token) const;
 
-    // chaining
-    public:
-        const chain_node* head() const;
-        const chain_node* command_tail() const;
-        const chain_node* config_tail() const;
-        const chain_node* prev(uint64_t token) const;
-        const chain_node* next(uint64_t token) const;
-        bool in_command_chain(uint64_t token) const;
-        bool in_config_chain(uint64_t token) const;
-        uint64_t command_size() const;
-        uint64_t config_size() const;
-
     // iterators
     public:
         const chain_node* members_begin() const;
         const chain_node* members_end() const;
-        const uint64_t* chain_begin() const;
-        const uint64_t* chain_end() const;
 
     // modify the configuration
     public:
@@ -105,8 +90,6 @@ class configuration
         uint64_t m_this_token;
         uint64_t m_version;
         std::vector<chain_node> m_members;
-        std::vector<uint64_t> m_chain;
-        uint64_t m_command_sz;
 };
 
 bool

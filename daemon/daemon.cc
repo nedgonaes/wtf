@@ -207,13 +207,16 @@ daemon :: run(bool daemonize,
     m_us.address = bind_to;
 
     m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, 0/*we don't use pause/unpause*/));
-    m_busybee->set_timeout(1);
+    LOG(INFO) << "token " << m_us.token;
+    m_busybee->set_timeout(1000);
 
     wtf::connection conn;
     std::auto_ptr<e::buffer> msg;
 
+    LOG(INFO) << "recv";
     while (recv(&conn, &msg))
     {
+        LOG(INFO) << "recved";
         assert(msg.get());
         wtf_network_msgtype mt = WTFNET_NOP;
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
@@ -264,6 +267,8 @@ daemon :: recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg)
                 LOG(ERROR) << "BusyBee returned " << rc << " during a \"recv\" call";
                 return false;
         }
+
+        return true;
     }
 
     return false;
@@ -336,9 +341,8 @@ daemon :: process_put(const wtf::connection& conn,
                             std::auto_ptr<e::buffer> msg,
                             e::unpacker up)
 {
-    uint64_t message;
-    up = up >> message;
-    LOG(INFO) << "PUT: " << message;
+    e::slice data = up.as_slice();
+    LOG(INFO) << "PUT: " << data.hex();
 }
 
 void
@@ -346,9 +350,8 @@ daemon :: process_get(const wtf::connection& conn,
                       std::auto_ptr<e::buffer> msg, 
                       e::unpacker up)
 {
-    uint64_t message;
-    up = up >> message;
-    LOG(INFO) << "GET: " << message;
+    e::slice data = up.as_slice();
+    LOG(INFO) << "GET: " << data.hex();
 }
 
 typedef void (daemon::*_periodic_fptr)(uint64_t now);

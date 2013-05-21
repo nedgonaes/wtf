@@ -47,11 +47,11 @@
 static bool _daemonize = true;
 static const char* _data = ".";
 static const char* _listen_host = "auto";
-static unsigned long _listen_port = 1982;
+static unsigned long _listen_port = 1983;
 static po6::net::ipaddr _listen_ip;
 static bool _listen = false;
 static const char* _connect_host = "127.0.0.1";
-static unsigned long _connect_port = 1982;
+static unsigned long _connect_port = 1983;
 static bool _connect = false;
 
 extern "C"
@@ -70,13 +70,13 @@ static struct poptOption popts[] = {
      "listen on a specific IP address (default: auto)",
      "IP"},
     {"listen-port", 'p', POPT_ARG_LONG, &_listen_port, 'L',
-     "listen on an alternative port (default: 1982)",
+     "listen on an alternative port (default: 1983)",
      "port"},
     {"connect", 'c', POPT_ARG_STRING, &_connect_host, 'c',
      "join an existing wtf cluster through IP address or hostname",
      "addr"},
     {"connect-port", 'P', POPT_ARG_LONG, &_connect_port, 'C',
-     "connect to an alternative port (default: 1982)",
+     "connect to an alternative port (default: 1983)",
      "port"},
     POPT_TABLEEND
 };

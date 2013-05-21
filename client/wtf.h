@@ -92,7 +92,10 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
-        int64_t send(wtf::wtf_network_msgtype msg, const char* data, size_t data_sz,
+        int64_t send(const char* host, in_port_t port, 
+                     uint64_t token,
+                     wtf::wtf_network_msgtype msg, 
+                     const char* data, size_t data_sz,
                      wtf_returncode* status,
                      const char** output, size_t* output_sz);
         int64_t wait(const char* object,
@@ -117,11 +120,7 @@ class wtf_client
 
     private:
         int64_t inner_loop(wtf_returncode* status);
-        // Work the state machine to keep connected to the replicated service
-        int64_t maintain_connection(wtf_returncode* status);
         // Send commands and receive responses
-        int64_t send_to_chain_head(std::auto_ptr<e::buffer> msg,
-                                   wtf_returncode* status);
         int64_t send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
                                                  wtf_returncode* status);
         void handle_disruption(const wtf::chain_node& node,
