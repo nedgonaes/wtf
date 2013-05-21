@@ -40,6 +40,9 @@
 #include <e/buffer.h>
 #include <e/intrusive_ptr.h>
 
+//wtf
+#include <common/network_msgtype.h>
+
 // wtf_returncode occupies [4864, 5120)
 enum wtf_returncode
 {
@@ -89,7 +92,7 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
-        int64_t send(const char* data, size_t data_sz,
+        int64_t send(wtf::wtf_network_msgtype msg, const char* data, size_t data_sz,
                      wtf_returncode* status,
                      const char** output, size_t* output_sz);
         int64_t wait(const char* object,

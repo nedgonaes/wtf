@@ -117,7 +117,7 @@ wtf_client :: ~wtf_client() throw ()
 }
 
 int64_t
-wtf_client :: send(const char* data, size_t data_sz,
+wtf_client :: send(wtf_network_msgtype msgtype, const char* data, size_t data_sz,
                    wtf_returncode* status,
                    const char** output, size_t* output_sz)
 {
@@ -128,7 +128,7 @@ wtf_client :: send(const char* data, size_t data_sz,
     size_t sz = COMMAND_HEADER_SIZE + data_sz;
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
     e::buffer::packer pa = msg->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << WTFNET_PUT << m_token << nonce;
+    pa = pa << msgtype << m_token << nonce;
     pa = pa.copy(e::slice(data, data_sz));
 
     // Create the command object
