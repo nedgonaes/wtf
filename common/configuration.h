@@ -29,7 +29,7 @@
 #define wtf_configuration_h_
 
 // WTF
-#include "common/chain_node.h"
+#include "common/wtf_node.h"
 
 namespace wtf
 {
@@ -58,18 +58,18 @@ class configuration
     // membership
     public:
         bool has_token(uint64_t token) const;
-        bool is_member(const chain_node& node) const;
-        const chain_node* node_from_token(uint64_t token) const;
+        bool is_member(const wtf_node& node) const;
+        const wtf_node* node_from_token(uint64_t token) const;
 
     // iterators
     public:
-        const chain_node* members_begin() const;
-        const chain_node* members_end() const;
+        const wtf_node* members_begin() const;
+        const wtf_node* members_end() const;
 
     // modify the configuration
     public:
         void bump_version();
-        void add_member(const chain_node& node);
+        void add_member(const wtf_node& node);
 
     private:
         friend bool operator == (const configuration& lhs, const configuration& rhs);
@@ -83,7 +83,7 @@ class configuration
         uint64_t m_prev_token;
         uint64_t m_this_token;
         uint64_t m_version;
-        std::vector<chain_node> m_members;
+        std::vector<wtf_node> m_members;
 };
 
 bool

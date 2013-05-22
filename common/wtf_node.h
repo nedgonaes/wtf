@@ -25,8 +25,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_chain_node_h_
-#define wtf_chain_node_h_
+#ifndef wtf_wtf_node_h_
+#define wtf_wtf_node_h_
 
 // po6
 #include <po6/net/ipaddr.h>
@@ -38,12 +38,12 @@
 namespace wtf
 {
 
-class chain_node
+class wtf_node
 {
     public:
-        chain_node();
-        chain_node(uint64_t token, const po6::net::location& address);
-        ~chain_node() throw ();
+        wtf_node();
+        wtf_node(uint64_t token, const po6::net::location& address);
+        ~wtf_node() throw ();
 
     public:
         uint64_t token;
@@ -51,24 +51,24 @@ class chain_node
 };
 
 bool
-operator < (const chain_node& lhs, const chain_node& rhs);
+operator < (const wtf_node& lhs, const wtf_node& rhs);
 bool
-operator == (const chain_node& lhs, const chain_node& rhs);
+operator == (const wtf_node& lhs, const wtf_node& rhs);
 inline bool
-operator != (const chain_node& lhs, const chain_node& rhs) { return !(lhs == rhs); }
+operator != (const wtf_node& lhs, const wtf_node& rhs) { return !(lhs == rhs); }
 
 std::ostream&
-operator << (std::ostream& lhs, const chain_node& rhs);
+operator << (std::ostream& lhs, const wtf_node& rhs);
 
 e::buffer::packer
-operator << (e::buffer::packer lhs, const chain_node& rhs);
+operator << (e::buffer::packer lhs, const wtf_node& rhs);
 
 e::unpacker
-operator >> (e::unpacker lhs, chain_node& rhs);
+operator >> (e::unpacker lhs, wtf_node& rhs);
 
 size_t
-pack_size(const chain_node& rhs);
+pack_size(const wtf_node& rhs);
 
 } // namespace wtf
 
-#endif // wtf_chain_node_h_
+#endif // wtf_wtf_node_h_

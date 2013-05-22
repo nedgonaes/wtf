@@ -135,7 +135,7 @@ wtf_client :: send(const char* host, in_port_t port, uint64_t token,
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
-    cmd->set_sent_to(chain_node(token, po6::net::location(host, port)));
+    cmd->set_sent_to(wtf_node(token, po6::net::location(host, port)));
     return send_to_preferred_chain_position(cmd, status);
 }
 
@@ -255,7 +255,7 @@ wtf_client :: inner_loop(wtf_returncode* status)
     uint64_t id;
     std::auto_ptr<e::buffer> msg;
     busybee_returncode rc = m_busybee->recv(&id, &msg);
-    const chain_node* node = m_config->node_from_token(id);
+    const wtf_node* node = m_config->node_from_token(id);
 
     // And process it
     switch (rc)
@@ -327,7 +327,7 @@ wtf_client :: send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
     bool sent = false;
 
     std::auto_ptr<e::buffer> msg(cmd->request()->copy());
-    chain_node send_to = cmd->sent_to();
+    wtf_node send_to = cmd->sent_to();
     m_busybee_mapper->set(send_to);
     busybee_returncode rc = m_busybee->send(send_to.token, msg);
 
@@ -444,7 +444,7 @@ wtf_client :: handle_command_response(const po6::net::location& from,
 }
 
 void
-wtf_client :: handle_disruption(const chain_node& from,
+wtf_client :: handle_disruption(const wtf_node& from,
                                       wtf_returncode*)
 {
     for (command_map::iterator it = m_commands.begin(); it != m_commands.end(); )

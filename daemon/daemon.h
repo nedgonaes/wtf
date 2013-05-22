@@ -48,7 +48,7 @@
 // WTF
 #include "daemon/coordinator_link.h"
 #include "common/mapper.h"
-#include "common/chain_node.h"
+#include "common/wtf_node.h"
 #include "common/configuration.h"
 #include "daemon/settings.h"
 #include "daemon/connection.h"
@@ -92,11 +92,11 @@ class daemon
                                    std::auto_ptr<e::buffer> msg,
                                    e::unpacker up);
         // send accept message for proposal
-        void accept_proposal(const chain_node& dest,
+        void accept_proposal(const wtf_node& dest,
                              uint64_t proposal_id,
                              uint64_t proposal_time);
         // send reject message for proposal
-        void reject_proposal(const chain_node& dest,
+        void reject_proposal(const wtf_node& dest,
                              uint64_t proposal_id,
                              uint64_t proposal_time);
         // create an INFORM message ready to pass to "send"
@@ -181,7 +181,7 @@ class daemon
     private:
         bool recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg);
         bool send(const wtf::connection& conn, std::auto_ptr<e::buffer> msg);
-        bool send(const chain_node& node, std::auto_ptr<e::buffer> msg);
+        bool send(const wtf_node& node, std::auto_ptr<e::buffer> msg);
         bool send_no_disruption(uint64_t token, std::auto_ptr<e::buffer> msg);
 
     // Handle communication disruptions
@@ -210,7 +210,7 @@ class daemon
         settings m_s;
         wtf::mapper m_busybee_mapper;
         std::auto_ptr<busybee_mta> m_busybee;
-        chain_node m_us;
+        wtf_node m_us;
         coordinator_link m_coord;
         std::vector<periodic> m_periodic;
         std::map<uint64_t, uint64_t> m_temporary_servers;

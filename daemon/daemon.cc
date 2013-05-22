@@ -63,7 +63,7 @@
 #include "common/macros.h"
 #include "common/network_msgtype.h"
 #include "common/special_objects.h"
-#include "common/chain_node.h"
+#include "common/wtf_node.h"
 #include "daemon/daemon.h"
 #include "daemon/request_response.h"
 
@@ -296,7 +296,7 @@ daemon :: send(const wtf::connection& conn, std::auto_ptr<e::buffer> msg)
 }
 
 bool
-daemon :: send(const chain_node& node, std::auto_ptr<e::buffer> msg)
+daemon :: send(const wtf_node& node, std::auto_ptr<e::buffer> msg)
 {
     m_busybee_mapper.set(node);
 

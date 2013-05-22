@@ -33,7 +33,7 @@
 // WTF
 #include "client/command.h"
 
-using wtf::chain_node;
+using wtf::wtf_node;
 
 wtf_client :: command :: command(wtf_returncode* st,
                                        uint64_t n,
@@ -66,7 +66,7 @@ wtf_client :: command :: set_nonce(uint64_t n)
 }
 
 void
-wtf_client :: command :: set_sent_to(const chain_node& s)
+wtf_client :: command :: set_sent_to(const wtf_node& s)
 {
     m_sent_to = s;
 }

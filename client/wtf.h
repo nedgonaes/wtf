@@ -77,7 +77,7 @@ wtf_destroy_output(const char* output, size_t output_sz);
 
 namespace wtf
 {
-class chain_node;
+class wtf_node;
 class configuration;
 class mapper;
 } // namespace wtf
@@ -125,7 +125,7 @@ class wtf_client
         // Send commands and receive responses
         int64_t send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
                                                  wtf_returncode* status);
-        void handle_disruption(const wtf::chain_node& node,
+        void handle_disruption(const wtf::wtf_node& node,
                                wtf_returncode* status);
         int64_t handle_command_response(const po6::net::location& from,
                                         std::auto_ptr<e::buffer> msg,

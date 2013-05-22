@@ -32,7 +32,7 @@
 #include <e/intrusive_ptr.h>
 
 // WTF
-#include "common/chain_node.h"
+#include "common/wtf_node.h"
 #include "client/wtf.h"
 
 class wtf_client::command
@@ -49,14 +49,14 @@ class wtf_client::command
         uint64_t nonce() const throw () { return m_nonce; }
         uint64_t clientid() const throw () { return m_clientid; }
         e::buffer* request() const throw () { return m_request.get(); }
-        const wtf::chain_node& sent_to() const throw () { return m_sent_to; }
+        const wtf::wtf_node& sent_to() const throw () { return m_sent_to; }
         const char* last_error_desc() const throw() { return m_last_error_desc; }
         const char* last_error_file() const throw() { return m_last_error_file; }
         uint64_t last_error_line() const throw() { return m_last_error_line; }
 
     public:
         void set_nonce(uint64_t nonce);
-        void set_sent_to(const wtf::chain_node& sent_to);
+        void set_sent_to(const wtf::wtf_node& sent_to);
         void fail(wtf_returncode status);
         void succeed(std::auto_ptr<e::buffer> msg,
                      const e::slice& resp,
@@ -86,7 +86,7 @@ class wtf_client::command
         wtf_returncode* m_status;
         const char** m_output;
         size_t* m_output_sz;
-        wtf::chain_node m_sent_to;
+        wtf::wtf_node m_sent_to;
         const char* m_last_error_desc;
         const char* m_last_error_file;
         uint64_t m_last_error_line;

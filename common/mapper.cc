@@ -53,7 +53,7 @@ mapper :: lookup(uint64_t server_id,
 }
 
 void
-mapper :: set(const wtf::chain_node& n)
+mapper :: set(const wtf::wtf_node& n)
 {
     m_cache = n;
 }

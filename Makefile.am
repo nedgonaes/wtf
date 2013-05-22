@@ -37,7 +37,7 @@ include_HEADERS = client/wtf.h
 noinst_HEADERS = 
 noinst_HEADERS += client/command.h
 noinst_HEADERS += client/coordinator_link.h
-noinst_HEADERS += common/chain_node.h
+noinst_HEADERS += common/wtf_node.h
 noinst_HEADERS += common/configuration.h
 noinst_HEADERS += common/coordinator_returncode.h
 noinst_HEADERS += common/macros.h
@@ -73,7 +73,7 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 ################################################################################
 
 wtf_daemon_SOURCES =
-wtf_daemon_SOURCES += common/chain_node.cc
+wtf_daemon_SOURCES += common/wtf_node.cc
 wtf_daemon_SOURCES += common/configuration.cc
 wtf_daemon_SOURCES += common/mapper.cc
 wtf_daemon_SOURCES += common/network_msgtype.cc
@@ -106,7 +106,7 @@ libwtfcoordinator_la_CPPFLAGS = $(REPLICANT_CFLAGS)
 libwtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 libwtf_la_SOURCES =
-libwtf_la_SOURCES += common/chain_node.cc
+libwtf_la_SOURCES += common/wtf_node.cc
 libwtf_la_SOURCES += common/configuration.cc
 libwtf_la_SOURCES += common/mapper.cc
 libwtf_la_SOURCES += common/network_msgtype.cc

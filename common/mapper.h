@@ -32,7 +32,7 @@
 #include <busybee_mapper.h>
 
 // WTF
-#include <common/chain_node.h>
+#include <common/wtf_node.h>
 
 namespace wtf
 {
@@ -45,10 +45,10 @@ class mapper : public busybee_mapper
 
     public:
         virtual bool lookup(uint64_t server_id, po6::net::location* bound_to);
-        virtual void set(const chain_node& n);
+        virtual void set(const wtf_node& n);
 
     private:
-        chain_node m_cache;
+        wtf_node m_cache;
 };
 
 } // namespace wtf

@@ -35,7 +35,7 @@
 // WTF
 #include "common/configuration.h"
 
-using wtf::chain_node;
+using wtf::wtf_node;
 using wtf::configuration;
 
 configuration :: configuration()
@@ -88,13 +88,13 @@ configuration :: has_token(uint64_t token) const
 }
 
 bool
-configuration :: is_member(const chain_node& node) const
+configuration :: is_member(const wtf_node& node) const
 {
-    const chain_node* n = node_from_token(node.token);
+    const wtf_node* n = node_from_token(node.token);
     return n && *n == node;
 }
 
-const chain_node*
+const wtf_node*
 configuration :: node_from_token(uint64_t token) const
 {
     for (size_t i = 0; i < m_members.size(); ++i)
@@ -108,13 +108,13 @@ configuration :: node_from_token(uint64_t token) const
     return NULL;
 }
 
-const chain_node*
+const wtf_node*
 configuration :: members_begin() const
 {
     return &m_members.front();
 }
 
-const chain_node*
+const wtf_node*
 configuration :: members_end() const
 {
     return &m_members.front() + m_members.size();
@@ -129,7 +129,7 @@ configuration :: bump_version()
 }
 
 void
-configuration :: add_member(const chain_node& node)
+configuration :: add_member(const wtf_node& node)
 {
     assert(node_from_token(node.token) == NULL);
     m_members.push_back(node);

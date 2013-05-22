@@ -26,29 +26,29 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // WTF
-#include "common/chain_node.h"
+#include "common/wtf_node.h"
 #include "packing.h"
 
-using wtf::chain_node;
+using wtf::wtf_node;
 
-chain_node :: chain_node()
+wtf_node :: wtf_node()
     : token()
     , address()
 {
 }
 
-chain_node :: chain_node(uint64_t t, const po6::net::location& a)
+wtf_node :: wtf_node(uint64_t t, const po6::net::location& a)
     : token(t)
     , address(a)
 {
 }
 
-chain_node :: ~chain_node() throw ()
+wtf_node :: ~wtf_node() throw ()
 {
 }
 
 bool
-wtf :: operator < (const chain_node& lhs, const chain_node& rhs)
+wtf :: operator < (const wtf_node& lhs, const wtf_node& rhs)
 {
     if (lhs.token == rhs.token)
     {
@@ -59,33 +59,33 @@ wtf :: operator < (const chain_node& lhs, const chain_node& rhs)
 }
 
 bool
-wtf :: operator == (const chain_node& lhs, const chain_node& rhs)
+wtf :: operator == (const wtf_node& lhs, const wtf_node& rhs)
 {
     return lhs.token == rhs.token &&
            lhs.address == rhs.address;
 }
 
 std::ostream&
-wtf :: operator << (std::ostream& lhs, const chain_node& rhs)
+wtf :: operator << (std::ostream& lhs, const wtf_node& rhs)
 {
-    return lhs << "chain_node(bind_to=" << rhs.address
+    return lhs << "wtf_node(bind_to=" << rhs.address
                << ", token=" << rhs.token << ")";
 }
 
 e::buffer::packer
-wtf :: operator << (e::buffer::packer lhs, const chain_node& rhs)
+wtf :: operator << (e::buffer::packer lhs, const wtf_node& rhs)
 {
     return lhs << rhs.token << rhs.address;
 }
 
 e::unpacker
-wtf :: operator >> (e::unpacker lhs, chain_node& rhs)
+wtf :: operator >> (e::unpacker lhs, wtf_node& rhs)
 {
     return lhs >> rhs.token >> rhs.address;
 }
 
 size_t
-wtf :: pack_size(const chain_node& rhs)
+wtf :: pack_size(const wtf_node& rhs)
 {
     return sizeof(uint64_t) + pack_size(rhs.address);
 }
