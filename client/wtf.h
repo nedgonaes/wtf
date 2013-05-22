@@ -43,31 +43,33 @@
 //wtf
 #include <common/network_msgtype.h>
 
-// wtf_returncode occupies [4864, 5120)
 enum wtf_returncode
 {
-    WTF_SUCCESS   = 4864,
-    /* send/wait-specific values */
-    WTF_NAME_TOO_LONG = 4880,
-    /* loop-specific values */
-    WTF_NONE_PENDING  = 4896,
-    /* loop/send/wait-specific values */
-    WTF_BACKOFF               = 4912,
-    WTF_INTERNAL_ERROR        = 4913,
-    WTF_INTERRUPTED           = 4914,
-    WTF_MISBEHAVING_SERVER    = 4915,
-    WTF_NEED_BOOTSTRAP        = 4916,
-    WTF_TIMEOUT               = 4917,
-    /* command-specific values */
-    WTF_BAD_LIBRARY       = 4928,
-    WTF_COND_DESTROYED    = 4929,
-    WTF_COND_NOT_FOUND    = 4930,
-    WTF_FUNC_NOT_FOUND    = 4931,
-    WTF_OBJ_EXIST         = 4932,
-    WTF_OBJ_NOT_FOUND     = 4933,
-    WTF_SERVER_ERROR      = 4934,
-    /* predictable uninitialized value */
-    WTF_GARBAGE   = 5119
+    WTF_SUCCESS      = 8448,
+    WTF_NOTFOUND     = 8449,
+    WTF_READONLY     = 8452,
+
+    /* Error conditions */
+    WTF_UNKNOWNSPACE = 8512,
+    WTF_COORDFAIL    = 8513,
+    WTF_SERVERERROR  = 8514,
+    WTF_POLLFAILED   = 8515,
+    WTF_OVERFLOW     = 8516,
+    WTF_RECONFIGURE  = 8517,
+    WTF_TIMEOUT      = 8519,
+    WTF_NONEPENDING  = 8523,
+    WTF_NOMEM        = 8526,
+    WTF_BADCONFIG    = 8527,
+    WTF_DUPLICATE    = 8529,
+    WTF_INTERRUPTED  = 8530,
+    WTF_CLUSTER_JUMP = 8531,
+    WTF_COORD_LOGGED = 8532,
+    WTF_BACKOFF      = 8533,
+
+    /* This should never happen.  It indicates a bug */
+    WTF_INTERNAL     = 8573,
+    WTF_EXCEPTION    = 8574,
+    WTF_GARBAGE      = 8575
 };
 
 void

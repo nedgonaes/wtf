@@ -76,13 +76,13 @@ using namespace wtf;
 
 #define WTF_UNEXPECTED(MT) \
     case WTFNET_ ## MT: \
-        WTFSETERROR(WTF_MISBEHAVING_SERVER, "unexpected " xstr(MT) " message"); \
+        WTFSETERROR(WTF_SERVERERROR, "unexpected " xstr(MT) " message"); \
         m_last_error_host = from; \
         return -1
 
 #define WTF_UNEXPECTED_DISCONNECT(MT) \
     case WTFNET_ ## MT: \
-        WTFSETERROR(WTF_MISBEHAVING_SERVER, "unexpected " xstr(MT) " message"); \
+        WTFSETERROR(WTF_SERVERERROR, "unexpected " xstr(MT) " message"); \
         m_last_error_host = from; \
         reset_to_disconnected(); \
         return -1
@@ -170,11 +170,11 @@ wtf_client :: loop(int timeout, wtf_returncode* status)
 
     if (m_commands.empty())
     {
-        WTFSETERROR(WTF_NONE_PENDING, "no outstanding operations to process");
+        WTFSETERROR(WTF_NONEPENDING, "no outstanding operations to process");
         return -1;
     }
 
-    WTFSETERROR(WTF_INTERNAL_ERROR, "unhandled exit case from loop");
+    WTFSETERROR(WTF_INTERNAL, "unhandled exit case from loop");
     return -1;
 }
 
@@ -200,7 +200,7 @@ wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
 
     if (it == m_complete.end())
     {
-        WTFSETERROR(WTF_NONE_PENDING, "no outstanding operation with the specified id");
+        WTFSETERROR(WTF_NONEPENDING, "no outstanding operation with the specified id");
         return -1;
     }
 
@@ -275,12 +275,12 @@ wtf_client :: inner_loop(wtf_returncode* status)
         case BUSYBEE_TIMEOUT:
             WTFSETERROR(WTF_TIMEOUT, "operation timed out");
             return -1;
-        BUSYBEE_ERROR(INTERNAL_ERROR, SHUTDOWN);
-        BUSYBEE_ERROR(INTERNAL_ERROR, POLLFAILED);
-        BUSYBEE_ERROR(INTERNAL_ERROR, ADDFDFAIL);
-        BUSYBEE_ERROR(INTERNAL_ERROR, EXTERNAL);
+        BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
+        BUSYBEE_ERROR(INTERNAL, POLLFAILED);
+        BUSYBEE_ERROR(INTERNAL, ADDFDFAIL);
+        BUSYBEE_ERROR(INTERNAL, EXTERNAL);
         default:
-            WTFSETERROR(WTF_INTERNAL_ERROR, "BusyBee returned unknown error");
+            WTFSETERROR(WTF_INTERNAL, "BusyBee returned unknown error");
             return -1;
     }
 
@@ -297,7 +297,7 @@ wtf_client :: inner_loop(wtf_returncode* status)
 
     if (up.error())
     {
-        WTFSETERROR(WTF_MISBEHAVING_SERVER, "unpack failed");
+        WTFSETERROR(WTF_SERVERERROR, "unpack failed");
         m_last_error_host = from;
         return -1;
     }
@@ -312,7 +312,7 @@ wtf_client :: inner_loop(wtf_returncode* status)
             break;
         WTF_UNEXPECTED(NOP);
         default:
-            WTFSETERROR(WTF_MISBEHAVING_SERVER, "invalid message type");
+            WTFSETERROR(WTF_SERVERERROR, "invalid message type");
             m_last_error_host = from;
             return -1;
     }
@@ -339,14 +339,14 @@ wtf_client :: send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
         case BUSYBEE_DISRUPTED:
             handle_disruption(send_to, status);
             WTFSETERROR(WTF_BACKOFF, "backoff before retrying");
-            BUSYBEE_ERROR(INTERNAL_ERROR, SHUTDOWN);
-            BUSYBEE_ERROR(INTERNAL_ERROR, POLLFAILED);
-            BUSYBEE_ERROR(INTERNAL_ERROR, ADDFDFAIL);
-            BUSYBEE_ERROR(INTERNAL_ERROR, TIMEOUT);
-            BUSYBEE_ERROR(INTERNAL_ERROR, EXTERNAL);
-            BUSYBEE_ERROR(INTERNAL_ERROR, INTERRUPTED);
+            BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
+            BUSYBEE_ERROR(INTERNAL, POLLFAILED);
+            BUSYBEE_ERROR(INTERNAL, ADDFDFAIL);
+            BUSYBEE_ERROR(INTERNAL, TIMEOUT);
+            BUSYBEE_ERROR(INTERNAL, EXTERNAL);
+            BUSYBEE_ERROR(INTERNAL, INTERRUPTED);
         default:
-            WTFSETERROR(WTF_INTERNAL_ERROR, "BusyBee returned unknown error");
+            WTFSETERROR(WTF_INTERNAL, "BusyBee returned unknown error");
     }
 
     if (sent)
@@ -374,7 +374,7 @@ wtf_client :: handle_command_response(const po6::net::location& from,
 
     if (up.error())
     {
-        WTFSETERROR(WTF_MISBEHAVING_SERVER, "unpack failed");
+        WTFSETERROR(WTF_SERVERERROR, "unpack failed");
         m_last_error_host = from;
         return -1;
     }
@@ -403,92 +403,32 @@ wtf_client :: handle_command_response(const po6::net::location& from,
         case wtf::RESPONSE_SUCCESS:
             c->succeed(msg, up.as_slice(), WTF_SUCCESS);
             break;
-        case wtf::RESPONSE_COND_NOT_EXIST:
-            c->fail(WTF_COND_NOT_FOUND);
-            m_last_error_desc = "condition not found";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_COND_DESTROYED:
-            c->fail(WTF_COND_DESTROYED);
-            m_last_error_desc = "condition destroyed";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
         case wtf::RESPONSE_REGISTRATION_FAIL:
-            c->fail(WTF_MISBEHAVING_SERVER);
+            c->fail(WTF_SERVERERROR);
             m_last_error_desc = "server treated request as a registration";
             m_last_error_file = __FILE__;
             m_last_error_line = __LINE__;
             break;
-        case wtf::RESPONSE_OBJ_EXIST:
-            c->fail(WTF_OBJ_EXIST);
-            m_last_error_desc = "object already exists";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
         case wtf::RESPONSE_OBJ_NOT_EXIST:
-            c->fail(WTF_OBJ_NOT_FOUND);
+            c->fail(WTF_NOTFOUND);
             m_last_error_desc = "object not found";
             m_last_error_file = __FILE__;
             m_last_error_line = __LINE__;
             break;
         case wtf::RESPONSE_SERVER_ERROR:
-            c->fail(WTF_SERVER_ERROR);
+            c->fail(WTF_SERVERERROR);
             m_last_error_desc = "server reports error; consult server logs for details";
             m_last_error_file = __FILE__;
             m_last_error_line = __LINE__;
             break;
-        case wtf::RESPONSE_DLOPEN_FAIL:
-            c->fail(WTF_BAD_LIBRARY);
-            m_last_error_desc = "library cannot be loaded on the server";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_DLSYM_FAIL:
-            c->fail(WTF_BAD_LIBRARY);
-            m_last_error_desc = "state machine not found in library";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_NO_CTOR:
-            c->fail(WTF_BAD_LIBRARY);
-            m_last_error_desc = "state machine not doesn't contain a constructor";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_NO_RTOR:
-            c->fail(WTF_BAD_LIBRARY);
-            m_last_error_desc = "state machine not doesn't contain a reconstructor";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_NO_DTOR:
-            c->fail(WTF_BAD_LIBRARY);
-            m_last_error_desc = "state machine not doesn't contain a denstructor";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_NO_SNAP:
-            c->fail(WTF_BAD_LIBRARY);
-            m_last_error_desc = "state machine not doesn't contain a snapshot function";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_NO_FUNC:
-            c->fail(WTF_FUNC_NOT_FOUND);
-            m_last_error_desc = "state machine not doesn't contain the requested function";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
         case wtf::RESPONSE_MALFORMED:
-            c->fail(WTF_INTERNAL_ERROR);
+            c->fail(WTF_INTERNAL);
             m_last_error_desc = "server reports that request was malformed";
             m_last_error_file = __FILE__;
             m_last_error_line = __LINE__;
             break;
         default:
-            c->fail(WTF_MISBEHAVING_SERVER);
+            c->fail(WTF_SERVERERROR);
             m_last_error_desc = "unknown response code";
             m_last_error_file = __FILE__;
             m_last_error_line = __LINE__;
@@ -557,21 +497,25 @@ operator << (std::ostream& lhs, wtf_returncode rhs)
     switch (rhs)
     {
         stringify(WTF_SUCCESS);
-        stringify(WTF_NAME_TOO_LONG);
-        stringify(WTF_FUNC_NOT_FOUND);
-        stringify(WTF_OBJ_EXIST);
-        stringify(WTF_OBJ_NOT_FOUND);
-        stringify(WTF_COND_NOT_FOUND);
-        stringify(WTF_COND_DESTROYED);
-        stringify(WTF_SERVER_ERROR);
-        stringify(WTF_BAD_LIBRARY);
+        stringify(WTF_NOTFOUND);
+        stringify(WTF_READONLY);
+        stringify(WTF_UNKNOWNSPACE);
+        stringify(WTF_COORDFAIL);
+        stringify(WTF_SERVERERROR);
+        stringify(WTF_POLLFAILED);
+        stringify(WTF_OVERFLOW);
+        stringify(WTF_RECONFIGURE);
         stringify(WTF_TIMEOUT);
-        stringify(WTF_BACKOFF);
-        stringify(WTF_NEED_BOOTSTRAP);
-        stringify(WTF_MISBEHAVING_SERVER);
-        stringify(WTF_INTERNAL_ERROR);
-        stringify(WTF_NONE_PENDING);
+        stringify(WTF_NONEPENDING);
+        stringify(WTF_NOMEM);
+        stringify(WTF_BADCONFIG);
+        stringify(WTF_DUPLICATE);
         stringify(WTF_INTERRUPTED);
+        stringify(WTF_CLUSTER_JUMP);
+        stringify(WTF_COORD_LOGGED);
+        stringify(WTF_BACKOFF);
+        stringify(WTF_INTERNAL);
+        stringify(WTF_EXCEPTION);
         stringify(WTF_GARBAGE);
         default:
             lhs << "unknown returncode (" << static_cast<unsigned int>(rhs) << ")";

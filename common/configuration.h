@@ -54,9 +54,6 @@ class configuration
     // invariants
     public:
         bool validate() const;
-        bool quorum_of(const configuration& other) const;
-        uint64_t fault_tolerance() const;
-        uint64_t servers_needed_for(uint64_t f) const;
 
     // membership
     public:
@@ -73,9 +70,6 @@ class configuration
     public:
         void bump_version();
         void add_member(const chain_node& node);
-        void add_to_chain(uint64_t token);
-        void remove_from_chain(uint64_t token);
-        void grow_command_chain();
 
     private:
         friend bool operator == (const configuration& lhs, const configuration& rhs);

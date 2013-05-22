@@ -36,6 +36,7 @@ include_HEADERS = client/wtf.h
 
 noinst_HEADERS = 
 noinst_HEADERS += client/command.h
+noinst_HEADERS += client/coordinator_link.h
 noinst_HEADERS += common/chain_node.h
 noinst_HEADERS += common/coordinator_returncode.h
 noinst_HEADERS += common/macros.h
@@ -107,12 +108,13 @@ libwtf_la_SOURCES += common/network_msgtype.cc
 libwtf_la_SOURCES += common/packing.cc
 libwtf_la_SOURCES += common/response_returncode.cc
 libwtf_la_SOURCES += client/command.cc
+libwtf_la_SOURCES += client/coordinator_link.cc
 libwtf_la_SOURCES += client/wtf.cc
 
-libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS)
+libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS)
 
 wtf_cli_SOURCES = tools/cli.cc
-wtf_cli_LDADD = libwtf.la
+wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS)
 
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt
