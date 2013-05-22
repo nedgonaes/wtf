@@ -38,6 +38,7 @@ noinst_HEADERS =
 noinst_HEADERS += client/command.h
 noinst_HEADERS += client/coordinator_link.h
 noinst_HEADERS += common/chain_node.h
+noinst_HEADERS += common/configuration.h
 noinst_HEADERS += common/coordinator_returncode.h
 noinst_HEADERS += common/macros.h
 noinst_HEADERS += common/mapper.h
@@ -50,6 +51,7 @@ noinst_HEADERS += coordinator/coordinator.h
 noinst_HEADERS += coordinator/missing_acks.h
 noinst_HEADERS += coordinator/server_state.h
 noinst_HEADERS += daemon/connection.h
+noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += daemon/request_response.h
 
@@ -72,15 +74,18 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 
 wtf_daemon_SOURCES =
 wtf_daemon_SOURCES += common/chain_node.cc
+wtf_daemon_SOURCES += common/configuration.cc
 wtf_daemon_SOURCES += common/mapper.cc
 wtf_daemon_SOURCES += common/network_msgtype.cc
 wtf_daemon_SOURCES += common/packing.cc
 wtf_daemon_SOURCES += common/response_returncode.cc
 wtf_daemon_SOURCES += daemon/connection.cc
+wtf_daemon_SOURCES += daemon/coordinator_link.cc
 wtf_daemon_SOURCES += daemon/daemon.cc
 wtf_daemon_SOURCES += daemon/main.cc
 
-wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) -lglog -lleveldb -ldl -lpthread
+wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
+                   -lglog -lleveldb -ldl -lpthread
 
 ################################################################################
 ################################## Coordinator #################################

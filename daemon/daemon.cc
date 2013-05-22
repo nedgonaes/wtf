@@ -69,6 +69,9 @@
 
 using wtf::daemon;
 
+int s_interrupts = 0;
+bool s_alarm = false;
+
 #define CHECK_UNPACK(MSGTYPE, UNPACKER) \
     do \
     { \
@@ -105,6 +108,7 @@ daemon :: daemon()
     , m_busybee_mapper()
     , m_busybee()
     , m_us()
+    , m_coord(this)
     , m_periodic()
     , m_temporary_servers()
 {
@@ -125,8 +129,8 @@ daemon :: run(bool daemonize,
               po6::pathname data,
               bool set_bind_to,
               po6::net::location bind_to,
-              bool set_existing,
-              po6::net::hostname existing)
+              bool set_coordinator,
+              po6::net::hostname coordinator)
 {
     if (!install_signal_handler(SIGHUP))
     {
@@ -191,14 +195,11 @@ daemon :: run(bool daemonize,
 
     bool restored = false;
 
+    m_coord.set_coordinator_address(coordinator.address.c_str(), coordinator.port);
+
     m_us.address = bind_to;
 
-    uint64_t cluster_id;
-    uint64_t this_token;
-
-    if (!generate_token(&m_us.token) ||
-        !generate_token(&cluster_id) ||
-        !generate_token(&this_token))
+    if (!generate_token(&m_us.token))
     {
         PLOG(ERROR) << "could not read random tokens from /dev/urandom";
         return EXIT_FAILURE;

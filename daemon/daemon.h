@@ -46,8 +46,10 @@
 #include <busybee_mta.h>
 
 // WTF
+#include "daemon/coordinator_link.h"
 #include "common/mapper.h"
 #include "common/chain_node.h"
+#include "common/configuration.h"
 #include "daemon/settings.h"
 #include "daemon/connection.h"
 
@@ -65,8 +67,9 @@ class daemon
                 po6::pathname data,
                 bool set_bind_to,
                 po6::net::location bind_to,
-                bool set_existing,
-                po6::net::hostname existing);
+                bool set_coordinator,
+                po6::net::hostname coordinator);
+
 
     // Configure the chain membership via (re)configuration
     private:
@@ -201,14 +204,19 @@ class daemon
         bool generate_token(uint64_t* token);
 
     private:
+        friend class coordinator_link;
+
+    private:
         settings m_s;
         wtf::mapper m_busybee_mapper;
         std::auto_ptr<busybee_mta> m_busybee;
         chain_node m_us;
+        coordinator_link m_coord;
         std::vector<periodic> m_periodic;
         std::map<uint64_t, uint64_t> m_temporary_servers;
         std::set<uint64_t> m_disrupted_backoff;
         bool m_disrupted_retry_scheduled;
+        configuration m_config;
 };
 
 } // namespace wtf

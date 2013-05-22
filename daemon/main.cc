@@ -50,9 +50,9 @@ static const char* _listen_host = "auto";
 static unsigned long _listen_port = 1983;
 static po6::net::ipaddr _listen_ip;
 static bool _listen = false;
-static const char* _connect_host = "127.0.0.1";
-static unsigned long _connect_port = 1983;
-static bool _connect = false;
+static const char* _coordinator_host = "127.0.0.1";
+static unsigned long _coordinator_port = 1982;
+static bool _coordinator = false;
 
 extern "C"
 {
@@ -72,11 +72,11 @@ static struct poptOption popts[] = {
     {"listen-port", 'p', POPT_ARG_LONG, &_listen_port, 'L',
      "listen on an alternative port (default: 1983)",
      "port"},
-    {"connect", 'c', POPT_ARG_STRING, &_connect_host, 'c',
-     "join an existing wtf cluster through IP address or hostname",
+    {"coordinator", 'c', POPT_ARG_STRING, &_coordinator_host, 'c',
+     "join an existing HyperDex cluster through IP address or hostname",
      "addr"},
-    {"connect-port", 'P', POPT_ARG_LONG, &_connect_port, 'C',
-     "connect to an alternative port (default: 1983)",
+    {"coordinator-port", 'P', POPT_ARG_LONG, &_coordinator_port, 'C',
+     "connect to an alternative port on the coordinator (default: 2013)",
      "port"},
     POPT_TABLEEND
 };
@@ -144,16 +144,16 @@ main(int argc, const char* argv[])
                 _listen = true;
                 break;
             case 'c':
-                _connect = true;
+                _coordinator = true;
                 break;
             case 'C':
-                if (_connect_port >= (1 << 16))
+                if (_coordinator_port >= (1 << 16))
                 {
-                    std::cerr << "port number to connect to is out of range" << std::endl;
+                    std::cerr << "port number to coordinator to is out of range" << std::endl;
                     return EXIT_FAILURE;
                 }
 
-                _connect = true;
+                _coordinator = true;
                 break;
             case POPT_ERROR_NOARG:
             case POPT_ERROR_BADOPT:
@@ -188,14 +188,9 @@ main(int argc, const char* argv[])
 
         po6::pathname data(_data);
         po6::net::location bind_to(_listen_ip, _listen_port);
-        po6::net::hostname existing;
+        po6::net::hostname coord(_coordinator_host, _coordinator_port);
 
-        if (_connect)
-        {
-            existing = po6::net::hostname(_connect_host, _connect_port);
-        }
-
-        return d.run(_daemonize, data, _listen, bind_to, _connect, existing);
+        return d.run(_daemonize, data, _listen, bind_to, _coordinator, coord);
     }
     catch (po6::error& e)
     {
