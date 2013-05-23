@@ -72,9 +72,6 @@ generate_response(replicant_state_machine_context* ctx, coordinator_returncode x
         case COORD_UNINITIALIZED:
             ptr = "\x22\x85";
             break;
-        case COORD_TRANSFER_IN_PROGRESS:
-            ptr = "\x22\x86";
-            break;
         default:
             ptr = "\x00\x00";
             break;

@@ -136,6 +136,25 @@ configuration :: add_member(const wtf_node& node)
     std::sort(m_members.begin(), m_members.end());
 }
 
+const wtf_node*
+configuration :: get_random_member(uint64_t id)
+{
+    id = id % m_members.size();
+    return &m_members[id];
+}
+
+void
+configuration :: debug_dump(std::ostream& out)
+{
+    out << "configuration cluster=" << m_cluster << " version=" << m_version << std::endl;
+
+    for (size_t i = 0; i <m_members.size(); ++i)
+    {
+        out << "server id=" << m_members[i].token 
+            << " address=" << m_members[i].address << std::endl;
+    }
+}
+
 bool
 wtf :: operator == (const configuration& lhs, const configuration& rhs)
 {

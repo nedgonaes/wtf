@@ -79,7 +79,9 @@ namespace wtf
 {
 class wtf_node;
 class configuration;
+class coordinator_link;
 class mapper;
+class tool_wrapper;
 } // namespace wtf
 
 class wtf_client
@@ -106,7 +108,17 @@ class wtf_client
                      wtf_returncode* status);
         int64_t loop(int timeout, wtf_returncode* status);
         int64_t loop(int64_t id, int timeout, wtf_returncode* status);
-        void kill(int64_t id);
+
+    friend class wtf::tool_wrapper;
+
+    // these are the only private things that tool_wrapper should touch
+    private:
+        wtf_returncode initialize_cluster(uint64_t cluster, const char* path);
+        wtf_returncode show_config(std::ostream& out);
+        wtf_returncode kill(uint64_t server_id);
+
+    private:
+        int64_t maintain_coord_connection(wtf_returncode* status);
 #ifdef _MSC_VER
         fd_set* poll_fd();
 #else
@@ -123,7 +135,7 @@ class wtf_client
     private:
         int64_t inner_loop(wtf_returncode* status);
         // Send commands and receive responses
-        int64_t send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
+        int64_t send_to_random_node(e::intrusive_ptr<command> cmd,
                                                  wtf_returncode* status);
         void handle_disruption(const wtf::wtf_node& node,
                                wtf_returncode* status);
@@ -139,11 +151,13 @@ class wtf_client
         wtf_client& operator = (const wtf_client& rhs);
 
     private:
+        std::auto_ptr<wtf::configuration> m_config;
         std::auto_ptr<wtf::mapper> m_busybee_mapper;
         std::auto_ptr<class busybee_st> m_busybee;
-        std::auto_ptr<wtf::configuration> m_config;
+        const std::auto_ptr<wtf::coordinator_link> m_coord;
         uint64_t m_token;
         uint64_t m_nonce;
+        bool m_have_seen_config;
         command_map m_commands;
         command_map m_complete;
         command_map m_resend;

@@ -59,14 +59,10 @@ bin_PROGRAMS = wtf
 
 noinst_PROGRAMS = wtf-cli
 
-wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
-
 wtfexec_PROGRAMS =
-wtfexec_PROGRAMS += wtf-daemon 
 wtfexec_PROGRAMS += wtf-coordinator
-
-wtf_SOURCES = wtf.cc
-wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
+wtfexec_PROGRAMS += wtf-daemon 
+wtfexec_PROGRAMS += wtf-initialize-cluster
 
 ################################################################################
 ################################## Daemon ######################################
@@ -118,12 +114,20 @@ libwtf_la_SOURCES += client/wtf.cc
 
 libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS)
 
+wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
+
+wtf_SOURCES = wtf.cc
+wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
+
 wtf_cli_SOURCES = tools/cli.cc
 wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS)
 
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt
 
+wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
+wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(wtfexecdir)/libwtfcoordinator\"" $(CPPFLAGS)
+wtf_initialize_cluster_LDADD = libwtf.la -lpopt
 
 
 pkgconfigdir = $(libdir)/pkgconfig

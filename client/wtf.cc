@@ -35,12 +35,14 @@
 
 // WTF
 #include "common/configuration.h"
+#include "common/coordinator_returncode.h"
 #include "common/macros.h"
 #include "common/mapper.h"
 #include "common/network_msgtype.h"
 #include "common/response_returncode.h"
 #include "common/special_objects.h"
 #include "client/command.h"
+#include "client/coordinator_link.h"
 #include "client/wtf.h"
 
 using namespace wtf;
@@ -97,11 +99,13 @@ wtf_destroy_output(const char* output, size_t)
 }
 
 wtf_client :: wtf_client(const char* host, in_port_t port)
-    : m_busybee_mapper(new wtf::mapper())
+    : m_config(new wtf::configuration())
+    , m_busybee_mapper(new wtf::mapper())
     , m_busybee(new busybee_st(m_busybee_mapper.get(), 0))
-    , m_config(new wtf::configuration())
+    , m_coord()
     , m_token(0x4141414141414141ULL)
     , m_nonce(1)
+    , m_have_seen_config(false)
     , m_commands()
     , m_complete()
     , m_resend()
@@ -135,8 +139,7 @@ wtf_client :: send(const char* host, in_port_t port, uint64_t token,
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
-    cmd->set_sent_to(wtf_node(token, po6::net::location(host, port)));
-    return send_to_preferred_chain_position(cmd, status);
+    return send_to_random_node(cmd, status);
 }
 
 int64_t
@@ -213,13 +216,277 @@ wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
     return c->clientid();
 }
 
-void
-wtf_client :: kill(int64_t id)
+int64_t
+wtf_client :: maintain_coord_connection(wtf_returncode* status)
 {
-    m_commands.erase(id);
-    m_complete.erase(id);
-    m_resend.erase(id);
+    if (!m_have_seen_config)
+    {
+        if (!m_coord->wait_for_config(status))
+        {
+            return -1;
+        }
+
+        if (m_busybee->set_external_fd(m_coord->poll_fd()) < 0)
+        {
+            *status = WTF_POLLFAILED;
+            return -1;
+        }
+    }
+    else
+    {
+        if (!m_coord->poll_for_config(status))
+        {
+            return 0;
+        }
+    }
+
+    int64_t reconfigured = 0;
+
+    if (m_config->version() < m_coord->config().version())
+    {
+        *m_config = m_coord->config();
+        command_map::iterator i = m_commands.begin();
+
+        while (i != m_commands.end())
+        {
+            //XXX: Find the reconfigured nodes and retry ops to new nodes
+            ++i;
+        }
+
+        m_have_seen_config = true;
+    }
+
+    return reconfigured;
 }
+
+wtf_returncode
+wtf_client :: initialize_cluster(uint64_t cluster, const char* path)
+{
+    replicant_client* repl = m_coord->replicant();
+    replicant_returncode rstatus;
+    const char* errmsg = NULL;
+    size_t errmsg_sz = 0;
+
+    int64_t noid = repl->new_object("wtf", path, &rstatus,
+                                    &errmsg, &errmsg_sz);
+
+    if (noid < 0)
+    {
+        switch (rstatus)
+        {
+            case REPLICANT_BAD_LIBRARY:
+                return WTF_NOTFOUND;
+            case REPLICANT_INTERRUPTED:
+                return WTF_INTERRUPTED;
+            case REPLICANT_SERVER_ERROR:
+            case REPLICANT_NEED_BOOTSTRAP:
+            case REPLICANT_MISBEHAVING_SERVER:
+            case REPLICANT_BACKOFF:
+                return WTF_COORDFAIL;
+            case REPLICANT_SUCCESS:
+            case REPLICANT_NAME_TOO_LONG:
+            case REPLICANT_FUNC_NOT_FOUND:
+            case REPLICANT_OBJ_EXIST:
+            case REPLICANT_OBJ_NOT_FOUND:
+            case REPLICANT_COND_NOT_FOUND:
+            case REPLICANT_COND_DESTROYED:
+            case REPLICANT_TIMEOUT:
+            case REPLICANT_INTERNAL_ERROR:
+            case REPLICANT_NONE_PENDING:
+            case REPLICANT_GARBAGE:
+            default:
+                return WTF_INTERNAL;
+        }
+    }
+
+    replicant_returncode lstatus;
+    int64_t lid = repl->loop(noid, -1, &lstatus);
+
+    if (lid < 0)
+    {
+        repl->kill(noid);
+
+        switch (lstatus)
+        {
+            case REPLICANT_INTERRUPTED:
+                return WTF_INTERRUPTED;
+            case REPLICANT_SERVER_ERROR:
+            case REPLICANT_NEED_BOOTSTRAP:
+            case REPLICANT_MISBEHAVING_SERVER:
+            case REPLICANT_BACKOFF:
+                return WTF_COORDFAIL;
+            case REPLICANT_TIMEOUT:
+            case REPLICANT_SUCCESS:
+            case REPLICANT_NAME_TOO_LONG:
+            case REPLICANT_FUNC_NOT_FOUND:
+            case REPLICANT_OBJ_EXIST:
+            case REPLICANT_OBJ_NOT_FOUND:
+            case REPLICANT_COND_NOT_FOUND:
+            case REPLICANT_COND_DESTROYED:
+            case REPLICANT_BAD_LIBRARY:
+            case REPLICANT_INTERNAL_ERROR:
+            case REPLICANT_NONE_PENDING:
+            case REPLICANT_GARBAGE:
+            default:
+                return WTF_INTERNAL;
+        }
+    }
+
+    assert(lid == noid);
+
+    switch (rstatus)
+    {
+        case REPLICANT_SUCCESS:
+            break;
+        case REPLICANT_INTERRUPTED:
+            return WTF_INTERRUPTED;
+        case REPLICANT_OBJ_EXIST:
+            return WTF_DUPLICATE;
+        case REPLICANT_FUNC_NOT_FOUND:
+        case REPLICANT_OBJ_NOT_FOUND:
+        case REPLICANT_COND_NOT_FOUND:
+        case REPLICANT_COND_DESTROYED:
+        case REPLICANT_SERVER_ERROR:
+        case REPLICANT_NEED_BOOTSTRAP:
+        case REPLICANT_MISBEHAVING_SERVER:
+            return WTF_COORDFAIL;
+        case REPLICANT_NAME_TOO_LONG:
+        case REPLICANT_BAD_LIBRARY:
+            return WTF_COORD_LOGGED;
+        case REPLICANT_TIMEOUT:
+        case REPLICANT_BACKOFF:
+        case REPLICANT_INTERNAL_ERROR:
+        case REPLICANT_NONE_PENDING:
+        case REPLICANT_GARBAGE:
+        default:
+            return WTF_INTERNAL;
+    }
+
+    wtf_returncode status;
+    char data[sizeof(uint64_t)];
+    e::pack64be(cluster, data);
+    const char* output;
+    size_t output_sz;
+
+    if (!m_coord->make_rpc("initialize", data, sizeof(uint64_t),
+                           &status, &output, &output_sz))
+    {
+        return status;
+    }
+
+    status = WTF_SUCCESS;
+
+    if (output_sz >= 2)
+    {
+        uint16_t x;
+        e::unpack16be(output, &x);
+        coordinator_returncode rc = static_cast<coordinator_returncode>(x);
+
+        switch (rc)
+        {
+            case wtf::COORD_SUCCESS:
+                status = WTF_SUCCESS;
+                break;
+            case wtf::COORD_MALFORMED:
+                status = WTF_INTERNAL;
+                break;
+            case wtf::COORD_DUPLICATE:
+                status = WTF_CLUSTER_JUMP;
+                break;
+            case wtf::COORD_NOT_FOUND:
+                status = WTF_INTERNAL;
+                break;
+            case wtf::COORD_INITIALIZED:
+                status = WTF_DUPLICATE;
+                break;
+            case wtf::COORD_UNINITIALIZED:
+                status = WTF_COORDFAIL;
+                break;
+            default:
+                status = WTF_INTERNAL;
+                break;
+        }
+    }
+
+    if (output)
+    {
+        replicant_destroy_output(output, output_sz);
+    }
+
+    return status;
+}
+
+wtf_returncode
+wtf_client :: show_config(std::ostream& out)
+{
+    wtf_returncode status;
+
+    if (maintain_coord_connection(&status) < 0)
+    {
+        return status;
+    }
+
+    m_config->debug_dump(out);
+    return WTF_SUCCESS;
+}
+
+wtf_returncode
+wtf_client :: kill(uint64_t server_id)
+{
+    wtf_returncode status;
+    char data[sizeof(uint64_t)];
+    e::pack64be(server_id, data);
+    const char* output;
+    size_t output_sz;
+
+    if (!m_coord->make_rpc("kill", data, sizeof(uint64_t),
+                           &status, &output, &output_sz))
+    {
+        return status;
+    }
+
+    status = WTF_SUCCESS;
+
+    if (output_sz >= 2)
+    {
+        uint16_t x;
+        e::unpack16be(output, &x);
+        coordinator_returncode rc = static_cast<coordinator_returncode>(x);
+
+        switch (rc)
+        {
+            case wtf::COORD_SUCCESS:
+                status = WTF_SUCCESS;
+                break;
+            case wtf::COORD_MALFORMED:
+                status = WTF_INTERNAL;
+                break;
+            case wtf::COORD_DUPLICATE:
+                status = WTF_DUPLICATE;
+                break;
+            case wtf::COORD_NOT_FOUND:
+                status = WTF_NOTFOUND;
+                break;
+            case wtf::COORD_INITIALIZED:
+                status = WTF_INTERNAL;
+                break;
+            case wtf::COORD_UNINITIALIZED:
+                status = WTF_COORDFAIL;
+                break;
+            default:
+                status = WTF_INTERNAL;
+                break;
+        }
+    }
+
+    if (output)
+    {
+        replicant_destroy_output(output, output_sz);
+    }
+
+    return status;
+}
+
 
 #ifdef _MSC_VER
 fd_set*
@@ -239,7 +506,7 @@ wtf_client :: inner_loop(wtf_returncode* status)
     // Resend all those that need it
     while (!m_resend.empty())
     {
-        ret = send_to_preferred_chain_position(m_resend.begin()->second, status);
+        ret = send_to_random_node(m_resend.begin()->second, status);
 
         // As this is a retransmission, we only care about errors (< 0)
         // not the success half (>=0).
@@ -321,10 +588,13 @@ wtf_client :: inner_loop(wtf_returncode* status)
 }
 
 int64_t
-wtf_client :: send_to_preferred_chain_position(e::intrusive_ptr<command> cmd,
+wtf_client :: send_to_random_node(e::intrusive_ptr<command> cmd,
                                                wtf_returncode* status)
 {
+    static int last_node = 0;
     bool sent = false;
+
+    cmd->set_sent_to(*m_config->get_random_member(generate_token()));
 
     std::auto_ptr<e::buffer> msg(cmd->request()->copy());
     wtf_node send_to = cmd->sent_to();

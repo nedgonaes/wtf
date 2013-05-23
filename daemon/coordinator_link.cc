@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of HyperDex nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -34,7 +34,7 @@
 // e
 #include <e/endian.h>
 
-// HyperDex
+// WTF
 #include "common/coordinator_returncode.h"
 #include "common/serialization.h"
 #include "daemon/coordinator_link.h"
@@ -172,7 +172,7 @@ coordinator_link :: register_id(server_id us, const po6::net::location& bind_to)
             return false;
         case REPLICANT_OBJ_NOT_FOUND:
             LOG(ERROR) << "could not register this instance with the coordinator "
-                       << "because the HyperDex object was not found";
+                       << "because the WTF object was not found";
             return false;
         case REPLICANT_NEED_BOOTSTRAP:
         case REPLICANT_BACKOFF:
@@ -222,7 +222,6 @@ coordinator_link :: register_id(server_id us, const po6::net::location& bind_to)
             case COORD_MALFORMED:
             case COORD_NOT_FOUND:
             case COORD_INITIALIZED:
-            case COORD_TRANSFER_IN_PROGRESS:
             default:
                 LOG(ERROR) << "could not register this instance with the coordinator "
                            << "because of an internal error";
@@ -326,7 +325,7 @@ coordinator_link :: reregister_id(server_id us, const po6::net::location& bind_t
             return false;
         case REPLICANT_OBJ_NOT_FOUND:
             LOG(ERROR) << "could not re-register this instance with the coordinator "
-                       << "because the HyperDex object was not found";
+                       << "because the WTF object was not found";
             return false;
         case REPLICANT_NEED_BOOTSTRAP:
         case REPLICANT_BACKOFF:
@@ -380,7 +379,6 @@ coordinator_link :: reregister_id(server_id us, const po6::net::location& bind_t
                 break;
             case COORD_MALFORMED:
             case COORD_INITIALIZED:
-            case COORD_TRANSFER_IN_PROGRESS:
             default:
                 LOG(ERROR) << "could not re-register this instance with the coordinator "
                            << "because of an internal error";

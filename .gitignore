@@ -28,5 +28,6 @@ wtf
 wtf-cli
 wtf-coordinator
 wtf-daemon
+wtf-initialize-cluster
 wtf.pc
 stamp-h1

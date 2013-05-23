@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Sean Ogden 
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,25 +25,38 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_coordinator_returncode_h_
-#define wtf_common_coordinator_returncode_h_
+#ifndef wtf_client_tool_wrapper_h_
+#define wtf_client_tool_wrapper_h_
+
+// WTF
+#include "client/wtf.h"
 
 namespace wtf
 {
 
-// occupies [8832, 8960)
-// these are hardcoded as byte strings in coordinator/coordinator.cc
-// keep them in sync
-enum coordinator_returncode
+class tool_wrapper
 {
-    COORD_SUCCESS = 8832,
-    COORD_MALFORMED = 8833,
-    COORD_DUPLICATE = 8834,
-    COORD_NOT_FOUND = 8835,
-    COORD_INITIALIZED = 8836,
-    COORD_UNINITIALIZED = 8837
+    public:
+        tool_wrapper(wtf_client* h) : m_h(h) {}
+        tool_wrapper(const tool_wrapper& other) : m_h(other.m_h) {}
+        ~tool_wrapper() throw () {}
+
+    public:
+        wtf_returncode initialize_cluster(uint64_t cluster, const char* path)
+        { return m_h->initialize_cluster(cluster, path); }
+        wtf_returncode show_config(std::ostream& out)
+        { return m_h->show_config(out); }
+        wtf_returncode kill(uint64_t server_id)
+        { return m_h->kill(server_id); }
+
+    public:
+        tool_wrapper& operator = (const tool_wrapper& rhs)
+        { m_h = rhs.m_h; return *this; }
+
+    private:
+        wtf_client* m_h;
 };
 
 } // namespace wtf
 
-#endif // wtf_common_coordinator_returncode_h_
+#endif // wtf_client_tool_wrapper_h_

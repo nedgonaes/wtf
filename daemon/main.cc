@@ -53,6 +53,7 @@ static bool _listen = false;
 static const char* _coordinator_host = "127.0.0.1";
 static unsigned long _coordinator_port = 1982;
 static bool _coordinator = false;
+static long _threads = 0;
 
 extern "C"
 {
@@ -73,11 +74,14 @@ static struct poptOption popts[] = {
      "listen on an alternative port (default: 1983)",
      "port"},
     {"coordinator", 'c', POPT_ARG_STRING, &_coordinator_host, 'c',
-     "join an existing HyperDex cluster through IP address or hostname",
+     "join an existing WTF cluster through IP address or hostname",
      "addr"},
     {"coordinator-port", 'P', POPT_ARG_LONG, &_coordinator_port, 'C',
      "connect to an alternative port on the coordinator (default: 2013)",
      "port"},
+    {"threads", 't', POPT_ARG_LONG, &_threads, 't',
+     "the number of threads which will handle network traffic",
+     "N"},
     POPT_TABLEEND
 };
 
@@ -155,6 +159,8 @@ main(int argc, const char* argv[])
 
                 _coordinator = true;
                 break;
+            case 't':
+                break;
             case POPT_ERROR_NOARG:
             case POPT_ERROR_BADOPT:
             case POPT_ERROR_BADNUMBER:
@@ -190,7 +196,7 @@ main(int argc, const char* argv[])
         po6::net::location bind_to(_listen_ip, _listen_port);
         po6::net::hostname coord(_coordinator_host, _coordinator_port);
 
-        return d.run(_daemonize, data, _listen, bind_to, _coordinator, coord);
+        return d.run(_daemonize, data, _listen, bind_to, _coordinator, coord, _threads);
     }
     catch (po6::error& e)
     {

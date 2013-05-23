@@ -80,7 +80,10 @@ struct subcommand
 };
 
 static subcommand subcommands[] = {
-    subcommand("daemon",            "Start a new WTF daemon"),
+    subcommand("daemon",             "Start a new WTF daemon"),
+    subcommand("coordinator",        "Start a new WTF coordinator"),
+    subcommand("initialize-cluster", "One time initialization of a WTF coordinator"),
+    subcommand("show-config",        "Output a human-readable version of the cluster configuration"),
     subcommand(NULL, NULL)
 };
 

@@ -41,6 +41,7 @@
 #include <po6/net/hostname.h>
 #include <po6/net/ipaddr.h>
 #include <po6/pathname.h>
+#include <po6/threads/thread.h>
 
 // BusyBee
 #include <busybee_mta.h>
@@ -68,108 +69,12 @@ class daemon
                 bool set_bind_to,
                 po6::net::location bind_to,
                 bool set_coordinator,
-                po6::net::hostname coordinator);
-
-
-    // Configure the chain membership via (re)configuration
-    private:
-/*        void process_bootstrap(const wtf::connection& conn,
-                               std::auto_ptr<e::buffer> msg,
-                               e::unpacker up);
-        void process_inform(const wtf::connection& conn,
-                            std::auto_ptr<e::buffer> msg,
-                            e::unpacker up);
-        void process_server_register(const wtf::connection& conn,
-                                     std::auto_ptr<e::buffer> msg,
-                                     e::unpacker up);
-        void process_config_propose(const wtf::connection& conn,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up);
-        void process_config_accept(const wtf::connection& conn,
-                                   std::auto_ptr<e::buffer> msg,
-                                   e::unpacker up);
-        void process_config_reject(const wtf::connection& conn,
-                                   std::auto_ptr<e::buffer> msg,
-                                   e::unpacker up);
-        // send accept message for proposal
-        void accept_proposal(const wtf_node& dest,
-                             uint64_t proposal_id,
-                             uint64_t proposal_time);
-        // send reject message for proposal
-        void reject_proposal(const wtf_node& dest,
-                             uint64_t proposal_id,
-                             uint64_t proposal_time);
-        // create an INFORM message ready to pass to "send"
-        std::auto_ptr<e::buffer> create_inform_message();
-        // invoke all hooks, presumably because the configuration changed
-        void post_reconfiguration_hooks();
-        // propose a new configuration.  the caller must enforce all invariants
-        // about this configuration w.r.t. previously issued ones and this call
-        // will assert that
-        void propose_config(const configuration& config);
-        void periodic_describe_cluster(uint64_t now);
-        void periodic_maintain_cluster(uint64_t now);
-
-    // Client-related functions
-    private:
-        void process_client_register(const wtf::connection& conn,
-                                     std::auto_ptr<e::buffer> msg,
-                                     e::unpacker up);
-        void process_client_disconnect(const wtf::connection& conn,
-                                       std::auto_ptr<e::buffer> msg,
-                                       e::unpacker up);
-
-    // Normal-case chain-replication-related goodness.
-    private:
-        void process_command_submit(const wtf::connection& conn,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up);
-        void process_command_issue(const wtf::connection& conn,
-                                   std::auto_ptr<e::buffer> msg,
-                                   e::unpacker up);
-        void process_command_ack(const wtf::connection& conn,
-                                 std::auto_ptr<e::buffer> msg,
-                                 e::unpacker up);
-        void issue_command(uint64_t slot, uint64_t object,
-                           uint64_t client, uint64_t nonce,
-                           const e::slice& data);
-        void acknowledge_command(uint64_t slot);
-        void record_execution(uint64_t slot, uint64_t client, uint64_t nonce, wtf::response_returncode rc, const e::slice& data);
-
-    // Error-case chain functions
-    private:
-        void process_heal_req(const wtf::connection& conn,
-                              std::auto_ptr<e::buffer> msg,
-                              e::unpacker up);
-        void process_heal_resp(const wtf::connection& conn,
-                               std::auto_ptr<e::buffer> msg,
-                               e::unpacker up);
-        void process_heal_done(const wtf::connection& conn,
-                               std::auto_ptr<e::buffer> msg,
-                               e::unpacker up);
-        void transfer_more_state();
-        void periodic_heal_next(uint64_t now);
-
-    // Notify/wait-style conditions
-    private:
-        void process_condition_wait(const wtf::connection& conn,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up);
-        void send_notify(uint64_t client, uint64_t nonce, wtf::response_returncode rc, const e::slice& data);
-
-    // Check for faults
-    private:
-        void process_ping(const wtf::connection& conn,
-                          std::auto_ptr<e::buffer> msg,
-                          e::unpacker up);
-        void process_pong(const wtf::connection& conn,
-                          std::auto_ptr<e::buffer> msg,
-                          e::unpacker up);
-        void periodic_exchange(uint64_t now);
-        */
+                po6::net::hostname coordinator,
+                unsigned threads);
 
     // Handle file operations
     private:
+        void loop(size_t thread);
         void process_get(const wtf::connection& conn,
                           std::auto_ptr<e::buffer> msg,
                           e::unpacker up);
@@ -211,6 +116,7 @@ class daemon
         wtf::mapper m_busybee_mapper;
         std::auto_ptr<busybee_mta> m_busybee;
         wtf_node m_us;
+        std::vector<std::tr1::shared_ptr<po6::threads::thread> > m_threads;
         coordinator_link m_coord;
         std::vector<periodic> m_periodic;
         std::map<uint64_t, uint64_t> m_temporary_servers;

@@ -60,6 +60,7 @@ class configuration
         bool has_token(uint64_t token) const;
         bool is_member(const wtf_node& node) const;
         const wtf_node* node_from_token(uint64_t token) const;
+        const wtf_node* get_random_member(uint64_t id);
 
     // iterators
     public:
@@ -70,6 +71,9 @@ class configuration
     public:
         void bump_version();
         void add_member(const wtf_node& node);
+
+    public:
+        void debug_dump(std::ostream& out);
 
     private:
         friend bool operator == (const configuration& lhs, const configuration& rhs);

@@ -108,6 +108,7 @@ daemon :: daemon()
     , m_busybee_mapper()
     , m_busybee()
     , m_us()
+    , m_threads()
     , m_coord(this)
     , m_periodic()
     , m_temporary_servers()
@@ -130,7 +131,8 @@ daemon :: run(bool daemonize,
               bool set_bind_to,
               po6::net::location bind_to,
               bool set_coordinator,
-              po6::net::hostname coordinator)
+              po6::net::hostname coordinator,
+              unsigned threads)
 {
     if (!install_signal_handler(SIGHUP))
     {
@@ -205,19 +207,101 @@ daemon :: run(bool daemonize,
         return EXIT_FAILURE;
     }
 
-    m_us.address = bind_to;
-
     m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, 0/*we don't use pause/unpause*/));
     LOG(INFO) << "token " << m_us.token;
     m_busybee->set_timeout(1000);
 
+
+    if (!m_coord.register_id(server_id(m_us.token), m_us.address))
+    {
+        return EXIT_FAILURE;
+    }
+
+
+    for (size_t i = 0; i < threads; ++i)
+    {
+        std::tr1::shared_ptr<po6::threads::thread> t(new po6::threads::thread(std::tr1::bind(&daemon::loop, this, i)));
+        m_threads.push_back(t);
+        t->start();
+    }
+
+    while (!m_coord.exit_wait_loop())
+    {
+        configuration old_config = m_config;
+        configuration new_config;
+
+        if (!m_coord.wait_for_config(&new_config))
+        {
+            continue;
+        }
+
+        if (old_config.version() >= new_config.version())
+        {
+            LOG(INFO) << "received new configuration version=" << new_config.version()
+                      << " that's not newer than our current configuration version="
+                      << old_config.version();
+            continue;
+        }
+
+        LOG(INFO) << "received new configuration version=" << new_config.version();
+        m_config = new_config;
+
+        // let the coordinator know we've moved to this config
+        m_coord.ack_config(new_config.version());
+    }
+
+    for (size_t i = 0; i < m_threads.size(); ++i)
+    {
+        m_threads[i]->join();
+    }
+
+    m_coord.shutdown();
+
+    if (m_coord.is_clean_shutdown())
+    {
+        LOG(INFO) << "wtf-daemon is gracefully shutting down";
+    }
+
+    LOG(INFO) << "wtf-daemon will now terminate";
+    return EXIT_SUCCESS;
+
+}
+
+void
+daemon :: loop(size_t thread)
+{
+    sigset_t ss;
+
+    size_t core = thread % sysconf(_SC_NPROCESSORS_ONLN);
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core, &cpuset);
+    pthread_t cur = pthread_self();
+    int x = pthread_setaffinity_np(cur, sizeof(cpu_set_t), &cpuset);
+    assert(x == 0);
+
+    LOG(INFO) << "network thread " << thread << " started on core " << core;
+
+    if (sigfillset(&ss) < 0)
+    {
+        PLOG(ERROR) << "sigfillset";
+        return;
+    }
+
+    sigdelset(&ss, SIGPROF);
+
+    if (pthread_sigmask(SIG_SETMASK, &ss, NULL) < 0)
+    {
+        PLOG(ERROR) << "could not block signals";
+        return;
+    }
+
+
     wtf::connection conn;
     std::auto_ptr<e::buffer> msg;
 
-    LOG(INFO) << "recv";
     while (recv(&conn, &msg))
     {
-        LOG(INFO) << "recved";
         assert(msg.get());
         wtf_network_msgtype mt = WTFNET_NOP;
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
@@ -239,9 +323,7 @@ daemon :: run(bool daemonize,
         }
     }
 
-    LOG(INFO) << "wtf is gracefully shutting down";
-    LOG(INFO) << "wtf will now terminate";
-    return EXIT_SUCCESS;
+    LOG(INFO) << "network thread shutting down";
 }
 
 bool
