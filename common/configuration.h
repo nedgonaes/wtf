@@ -39,8 +39,6 @@ class configuration
     public:
         configuration();
         configuration(uint64_t cluster,
-                      uint64_t prev_token,
-                      uint64_t this_token,
                       uint64_t version);
         ~configuration() throw ();
 
@@ -48,8 +46,6 @@ class configuration
     public:
         uint64_t cluster() const { return m_cluster; }
         uint64_t version() const { return m_version; }
-        uint64_t prev_token() const { return m_prev_token; }
-        uint64_t this_token() const { return m_this_token; }
 
     // invariants
     public:
@@ -84,8 +80,6 @@ class configuration
 
     private:
         uint64_t m_cluster;
-        uint64_t m_prev_token;
-        uint64_t m_this_token;
         uint64_t m_version;
         std::vector<wtf_node> m_members;
 };

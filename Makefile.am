@@ -88,6 +88,7 @@ wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
 ################################################################################
 
 libwtfcoordinator_la_SOURCES =
+libwtfcoordinator_la_SOURCES += common/serialization.cc
 libwtfcoordinator_la_SOURCES += coordinator/coordinator.cc
 libwtfcoordinator_la_SOURCES += coordinator/symtable.c
 
@@ -112,7 +113,7 @@ libwtf_la_SOURCES += client/command.cc
 libwtf_la_SOURCES += client/coordinator_link.cc
 libwtf_la_SOURCES += client/wtf.cc
 
-libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS)
+libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) -lglog
 
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 
@@ -126,9 +127,8 @@ wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt
 
 wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
-wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(wtfexecdir)/libwtfcoordinator\"" $(CPPFLAGS)
+wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
-
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wtf.pc

@@ -40,20 +40,14 @@ using wtf::configuration;
 
 configuration :: configuration()
     : m_cluster()
-    , m_prev_token()
-    , m_this_token()
     , m_version()
     , m_members()
 {
 }
 
 configuration :: configuration(uint64_t c,
-                               uint64_t pt,
-                               uint64_t tt,
                                uint64_t v)
     : m_cluster(c)
-    , m_prev_token(pt)
-    , m_this_token(tt)
     , m_version(v)
     , m_members()
 {
@@ -123,8 +117,6 @@ configuration :: members_end() const
 void
 configuration :: bump_version()
 {
-    m_prev_token = m_this_token;
-    // XXX m_this_token = token
     ++m_version;
 }
 
@@ -159,8 +151,6 @@ bool
 wtf :: operator == (const configuration& lhs, const configuration& rhs)
 {
     if (lhs.m_cluster != rhs.m_cluster ||
-        lhs.m_prev_token != rhs.m_prev_token ||
-        lhs.m_this_token != rhs.m_this_token ||
         lhs.m_version != rhs.m_version ||
         lhs.m_members.size() != rhs.m_members.size())
     {
@@ -182,8 +172,6 @@ std::ostream&
 wtf :: operator << (std::ostream& lhs, const configuration& rhs)
 {
     lhs << "configuration(cluster=" << rhs.m_cluster
-        << ", prev_token=" << rhs.m_prev_token
-        << ", this_token=" << rhs.m_this_token
         << ", version=" << rhs.m_version
         << ", members=[";
 
@@ -200,8 +188,6 @@ e::buffer::packer
 wtf :: operator << (e::buffer::packer lhs, const configuration& rhs)
 {
     lhs = lhs << rhs.m_cluster
-              << rhs.m_prev_token
-              << rhs.m_this_token
               << rhs.m_version
               << uint64_t(rhs.m_members.size());
 
@@ -216,13 +202,16 @@ wtf :: operator << (e::buffer::packer lhs, const configuration& rhs)
 e::unpacker
 wtf :: operator >> (e::unpacker lhs, configuration& rhs)
 {
+    LOG(INFO) << "HERE";
     uint64_t members_sz;
     uint64_t chain_sz;
-    lhs = lhs >> rhs.m_cluster
-              >> rhs.m_prev_token
-              >> rhs.m_this_token
-              >> rhs.m_version
-              >> members_sz;
+    lhs = lhs >> rhs.m_cluster;
+    LOG(INFO) << "cluster: " << rhs.m_cluster;
+    lhs = lhs >> rhs.m_version;
+    LOG(INFO) << "version: " << rhs.m_version;
+    lhs = lhs >> members_sz;
+    LOG(INFO) << "members_sz: " << members_sz;
+    
     rhs.m_members.resize(members_sz);
 
     for (uint64_t i = 0; i < rhs.m_members.size(); ++i)

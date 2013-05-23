@@ -635,7 +635,7 @@ remove(std::vector<T>* v, const TID& id)
 void
 coordinator :: regenerate_cached(struct replicant_state_machine_context*)
 {
-    size_t sz = 6 * sizeof(uint64_t);
+    size_t sz = 3 * sizeof(uint64_t);
     uint64_t num_servers = 0;
 
     for (size_t i = 0; i < m_servers.size(); ++i)
