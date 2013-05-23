@@ -202,15 +202,11 @@ wtf :: operator << (e::buffer::packer lhs, const configuration& rhs)
 e::unpacker
 wtf :: operator >> (e::unpacker lhs, configuration& rhs)
 {
-    LOG(INFO) << "HERE";
     uint64_t members_sz;
     uint64_t chain_sz;
     lhs = lhs >> rhs.m_cluster;
-    LOG(INFO) << "cluster: " << rhs.m_cluster;
     lhs = lhs >> rhs.m_version;
-    LOG(INFO) << "version: " << rhs.m_version;
     lhs = lhs >> members_sz;
-    LOG(INFO) << "members_sz: " << members_sz;
     
     rhs.m_members.resize(members_sz);
 

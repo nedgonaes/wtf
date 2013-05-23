@@ -96,8 +96,7 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
-        int64_t send(const char* host, in_port_t port, 
-                     uint64_t token,
+        int64_t send(uint64_t token,
                      wtf::wtf_network_msgtype msg, 
                      const char* data, size_t data_sz,
                      wtf_returncode* status,

@@ -217,7 +217,7 @@ daemon :: run(bool daemonize,
         return EXIT_FAILURE;
     }
 
-
+    LOG(INFO) << "Starting with " << threads << " network threads.";
     for (size_t i = 0; i < threads; ++i)
     {
         std::tr1::shared_ptr<po6::threads::thread> t(new po6::threads::thread(std::tr1::bind(&daemon::loop, this, i)));

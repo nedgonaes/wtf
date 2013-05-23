@@ -145,7 +145,7 @@ main(int argc, const char* argv[])
                 std::cerr << "Invalid input file.  Aborting." << std::endl;
             }
 
-            rid = r.send(_connect_host, _connect_port, 0, msgtype, item.c_str(), item.size() + 1,
+            rid = r.send(0, msgtype, item.c_str(), item.size() + 1,
                          &re, &output, &output_sz);
 
             if (rid < 0)

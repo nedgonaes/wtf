@@ -47,6 +47,12 @@
 
 using namespace wtf;
 
+#define MAINTAIN_COORD_CONNECTION(STATUS) \
+    if (maintain_coord_connection(STATUS) < 0) \
+    { \
+        return -1; \
+    }
+
 #define WTFSETERROR(CODE, DESC) \
     do \
     { \
@@ -121,13 +127,13 @@ wtf_client :: ~wtf_client() throw ()
 }
 
 int64_t
-wtf_client :: send(const char* host, in_port_t port, uint64_t token,
+wtf_client :: send(uint64_t token,
                    wtf_network_msgtype msgtype,
                    const char* data, size_t data_sz,
                    wtf_returncode* status,
                    const char** output, size_t* output_sz)
 {
-
+    MAINTAIN_COORD_CONNECTION(status);
     // Pack the message to send
     uint64_t nonce = m_nonce;
     ++m_nonce;
@@ -148,6 +154,12 @@ wtf_client :: loop(int timeout, wtf_returncode* status)
     while ((!m_commands.empty() || !m_resend.empty())
            && m_complete.empty())
     {
+        if (maintain_coord_connection(status) < 0)
+        {
+            return -1;
+        }
+
+
         // Always set timeout
         m_busybee->set_timeout(timeout);
         int64_t ret = inner_loop(status);
@@ -187,6 +199,11 @@ wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
     while (m_commands.find(id) != m_commands.end() ||
            m_resend.find(id) != m_resend.end())
     {
+        if (maintain_coord_connection(status) < 0)
+        {
+            return -1;
+        }
+
         // Always set timeout
         m_busybee->set_timeout(timeout);
         int64_t ret = inner_loop(status);

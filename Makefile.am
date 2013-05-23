@@ -55,9 +55,11 @@ noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += daemon/request_response.h
 
-bin_PROGRAMS = wtf
+bin_PROGRAMS =
+bin_PROGRAMS += wtf
 
-noinst_PROGRAMS = wtf-cli
+noinst_PROGRAMS =
+noinst_PROGRAMS += wtf-cli
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
