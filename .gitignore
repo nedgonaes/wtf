@@ -16,7 +16,7 @@ config.log
 config.status
 config.sub
 configure
-data/
+wtf-data/
 depcomp
 install-sh
 libtool

@@ -84,13 +84,30 @@ bool s_alarm = false;
         } \
     } while (0)
 
-static bool s_continue = true;
-
 static void
 exit_on_signal(int /*signum*/)
 {
-    RAW_LOG(ERROR, "signal received; triggering exit");
-    s_continue = false;
+    if (s_interrupts == 0)
+    {
+        RAW_LOG(ERROR, "interrupted: initiating shutdown (interrupt again to exit immediately)");
+    }
+    else
+    {
+        RAW_LOG(ERROR, "interrupted again: exiting immediately");
+    }
+
+    ++s_interrupts;
+}
+
+static void
+handle_alarm(int /*signum*/)
+{
+    s_alarm = true;
+}
+
+static void
+dummy(int /*signum*/)
+{
 }
 
 static uint64_t
@@ -116,10 +133,10 @@ daemon :: daemon()
 }
 
 static bool
-install_signal_handler(int signum)
+install_signal_handler(int signum, void (*f)(int))
 {
     struct sigaction handle;
-    handle.sa_handler = exit_on_signal;
+    handle.sa_handler = f;
     sigfillset(&handle.sa_mask);
     handle.sa_flags = SA_RESTART;
     return sigaction(signum, &handle, NULL) >= 0;
@@ -134,21 +151,33 @@ daemon :: run(bool daemonize,
               po6::net::hostname coordinator,
               unsigned threads)
 {
-    if (!install_signal_handler(SIGHUP))
+    if (!install_signal_handler(SIGHUP, exit_on_signal))
     {
         std::cerr << "could not install SIGHUP handler; exiting" << std::endl;
         return EXIT_FAILURE;
     }
 
-    if (!install_signal_handler(SIGINT))
+    if (!install_signal_handler(SIGINT, exit_on_signal))
     {
         std::cerr << "could not install SIGINT handler; exiting" << std::endl;
         return EXIT_FAILURE;
     }
 
-    if (!install_signal_handler(SIGTERM))
+    if (!install_signal_handler(SIGTERM, exit_on_signal))
     {
         std::cerr << "could not install SIGTERM handler; exiting" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if (!install_signal_handler(SIGALRM, handle_alarm))
+    {
+        std::cerr << "could not install SIGUSR1 handler; exiting" << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    if (!install_signal_handler(SIGUSR1, dummy))
+    {
+        std::cerr << "could not install SIGUSR1 handler; exiting" << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -156,15 +185,12 @@ daemon :: run(bool daemonize,
 
     if (sigfillset(&ss) < 0)
     {
-        PLOG(ERROR) << "could not block signals";
+        PLOG(ERROR) << "sigfillset";
         return EXIT_FAILURE;
     }
 
-    int err = pthread_sigmask(SIG_BLOCK, &ss, NULL);
-
-    if (err < 0)
+    if (pthread_sigmask(SIG_BLOCK, &ss, NULL) < 0)
     {
-        errno = err;
         PLOG(ERROR) << "could not block signals";
         return EXIT_FAILURE;
     }
@@ -180,7 +206,7 @@ daemon :: run(bool daemonize,
         google::SetLogSymlink(google::WARNING, "");
         google::SetLogSymlink(google::ERROR, "");
         google::SetLogSymlink(google::FATAL, "");
-        google::SetLogDestination(google::INFO, "wtf-daemon-");
+        google::SetLogDestination(google::INFO, "wtf-data/daemon/wtf-daemon-");
 
         if (::daemon(1, 0) < 0)
         {
@@ -207,17 +233,15 @@ daemon :: run(bool daemonize,
         return EXIT_FAILURE;
     }
 
-    m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, 0/*we don't use pause/unpause*/));
+    m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, threads));
+    m_busybee->set_ignore_signals();
     LOG(INFO) << "token " << m_us.token;
-    m_busybee->set_timeout(1000);
-
 
     if (!m_coord.register_id(server_id(m_us.token), m_us.address))
     {
         return EXIT_FAILURE;
     }
 
-    LOG(INFO) << "Starting with " << threads << " network threads.";
     for (size_t i = 0; i < threads; ++i)
     {
         std::tr1::shared_ptr<po6::threads::thread> t(new po6::threads::thread(std::tr1::bind(&daemon::loop, this, i)));
@@ -249,6 +273,10 @@ daemon :: run(bool daemonize,
         // let the coordinator know we've moved to this config
         m_coord.ack_config(new_config.version());
     }
+
+    LOG(INFO) << "shutting down.";
+
+    m_busybee->shutdown();
 
     for (size_t i = 0; i < m_threads.size(); ++i)
     {
@@ -296,7 +324,6 @@ daemon :: loop(size_t thread)
         return;
     }
 
-
     wtf::connection conn;
     std::auto_ptr<e::buffer> msg;
 
@@ -329,26 +356,29 @@ daemon :: loop(size_t thread)
 bool
 daemon :: recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg)
 {
-    while (s_continue)
+    while (true)
     {
         busybee_returncode rc = m_busybee->recv(&conn->token, msg);
+
+        LOG(INFO) << "recv'd " << rc;
 
         switch (rc)
         {
             case BUSYBEE_SUCCESS:
                 break;
-            case BUSYBEE_TIMEOUT:
-            case BUSYBEE_INTERRUPTED:
-                continue;
+            case BUSYBEE_SHUTDOWN:
+                return false;
             case BUSYBEE_DISRUPTED:
                 continue;
-            case BUSYBEE_SHUTDOWN:
+            case BUSYBEE_INTERRUPTED:
+                continue;
             case BUSYBEE_POLLFAILED:
             case BUSYBEE_ADDFDFAIL:
+            case BUSYBEE_TIMEOUT:
             case BUSYBEE_EXTERNAL:
             default:
-                LOG(ERROR) << "BusyBee returned " << rc << " during a \"recv\" call";
-                return false;
+                LOG(ERROR) << "busybee unexpectedly returned " << rc;
+                continue;
         }
 
         return true;

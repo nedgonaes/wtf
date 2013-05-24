@@ -44,16 +44,16 @@
 // WTF
 #include "daemon/daemon.h"
 
-static bool _daemonize = true;
-static const char* _data = ".";
+static bool _daemonize = false;
+static const char* _data = "wtf-data/daemon/data";
 static const char* _listen_host = "auto";
-static unsigned long _listen_port = 1983;
+static unsigned long _listen_port = 2013;
 static po6::net::ipaddr _listen_ip;
 static bool _listen = false;
 static const char* _coordinator_host = "127.0.0.1";
 static unsigned long _coordinator_port = 1982;
 static bool _coordinator = false;
-static long _threads = 0;
+static long _threads = 1;
 
 extern "C"
 {
@@ -65,7 +65,7 @@ static struct poptOption popts[] = {
     {"foreground", 'f', POPT_ARG_NONE, NULL, 'f',
      "run wtf in the foreground", 0},
     {"data", 'D', POPT_ARG_STRING, &_data, 'D',
-     "store persistent state in this directory (default: .)",
+     "store persistent state in this directory (default: ./daemon-data)",
      "dir"},
     {"listen", 'l', POPT_ARG_STRING, &_listen_host, 'l',
      "listen on a specific IP address (default: auto)",
@@ -80,7 +80,7 @@ static struct poptOption popts[] = {
      "connect to an alternative port on the coordinator (default: 2013)",
      "port"},
     {"threads", 't', POPT_ARG_LONG, &_threads, 't',
-     "the number of threads which will handle network traffic",
+     "the number of threads which will handle network traffic (default: 1)",
      "N"},
     POPT_TABLEEND
 };

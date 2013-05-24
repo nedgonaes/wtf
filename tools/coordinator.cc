@@ -41,9 +41,9 @@
 // BusyBee
 #include <busybee_utils.h>
 
-static bool _daemonize = true;
-static const char* _data = ".";
-static const char* _listen_host = "auto";
+static bool _daemonize = false;
+static const char* _data = "wtf-data/coordinator/data";
+static const char* _listen_host = "127.0.0.1";
 static unsigned long _listen_port = 1982;
 static po6::net::ipaddr _listen_ip;
 static bool _listen = false;
