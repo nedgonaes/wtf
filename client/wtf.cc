@@ -64,7 +64,8 @@ using namespace wtf;
 
 #define WTFSETSUCCESS WTFSETERROR(WTF_SUCCESS, "operation succeeded")
 
-#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(WTFNET_PUT) + 4 * sizeof(uint64_t))
+// busybee header + msgtype + nonce
+#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(WTFNET_PUT) + sizeof(uint64_t))
 
 #define BUSYBEE_ERROR(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
@@ -109,7 +110,6 @@ wtf_client :: wtf_client(const char* host, in_port_t port)
     , m_busybee_mapper(new wtf::mapper())
     , m_busybee(new busybee_st(m_busybee_mapper.get(), 0))
     , m_coord(new wtf::coordinator_link(po6::net::hostname(host, port)))
-    , m_token(0x4141414141414141ULL)
     , m_nonce(1)
     , m_have_seen_config(false)
     , m_commands()
@@ -140,7 +140,7 @@ wtf_client :: send(uint64_t token,
     size_t sz = COMMAND_HEADER_SIZE + data_sz;
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
     e::buffer::packer pa = msg->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << msgtype << m_token << nonce;
+    pa = pa << msgtype << nonce;
     pa = pa.copy(e::slice(data, data_sz));
 
     // Create the command object
@@ -689,12 +689,6 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     {
         case wtf::RESPONSE_SUCCESS:
             c->succeed(msg, up.as_slice(), WTF_SUCCESS);
-            break;
-        case wtf::RESPONSE_REGISTRATION_FAIL:
-            c->fail(WTF_SERVERERROR);
-            m_last_error_desc = "server treated request as a registration";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
             break;
         case wtf::RESPONSE_OBJ_NOT_EXIST:
             c->fail(WTF_NOTFOUND);

@@ -62,10 +62,10 @@
 // WTF
 #include "common/macros.h"
 #include "common/network_msgtype.h"
+#include "common/response_returncode.h"
 #include "common/special_objects.h"
 #include "common/wtf_node.h"
 #include "daemon/daemon.h"
-#include "daemon/request_response.h"
 
 using wtf::daemon;
 
@@ -83,6 +83,8 @@ bool s_alarm = false;
             return; \
         } \
     } while (0)
+
+#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(wtf::RESPONSE_SUCCESS) + sizeof(uint64_t))
 
 static void
 exit_on_signal(int /*signum*/)
@@ -330,19 +332,20 @@ daemon :: loop(size_t thread)
     while (recv(&conn, &msg))
     {
         assert(msg.get());
+        uint64_t nonce = 0;
         wtf_network_msgtype mt = WTFNET_NOP;
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
-        up = up >> mt;
+        up = up >> mt >> nonce;
 
         switch (mt)
         {
             case WTFNET_NOP:
                 break;
             case WTFNET_GET:
-                process_get(conn, msg, up);
+                process_get(conn, nonce, msg, up);
                 break;
             case WTFNET_PUT:
-                process_put(conn, msg, up);
+                process_put(conn, nonce, msg, up);
                 break;
             default:
                 LOG(WARNING) << "unknown message type; here's some hex:  " << msg->hex();
@@ -451,15 +454,26 @@ daemon :: send_no_disruption(uint64_t token, std::auto_ptr<e::buffer> msg)
 
 void
 daemon :: process_put(const wtf::connection& conn,
+                            uint64_t nonce,
                             std::auto_ptr<e::buffer> msg,
                             e::unpacker up)
 {
     e::slice data = up.as_slice();
     LOG(INFO) << "PUT: " << data.hex();
+
+    size_t sz = COMMAND_HEADER_SIZE + 
+                sizeof(uint64_t) + /* token */
+                sizeof(uint64_t); /* block id */
+    std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
+    e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
+    pa = pa << wtf::RESPONSE_SUCCESS << nonce 
+            << uint64_t(0xdeadbeef) << uint64_t(0xcafebabe);
+    send(conn, resp);
 }
 
 void
 daemon :: process_get(const wtf::connection& conn, 
+                      uint64_t nonce,
                       std::auto_ptr<e::buffer> msg, 
                       e::unpacker up)
 {

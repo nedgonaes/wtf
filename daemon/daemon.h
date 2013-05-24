@@ -76,9 +76,11 @@ class daemon
     private:
         void loop(size_t thread);
         void process_get(const wtf::connection& conn,
+                          uint64_t nonce,
                           std::auto_ptr<e::buffer> msg,
                           e::unpacker up);
         void process_put(const wtf::connection& conn,
+                          uint64_t nonce,
                           std::auto_ptr<e::buffer> msg,
                           e::unpacker up);
 

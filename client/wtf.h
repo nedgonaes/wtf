@@ -154,7 +154,6 @@ class wtf_client
         std::auto_ptr<wtf::mapper> m_busybee_mapper;
         std::auto_ptr<class busybee_st> m_busybee;
         const std::auto_ptr<wtf::coordinator_link> m_coord;
-        uint64_t m_token;
         uint64_t m_nonce;
         bool m_have_seen_config;
         command_map m_commands;

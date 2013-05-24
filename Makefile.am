@@ -53,7 +53,6 @@ noinst_HEADERS += coordinator/server_state.h
 noinst_HEADERS += daemon/connection.h
 noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
-noinst_HEADERS += daemon/request_response.h
 
 bin_PROGRAMS =
 bin_PROGRAMS += wtf
