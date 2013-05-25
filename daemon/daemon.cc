@@ -35,9 +35,9 @@
 #include <cmath>
 
 // POSIX
-#include <dlfcn.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/statvfs.h>
 
 // STL
 #include <algorithm>
@@ -84,9 +84,13 @@ bool s_alarm = false;
         } \
     } while (0)
 
-#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(wtf::RESPONSE_SUCCESS) + sizeof(uint64_t))
+#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + \
+    pack_size(wtf::WTFNET_COMMAND_RESPONSE) + \
+    pack_size(wtf::RESPONSE_SUCCESS) + sizeof(uint64_t))
 
 static void
+
+
 exit_on_signal(int /*signum*/)
 {
     if (s_interrupts == 0)
@@ -129,9 +133,11 @@ daemon :: daemon()
     , m_us()
     , m_threads()
     , m_coord(this)
+    , m_blockman()
     , m_periodic()
     , m_temporary_servers()
 {
+    trip_periodic(0, &daemon::periodic_stat);
 }
 
 static bool
@@ -237,7 +243,9 @@ daemon :: run(bool daemonize,
 
     m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, threads));
     m_busybee->set_ignore_signals();
+
     LOG(INFO) << "token " << m_us.token;
+    m_blockman.setup(m_us.token, data);
 
     if (!m_coord.register_id(server_id(m_us.token), m_us.address))
     {
@@ -285,6 +293,7 @@ daemon :: run(bool daemonize,
         m_threads[i]->join();
     }
 
+    m_blockman.shutdown();
     m_coord.shutdown();
 
     if (m_coord.is_clean_shutdown())
@@ -458,16 +467,34 @@ daemon :: process_put(const wtf::connection& conn,
                             std::auto_ptr<e::buffer> msg,
                             e::unpacker up)
 {
+    wtf::response_returncode rc;
+    server_id sid;
+    block_id bid;
+    ssize_t ret = 0;
+
     e::slice data = up.as_slice();
+
     LOG(INFO) << "PUT: " << data.hex();
+
+    ret = m_blockman.write_block(data, sid, bid); 
+
+    if (ret < data.size())
+    {
+        rc = wtf::RESPONSE_SERVER_ERROR;
+    }
+    else
+    {
+        rc = wtf::RESPONSE_SUCCESS;
+    }
+
 
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* token */
-                sizeof(uint64_t); /* block id */
+                sizeof(uint64_t);  /* block id */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << wtf::RESPONSE_SUCCESS << nonce 
-            << uint64_t(0xdeadbeef) << uint64_t(0xcafebabe);
+    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
+            << sid << bid;
     send(conn, resp);
 }
 
@@ -543,6 +570,12 @@ daemon :: run_periodic()
 void
 daemon :: periodic_nop(uint64_t)
 {
+}
+
+void
+daemon :: periodic_stat(uint64_t)
+{
+    m_blockman.stat();
 }
 
 bool

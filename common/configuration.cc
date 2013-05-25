@@ -129,9 +129,9 @@ configuration :: add_member(const wtf_node& node)
 }
 
 const wtf_node*
-configuration :: get_random_member(uint64_t id)
+configuration :: get_random_member(uint64_t sid)
 {
-    id = id % m_members.size();
+    uint32_t id = sid % m_members.size();
     return &m_members[id];
 }
 
@@ -207,6 +207,7 @@ wtf :: operator >> (e::unpacker lhs, configuration& rhs)
     lhs = lhs >> rhs.m_cluster;
     lhs = lhs >> rhs.m_version;
     lhs = lhs >> members_sz;
+    std::cout << "MEMBERS IN CONFIG: " << members_sz << std::endl;
     
     rhs.m_members.resize(members_sz);
 

@@ -53,6 +53,7 @@
 #include "common/configuration.h"
 #include "daemon/settings.h"
 #include "daemon/connection.h"
+#include "daemon/block_storage_manager.h"
 
 namespace wtf
 {
@@ -95,6 +96,7 @@ class daemon
     private:
         void handle_disruption(uint64_t token);
         void periodic_handle_disruption(uint64_t now);
+        void periodic_stat(uint64_t token);
         void handle_disruption_reset_healing(uint64_t token);
         void handle_disruption_reset_reconfiguration(uint64_t token);
 
@@ -120,6 +122,7 @@ class daemon
         wtf_node m_us;
         std::vector<std::tr1::shared_ptr<po6::threads::thread> > m_threads;
         coordinator_link m_coord;
+        wtf::block_storage_manager m_blockman;
         std::vector<periodic> m_periodic;
         std::map<uint64_t, uint64_t> m_temporary_servers;
         std::set<uint64_t> m_disrupted_backoff;

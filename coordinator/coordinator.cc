@@ -448,6 +448,7 @@ coordinator :: server_register(replicant_state_machine_context* ctx,
     m_servers.back().state = server_state::AVAILABLE;
     std::stable_sort(m_servers.begin(), m_servers.end());
     fprintf(log, "registered server_id(%lu) on address %s\n", sid.get(), oss.str().c_str());
+    issue_new_config(ctx);
     return generate_response(ctx, wtf::COORD_SUCCESS);
 }
 

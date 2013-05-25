@@ -611,6 +611,10 @@ wtf_client :: send_to_random_node(e::intrusive_ptr<command> cmd,
     static int last_node = 0;
     bool sent = false;
 
+    std::cout << "Sending to random node." << std::endl;
+    std::cout << "Configuration is: " ;
+    m_config->debug_dump(std::cout);
+
     cmd->set_sent_to(*m_config->get_random_member(generate_token()));
 
     std::auto_ptr<e::buffer> msg(cmd->request()->copy());

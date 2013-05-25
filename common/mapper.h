@@ -33,6 +33,7 @@
 
 // WTF
 #include <common/wtf_node.h>
+#include <common/ids.h>
 
 namespace wtf
 {
@@ -44,7 +45,7 @@ class mapper : public busybee_mapper
         ~mapper() throw ();
 
     public:
-        virtual bool lookup(uint64_t server_id, po6::net::location* bound_to);
+        virtual bool lookup(uint64_t sid, po6::net::location* bound_to);
         virtual void set(const wtf_node& n);
 
     private:

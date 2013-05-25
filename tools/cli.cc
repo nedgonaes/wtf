@@ -190,8 +190,8 @@ main(int argc, const char* argv[])
                 return EXIT_FAILURE;
             }
 
-            std::string out(output, output_sz);
-            std::cout << out << std::endl;
+            e::slice out(output, output_sz);
+            std::cout << "RESPONSE: " << out.hex() << std::endl;
             wtf_destroy_output(output, output_sz);
         }
 

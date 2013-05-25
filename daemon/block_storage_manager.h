@@ -25,73 +25,47 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_ids_h_
-#define wtf_common_ids_h_
+#ifndef wtf_block_storage_manager_h_
+#define wtf_block_storage_manager_h_
 
-// C
-#include <stdint.h>
+// Google Log
+#include <glog/logging.h>
+#include <glog/raw_logging.h>
 
-// C++
-#include <iostream>
+//po6
+#include <po6/io/fd.h>
+#include <po6/pathname.h>
 
-// e
-#include <e/buffer.h>
-
-// An ID is a simple wrapper around uint64_t in order to prevent devs from
-// accidently using one type of ID as another.
-
-#define OPERATOR(TYPE, OP) \
-    inline bool \
-    operator OP (const TYPE ## _id& lhs, const TYPE ## _id& rhs) \
-    { \
-        return lhs.get() OP rhs.get(); \
-    }
-#define CREATE_ID(TYPE) \
-    class TYPE ## _id \
-    { \
-        public: \
-            TYPE ## _id() : m_id(0) {} \
-            explicit TYPE ## _id(uint64_t id) : m_id(id) {} \
-        public: \
-            uint64_t get() const { return m_id; } \
-        private: \
-            uint64_t m_id; \
-    }; \
-    inline std::ostream& \
-    operator << (std::ostream& lhs, const TYPE ## _id& rhs) \
-    { \
-        return lhs << #TYPE "(" << rhs.get() << ")"; \
-    } \
-    inline e::buffer::packer \
-    operator << (e::buffer::packer pa, const TYPE ## _id& rhs) \
-    { \
-        return pa << rhs.get(); \
-    } \
-    inline e::unpacker \
-    operator >> (e::unpacker up, TYPE ## _id& rhs) \
-    { \
-        uint64_t id; \
-        up = up >> id; \
-        rhs = TYPE ## _id(id); \
-        return up; \
-    } \
-    OPERATOR(TYPE, <) \
-    OPERATOR(TYPE, <=) \
-    OPERATOR(TYPE, ==) \
-    OPERATOR(TYPE, !=) \
-    OPERATOR(TYPE, >=) \
-    OPERATOR(TYPE, >)
+// WTF
+#include "common/ids.h"
 
 namespace wtf
 {
+    class block_storage_manager
+    {
+        public:
+            block_storage_manager();
+            ~block_storage_manager();
 
-CREATE_ID(cluster)
-CREATE_ID(version)
-CREATE_ID(server)
-CREATE_ID(block)
+        public:
+            void setup(uint64_t sid,
+                       po6::pathname path);
+            void shutdown();
 
-} // namespace wtf
+        public:
+            ssize_t write_block(const e::slice& data,
+                             server_id& sid,
+                             block_id& bid);
+            ssize_t read_block(server_id& sid,
+                            block_id& bid,
+                            e::slice& data);
+            void stat();
 
-#undef OPERATOR
-#undef CREATE_ID
-#endif // wtf_common_ids_h_
+        private:
+            server_id m_prefix;
+            block_id m_last_block_id;
+            po6::pathname m_path;
+    };
+}
+
+#endif // wtf_block_storage_manager_h_

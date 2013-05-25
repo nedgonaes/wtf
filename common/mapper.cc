@@ -40,10 +40,10 @@ mapper :: ~mapper() throw ()
 }
 
 bool
-mapper :: lookup(uint64_t server_id,
+mapper :: lookup(uint64_t sid,
                  po6::net::location* bound_to)
 {
-    if (server_id == m_cache.token)
+    if (sid == m_cache.token)
     {
         *bound_to = m_cache.address;
         return true;
