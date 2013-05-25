@@ -114,16 +114,26 @@ block_storage_manager::write_block(const e::slice& data,
 ssize_t
 block_storage_manager::read_block(server_id& sid,
                                   block_id& bid,
-                                  e::slice& data)
+                                  std::vector<uint8_t>& data)
 {
-    /*
+    int ret;
     std::stringstream p;
+
     p << std::string(m_path.get()) << '/' << sid << bid;
-    po6::io::fd f(open(p.str().c_str(), 'r'));
-    uint8_t* ptr = const_cast<uint8_t *>(data.data());
-    return f.xread(ptr, data.size());
-    */
-    return 0;
+    po6::io::fd f(open(p.str().c_str(), O_RDONLY));
+
+    if (f.get() < 0)
+    {
+        PLOG(ERROR) << "read_block failed";
+    }
+
+    ret = f.xread(&data[0], data.size());
+
+    if (ret < 0)
+    {
+        PLOG(ERROR) << "read_block failed";
+    }
+
 }
 
 void

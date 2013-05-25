@@ -32,6 +32,9 @@
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
 
+// STL
+#include <vector>
+
 //po6
 #include <po6/io/fd.h>
 #include <po6/pathname.h>
@@ -58,7 +61,7 @@ namespace wtf
                              block_id& bid);
             ssize_t read_block(server_id& sid,
                             block_id& bid,
-                            e::slice& data);
+                            std::vector<uint8_t>& data);
             void stat();
 
         private:

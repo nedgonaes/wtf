@@ -504,8 +504,35 @@ daemon :: process_get(const wtf::connection& conn,
                       std::auto_ptr<e::buffer> msg, 
                       e::unpacker up)
 {
-    e::slice data = up.as_slice();
-    LOG(INFO) << "GET: " << data.hex();
+    wtf::response_returncode rc;
+    server_id sid;
+    block_id bid;
+    uint32_t len;
+    ssize_t ret;
+
+    LOG(INFO) << "GET: " << msg->as_slice().hex();
+
+    up = up >> sid >> bid >> len;
+    std::vector<uint8_t> data(len);
+    ret = m_blockman.read_block(sid, bid, data);
+
+    if (ret < len)
+    {
+        rc = wtf::RESPONSE_SERVER_ERROR;
+    }
+    else
+    {
+        rc = wtf::RESPONSE_SUCCESS;
+    }
+
+    size_t sz = COMMAND_HEADER_SIZE + 
+                sizeof(uint64_t) + /* token */
+                sizeof(uint64_t);  /* block id */
+    std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
+    e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
+    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
+            << sid << bid << data;
+    send(conn, resp);
 }
 
 typedef void (daemon::*_periodic_fptr)(uint64_t now);
