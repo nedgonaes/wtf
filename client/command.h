@@ -48,11 +48,13 @@ class wtf_client::command
     public:
         uint64_t nonce() const throw () { return m_nonce; }
         uint64_t clientid() const throw () { return m_clientid; }
+        int64_t fd() const throw() { return m_fd; }
         e::buffer* request() const throw () { return m_request.get(); }
         const wtf::wtf_node& sent_to() const throw () { return m_sent_to; }
         const char* last_error_desc() const throw() { return m_last_error_desc; }
         const char* last_error_file() const throw() { return m_last_error_file; }
         uint64_t last_error_line() const throw() { return m_last_error_line; }
+        wtf_returncode status() const throw() { return *m_status; }
 
     public:
         void set_nonce(uint64_t nonce);
@@ -82,6 +84,7 @@ class wtf_client::command
         size_t m_ref;
         uint64_t m_nonce;
         uint64_t m_clientid;
+        int64_t m_fd;
         std::auto_ptr<e::buffer> m_request;
         wtf_returncode* m_status;
         const char** m_output;

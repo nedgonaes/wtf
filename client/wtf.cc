@@ -33,6 +33,9 @@
 #include <busybee_constants.h>
 #include <busybee_st.h>
 
+// HyperDex
+#include <hyperdex.h>
+
 // WTF
 #include "common/configuration.h"
 #include "common/coordinator_returncode.h"
@@ -42,6 +45,7 @@
 #include "common/response_returncode.h"
 #include "common/special_objects.h"
 #include "client/command.h"
+#include "client/file.h"
 #include "client/coordinator_link.h"
 #include "client/wtf.h"
 
@@ -111,10 +115,12 @@ wtf_client :: wtf_client(const char* host, in_port_t port)
     , m_busybee(new busybee_st(m_busybee_mapper.get(), 0))
     , m_coord(new wtf::coordinator_link(po6::net::hostname(host, port)))
     , m_nonce(1)
+    , m_fileno(1)
     , m_have_seen_config(false)
     , m_commands()
     , m_complete()
     , m_resend()
+    , m_fds()
     , m_last_error_desc("")
     , m_last_error_file(__FILE__)
     , m_last_error_line(__LINE__)
@@ -145,7 +151,7 @@ wtf_client :: send(uint64_t token,
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
-    return send_to_random_node(cmd, status);
+    return send_to_blockserver(cmd, status);
 }
 
 int64_t
@@ -523,7 +529,7 @@ wtf_client :: inner_loop(wtf_returncode* status)
     // Resend all those that need it
     while (!m_resend.empty())
     {
-        ret = send_to_random_node(m_resend.begin()->second, status);
+        ret = send_to_blockserver(m_resend.begin()->second, status);
 
         // As this is a retransmission, we only care about errors (< 0)
         // not the success half (>=0).
@@ -605,7 +611,93 @@ wtf_client :: inner_loop(wtf_returncode* status)
 }
 
 int64_t
-wtf_client :: send_to_random_node(e::intrusive_ptr<command> cmd,
+wtf_client :: open(const char* path)
+{
+    e::intrusive_ptr<file> f = new file(path);
+    m_fds[m_fileno] = f; 
+    ++m_fileno;
+    return m_fileno;
+}
+
+int64_t
+wtf_client :: write(int64_t fd,
+                    const char* data,
+                    uint32_t data_sz,
+                    wtf_returncode* status)
+{
+#define CHUNKSIZE 1024 
+#define ROUNDUP(X,Y)   (((uint32_t)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
+    wtf_returncode re = WTF_GARBAGE;
+    int64_t rid = 0;
+    int64_t lid = 0;
+    const char* output;
+    size_t output_sz;
+    int chunks = ROUNDUP(data_sz, CHUNKSIZE); 
+    wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
+
+    if (m_fds.find(fd) == m_fds.end())
+    {
+        return -1;
+    }
+
+    for (int i = 0; i < chunks; ++i)
+    {
+
+        rid = send(0, msgtype, data, data_sz,
+                status, &output, &output_sz);
+
+        if (rid < 0)
+        {
+            return -1;
+        }
+    }
+
+    return m_fileno;
+}
+
+int64_t
+wtf_client :: read(const char* data,
+                   uint32_t data_sz,
+                   wtf_returncode* status)
+{
+    return -1;
+}
+
+int64_t
+wtf_client :: close(int64_t fd)
+{
+    return -1;
+}
+
+int64_t
+wtf_client :: flush(int64_t fd, wtf_returncode* rc)
+{
+    int64_t rid = 0;
+
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    for (command_map::iterator it = f->commands_begin();
+         it != f->commands_end(); ++it)
+    {
+        if (it->second->status() != WTF_SUCCESS)
+        {
+            *rc = WTF_GARBAGE;
+
+            rid = loop(it->first, 0, rc);
+
+            if (rid < 0 || *rc != WTF_SUCCESS)
+            {
+                return rid;
+            }
+        }
+    }
+    
+    f->gc_completed(rc);
+    return rid;
+}
+
+int64_t
+wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
                                                wtf_returncode* status)
 {
     static int last_node = 0;
@@ -615,7 +707,10 @@ wtf_client :: send_to_random_node(e::intrusive_ptr<command> cmd,
     std::cout << "Configuration is: " ;
     m_config->debug_dump(std::cout);
 
-    cmd->set_sent_to(*m_config->get_random_member(generate_token()));
+    if(cmd->sent_to() == wtf_node())
+    {
+        cmd->set_sent_to(*m_config->get_random_member(generate_token()));
+    }
 
     std::auto_ptr<e::buffer> msg(cmd->request()->copy());
     wtf_node send_to = cmd->sent_to();
@@ -643,6 +738,7 @@ wtf_client :: send_to_random_node(e::intrusive_ptr<command> cmd,
     if (sent)
     {
         m_commands[cmd->nonce()] = cmd;
+        m_fds[cmd->fd()]->add_command(cmd);
         return cmd->clientid();
     }
     else
@@ -754,7 +850,7 @@ wtf_client :: generate_token()
 {
     try
     {
-        po6::io::fd sysrand(open("/dev/urandom", O_RDONLY));
+        po6::io::fd sysrand(::open("/dev/urandom", O_RDONLY));
 
         if (sysrand.get() < 0)
         {

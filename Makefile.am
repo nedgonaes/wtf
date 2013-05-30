@@ -37,6 +37,7 @@ include_HEADERS = client/wtf.h
 noinst_HEADERS = 
 noinst_HEADERS += client/command.h
 noinst_HEADERS += client/coordinator_link.h
+noinst_HEADERS += client/file.h
 noinst_HEADERS += common/wtf_node.h
 noinst_HEADERS += common/configuration.h
 noinst_HEADERS += common/coordinator_returncode.h
@@ -114,6 +115,7 @@ libwtf_la_SOURCES += common/packing.cc
 libwtf_la_SOURCES += common/response_returncode.cc
 libwtf_la_SOURCES += client/command.cc
 libwtf_la_SOURCES += client/coordinator_link.cc
+libwtf_la_SOURCES += client/file.cc
 libwtf_la_SOURCES += client/wtf.cc
 
 libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) -lglog

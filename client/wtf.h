@@ -96,6 +96,17 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
+        int64_t open(const char* path);
+        int64_t write(int64_t fd,
+                      const char* data,
+                      uint32_t data_sz,
+                      wtf_returncode* status);
+        int64_t read(const char* data,
+                      uint32_t data_sz,
+                      wtf_returncode* status);
+        int64_t close(int64_t fd);
+        int64_t flush(int64_t fd,
+                      wtf_returncode* status);
         int64_t send(uint64_t token,
                      wtf::wtf_network_msgtype msg, 
                      const char* data, size_t data_sz,
@@ -126,7 +137,9 @@ class wtf_client
 
     private:
         class command;
+        class file;
         typedef std::map<uint64_t, e::intrusive_ptr<command> > command_map;
+        typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
 
     private:
         wtf_client(const wtf_client& other);
@@ -134,8 +147,8 @@ class wtf_client
     private:
         int64_t inner_loop(wtf_returncode* status);
         // Send commands and receive responses
-        int64_t send_to_random_node(e::intrusive_ptr<command> cmd,
-                                                 wtf_returncode* status);
+        int64_t send_to_blockserver(e::intrusive_ptr<command> cmd,
+                                    wtf_returncode* status);
         void handle_disruption(const wtf::wtf_node& node,
                                wtf_returncode* status);
         int64_t handle_command_response(const po6::net::location& from,
@@ -155,10 +168,12 @@ class wtf_client
         std::auto_ptr<class busybee_st> m_busybee;
         const std::auto_ptr<wtf::coordinator_link> m_coord;
         uint64_t m_nonce;
+        uint64_t m_fileno;
         bool m_have_seen_config;
         command_map m_commands;
         command_map m_complete;
         command_map m_resend;
+        file_map m_fds;
         const char* m_last_error_desc;
         const char* m_last_error_file;
         uint64_t m_last_error_line;
