@@ -137,7 +137,8 @@ wtf_client :: send(uint64_t token,
                    wtf_network_msgtype msgtype,
                    const char* data, size_t data_sz,
                    wtf_returncode* status,
-                   const char** output, size_t* output_sz)
+                   const char** output, size_t* output_sz,
+                   int64_t fd)
 {
     MAINTAIN_COORD_CONNECTION(status);
     // Pack the message to send
@@ -151,6 +152,7 @@ wtf_client :: send(uint64_t token,
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
+    cmd->set_fd(fd);
     return send_to_blockserver(cmd, status);
 }
 
@@ -615,8 +617,7 @@ wtf_client :: open(const char* path)
 {
     e::intrusive_ptr<file> f = new file(path);
     m_fds[m_fileno] = f; 
-    ++m_fileno;
-    return m_fileno;
+    return m_fileno++;
 }
 
 int64_t
@@ -626,30 +627,34 @@ wtf_client :: write(int64_t fd,
                     wtf_returncode* status)
 {
 #define CHUNKSIZE 1024 
-#define ROUNDUP(X,Y)   (((uint32_t)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
+#define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
     wtf_returncode re = WTF_GARBAGE;
     int64_t rid = 0;
     int64_t lid = 0;
     const char* output;
     size_t output_sz;
-    int chunks = ROUNDUP(data_sz, CHUNKSIZE); 
+    int chunks = ROUNDUP(data_sz, CHUNKSIZE)/CHUNKSIZE; 
     wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
 
     if (m_fds.find(fd) == m_fds.end())
     {
+        std::cout << "invalid fd: " << fd <<  std::endl;
         return -1;
     }
 
     for (int i = 0; i < chunks; ++i)
     {
+        std::cout << "Sending chunk " << i << std::endl;
 
         rid = send(0, msgtype, data, data_sz,
-                status, &output, &output_sz);
+                status, &output, &output_sz, fd);
 
         if (rid < 0)
         {
             return -1;
         }
+
+        std::cout << "Chunk " << i << " done." << std::endl;
     }
 
     return m_fileno;
@@ -737,8 +742,16 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
 
     if (sent)
     {
+
+        if (m_fds.find(cmd->fd()) == m_fds.end())
+        {
+            std::cout << "invalid fd: " << cmd->fd() <<  std::endl;
+            return -1;
+        }
+
         m_commands[cmd->nonce()] = cmd;
-        m_fds[cmd->fd()]->add_command(cmd);
+        e::intrusive_ptr<file> f = m_fds[cmd->fd()];
+        f->add_command(cmd);
         return cmd->clientid();
     }
     else
@@ -757,7 +770,10 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     // Parse the command response
     uint64_t nonce;
     wtf::response_returncode rc;
-    up = up >> nonce >> rc;
+    uint64_t sid; 
+    uint64_t bid;
+
+    up = up >> nonce >> rc >> sid >> bid;
 
     if (up.error())
     {

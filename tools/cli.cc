@@ -136,14 +136,16 @@ main(int argc, const char* argv[])
             wtf::wtf_network_msgtype msgtype = wtf::WTFNET_NOP;
             
             std::string item;
+            std::string path;
+
             std::stringstream ss(s);
             if (std::getline(ss, item, ' '))
             {
-                if (item.compare("WTFNET_PUT")==0)
+                if (item.compare("write")==0)
                 {
                     msgtype = wtf::WTFNET_PUT;
                 }
-                if (item.compare("WTFNET_GET")==0)
+                if (item.compare("read")==0)
                 {
                     msgtype = wtf::WTFNET_GET;
                 }
@@ -153,13 +155,19 @@ main(int argc, const char* argv[])
                 std::cerr << "Invalid input file.  Aborting." << std::endl;
             }
 
+            if (!std::getline(ss, path, ' '))
+            {
+                std::cerr << "Invalid input file.  Aborting." << std::endl;
+            }
+
             if (!std::getline(ss, item, ' '))
             {
                 std::cerr << "Invalid input file.  Aborting." << std::endl;
             }
 
-            rid = r.send(0, msgtype, item.c_str(), item.size() + 1,
-                         &re, &output, &output_sz);
+            int64_t fd = r.open(path.c_str());
+
+            rid = r.write(fd,item.c_str(), item.size()+1, &re);
 
             if (rid < 0)
             {
@@ -168,18 +176,12 @@ main(int argc, const char* argv[])
                 return EXIT_FAILURE;
             }
 
-            lid = r.loop(-1, &le);
+            lid = r.flush(fd, &re);
 
             if (lid < 0)
             {
                 std::cerr << "could not loop: " << r.last_error_desc()
                           << " (" << le << ")" << std::endl;
-                return EXIT_FAILURE;
-            }
-
-            if (rid != lid)
-            {
-                std::cerr << "could not process request: internal error" << std::endl;
                 return EXIT_FAILURE;
             }
 
@@ -190,9 +192,14 @@ main(int argc, const char* argv[])
                 return EXIT_FAILURE;
             }
 
-            e::slice out(output, output_sz);
-            std::cout << "RESPONSE: " << out.hex() << std::endl;
-            wtf_destroy_output(output, output_sz);
+            if (rid > 0 && lid > 0 && re == WTF_SUCCESS)
+            {
+                std::cout << "SUCCESS." << std::endl;
+            }
+
+            //e::slice out(output, output_sz);
+            //std::cout << "RESPONSE: " << out.hex() << std::endl;
+            //wtf_destroy_output(output, output_sz);
         }
 
         wtf_returncode e = WTF_SUCCESS; 

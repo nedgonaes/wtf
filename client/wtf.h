@@ -111,7 +111,8 @@ class wtf_client
                      wtf::wtf_network_msgtype msg, 
                      const char* data, size_t data_sz,
                      wtf_returncode* status,
-                     const char** output, size_t* output_sz);
+                     const char** output, size_t* output_sz,
+                     int64_t fd);
         int64_t wait(const char* object,
                      const char* cond,
                      uint64_t state,

@@ -57,6 +57,7 @@ class wtf_client::command
         wtf_returncode status() const throw() { return *m_status; }
 
     public:
+        void set_fd(int64_t fd) { m_fd = fd; }
         void set_nonce(uint64_t nonce);
         void set_sent_to(const wtf::wtf_node& sent_to);
         void fail(wtf_returncode status);
