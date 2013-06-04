@@ -48,16 +48,16 @@ wtf_client :: file :: ~file() throw ()
 {
 }
 
-const wtf_client::command_map::iterator
-wtf_client :: file :: commands_begin() const
+wtf_client::command_map::iterator
+wtf_client :: file :: commands_begin()
 {
-    m_commands.begin();
+    return m_commands.begin();
 }
 
-const wtf_client::command_map::iterator
-wtf_client :: file :: commands_end() const
+wtf_client::command_map::iterator
+wtf_client :: file :: commands_end()
 {
-    m_commands.end();
+    return m_commands.end();
 }
 
 int64_t
@@ -87,5 +87,5 @@ wtf_client :: file :: gc_completed(wtf_returncode* rc)
 void
 wtf_client :: file :: add_command(e::intrusive_ptr<command>& cmd)
 {
-    m_commands[cmd->fd()] = cmd;
+    m_commands[cmd->nonce()] = cmd;
 }

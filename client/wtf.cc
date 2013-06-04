@@ -33,9 +33,6 @@
 #include <busybee_constants.h>
 #include <busybee_st.h>
 
-// HyperDex
-#include <hyperdex.h>
-
 // WTF
 #include "common/configuration.h"
 #include "common/coordinator_returncode.h"
@@ -109,7 +106,8 @@ wtf_destroy_output(const char* output, size_t)
     delete buf;
 }
 
-wtf_client :: wtf_client(const char* host, in_port_t port)
+wtf_client :: wtf_client(const char* host, in_port_t port,
+                         const char* hyper_host, in_port_t hyper_port)
     : m_config(new wtf::configuration())
     , m_busybee_mapper(new wtf::mapper())
     , m_busybee(new busybee_st(m_busybee_mapper.get(), 0))
@@ -125,6 +123,7 @@ wtf_client :: wtf_client(const char* host, in_port_t port)
     , m_last_error_file(__FILE__)
     , m_last_error_line(__LINE__)
     , m_last_error_host()
+    , m_hyperclient(hyper_host, hyper_port)
 {
 }
 
@@ -150,6 +149,8 @@ wtf_client :: send(uint64_t token,
     pa = pa << msgtype << nonce;
     pa = pa.copy(e::slice(data, data_sz));
 
+    *status = WTF_GARBAGE;
+
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
     cmd->set_fd(fd);
@@ -159,6 +160,7 @@ wtf_client :: send(uint64_t token,
 int64_t
 wtf_client :: loop(int timeout, wtf_returncode* status)
 {
+    std::cout << "Starting loop, status: " << *status << std::endl;
     while ((!m_commands.empty() || !m_resend.empty())
            && m_complete.empty())
     {
@@ -166,11 +168,14 @@ wtf_client :: loop(int timeout, wtf_returncode* status)
         {
             return -1;
         }
+        std::cout << "Looping, status: " << *status << std::endl;
 
 
         // Always set timeout
         m_busybee->set_timeout(timeout);
         int64_t ret = inner_loop(status);
+
+        std::cout << "after inner_loop, status: " << *status << std::endl;
 
         if (ret < 0)
         {
@@ -531,6 +536,7 @@ wtf_client :: inner_loop(wtf_returncode* status)
     // Resend all those that need it
     while (!m_resend.empty())
     {
+        std::cout << "Resending..." << std::endl;
         ret = send_to_blockserver(m_resend.begin()->second, status);
 
         // As this is a retransmission, we only care about errors (< 0)
@@ -548,6 +554,8 @@ wtf_client :: inner_loop(wtf_returncode* status)
     std::auto_ptr<e::buffer> msg;
     busybee_returncode rc = m_busybee->recv(&id, &msg);
     const wtf_node* node = m_config->node_from_token(id);
+    
+    std::cout << rc << std::endl;
 
     // And process it
     switch (rc)
@@ -626,12 +634,13 @@ wtf_client :: write(int64_t fd,
                     uint32_t data_sz,
                     wtf_returncode* status)
 {
-#define CHUNKSIZE 1024 
+#define CHUNKSIZE 1048576 
 #define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
-    wtf_returncode re = WTF_GARBAGE;
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
     int64_t rid = 0;
     int64_t lid = 0;
     const char* output;
+    uint32_t rem = data_sz;
     size_t output_sz;
     int chunks = ROUNDUP(data_sz, CHUNKSIZE)/CHUNKSIZE; 
     wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
@@ -646,8 +655,11 @@ wtf_client :: write(int64_t fd,
     {
         std::cout << "Sending chunk " << i << std::endl;
 
-        rid = send(0, msgtype, data, data_sz,
+        rid = send(0, msgtype, data, MIN(rem, CHUNKSIZE),
                 status, &output, &output_sz, fd);
+
+        rem -= CHUNKSIZE;
+        data += CHUNKSIZE;
 
         if (rid < 0)
         {
@@ -655,9 +667,10 @@ wtf_client :: write(int64_t fd,
         }
 
         std::cout << "Chunk " << i << " done." << std::endl;
+        
     }
 
-    return m_fileno;
+    return rid;
 }
 
 int64_t
@@ -677,18 +690,32 @@ wtf_client :: close(int64_t fd)
 int64_t
 wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 {
-    int64_t rid = 0;
+    int64_t rid = -1;
+    if(m_fds.find(fd) == m_fds.end())
+    {
+        std::cout << "bad fd" << std::endl;
+    }
 
     e::intrusive_ptr<file> f = m_fds[fd];
+
+    if(f->commands_begin() == f->commands_end())
+    {
+        std::cout << "no commands" << std::endl;
+    }
 
     for (command_map::iterator it = f->commands_begin();
          it != f->commands_end(); ++it)
     {
+        std::cout << "Flushing " << it->second->nonce() << std::endl;
+        std::cout << "it->first: " << it->first << std::endl;
+        std::cout << "STATUS: " << it->second->status();
+
         if (it->second->status() != WTF_SUCCESS)
         {
             *rc = WTF_GARBAGE;
 
-            rid = loop(it->first, 0, rc);
+            std::cout << "Looping" << std::endl;
+            rid = loop(it->first, -1, rc);
 
             if (rid < 0 || *rc != WTF_SUCCESS)
             {
@@ -696,6 +723,8 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
             }
         }
     }
+
+    std::cout << "Done flushing." << std::endl;
     
     f->gc_completed(rc);
     return rid;
@@ -756,9 +785,14 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
     }
     else
     {
-        // We have an error captured by REPLSETERROR above.
+        // We have an error captured by WTFSETERROR above.
         return -1;
     }
+}
+
+void
+update_inodes(int64_t fd)
+{
 }
 
 int64_t
@@ -774,6 +808,8 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     uint64_t bid;
 
     up = up >> nonce >> rc >> sid >> bid;
+
+    std::cout << "sid: " << sid << "bid: " << bid << std::endl;
 
     if (up.error())
     {

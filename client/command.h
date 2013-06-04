@@ -54,7 +54,7 @@ class wtf_client::command
         const char* last_error_desc() const throw() { return m_last_error_desc; }
         const char* last_error_file() const throw() { return m_last_error_file; }
         uint64_t last_error_line() const throw() { return m_last_error_line; }
-        wtf_returncode status() const throw() { return *m_status; }
+        wtf_returncode status() const throw() { return m_status; }
 
     public:
         void set_fd(int64_t fd) { m_fd = fd; }
@@ -87,7 +87,7 @@ class wtf_client::command
         uint64_t m_clientid;
         int64_t m_fd;
         std::auto_ptr<e::buffer> m_request;
-        wtf_returncode* m_status;
+        wtf_returncode m_status;
         const char** m_output;
         size_t* m_output_sz;
         wtf::wtf_node m_sent_to;

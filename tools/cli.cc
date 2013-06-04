@@ -167,6 +167,8 @@ main(int argc, const char* argv[])
 
             int64_t fd = r.open(path.c_str());
 
+            std::cout << "FD is " << fd << std::endl;
+
             rid = r.write(fd,item.c_str(), item.size()+1, &re);
 
             if (rid < 0)
@@ -175,6 +177,8 @@ main(int argc, const char* argv[])
                           << " (" << re << ")" << std::endl;
                 return EXIT_FAILURE;
             }
+
+            std::cout << "Flushing " << fd << std::endl;
 
             lid = r.flush(fd, &re);
 
@@ -192,10 +196,7 @@ main(int argc, const char* argv[])
                 return EXIT_FAILURE;
             }
 
-            if (rid > 0 && lid > 0 && re == WTF_SUCCESS)
-            {
-                std::cout << "SUCCESS." << std::endl;
-            }
+            std::cout << "rid: " << rid << " lid: " << lid << " " << re << std::endl;
 
             //e::slice out(output, output_sz);
             //std::cout << "RESPONSE: " << out.hex() << std::endl;

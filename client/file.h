@@ -54,8 +54,8 @@ class wtf_client::file
         po6::pathname path() { return m_path; }
         void add_command(e::intrusive_ptr<command>& c);
         int64_t gc_completed(wtf_returncode* rc);
-        const command_map::iterator commands_begin() const; 
-        const command_map::iterator commands_end() const; 
+        command_map::iterator commands_begin();
+        command_map::iterator commands_end(); 
 
     private:
         friend class e::intrusive_ptr<file>;

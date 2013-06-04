@@ -44,7 +44,7 @@ wtf_client :: command :: command(wtf_returncode* st,
     , m_nonce(n)
     , m_clientid(n)
     , m_request(m)
-    , m_status(st)
+    , m_status(*st)
     , m_output(output)
     , m_output_sz(output_sz)
     , m_sent_to()
@@ -53,6 +53,7 @@ wtf_client :: command :: command(wtf_returncode* st,
     , m_last_error_line()
 {
     *st = WTF_GARBAGE;
+    std::cout << "Command constructed with m_status = " << m_status << std::endl;
 }
 
 wtf_client :: command :: ~command() throw ()
@@ -74,7 +75,7 @@ wtf_client :: command :: set_sent_to(const wtf_node& s)
 void
 wtf_client :: command :: fail(wtf_returncode status)
 {
-    *m_status = status;
+    m_status = status;
 }
 
 void
@@ -96,5 +97,5 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
         backing.release();
     }
 
-    *m_status = status;
+    m_status = status;
 }

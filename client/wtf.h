@@ -40,6 +40,9 @@
 #include <e/buffer.h>
 #include <e/intrusive_ptr.h>
 
+// HyperDex
+#include <hyperdex.h>
+
 //wtf
 #include <common/network_msgtype.h>
 
@@ -87,7 +90,8 @@ class tool_wrapper;
 class wtf_client
 {
     public:
-        wtf_client(const char* host, in_port_t port);
+        wtf_client(const char* host, in_port_t port,
+                   const char* hyper_host, in_port_t hyper_port);
         ~wtf_client() throw ();
 
     public:
@@ -179,6 +183,7 @@ class wtf_client
         const char* m_last_error_file;
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
+        hyperclient m_hyperclient;
 };
 
 std::ostream&

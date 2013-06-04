@@ -26,6 +26,7 @@ m4
 Makefile
 Makefile.in
 missing
+testdata
 wtf
 wtf-cli
 wtf-coordinator
