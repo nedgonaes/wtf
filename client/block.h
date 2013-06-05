@@ -36,6 +36,7 @@
 
 //WTF
 #include <client/wtf.h>
+#include <common/block_id.h>
 
 class wtf_client::block
 {
@@ -59,7 +60,7 @@ class wtf_client::block
 
     private:
         block& operator = (const block&);
-        typedef std::vector<std::pair<uint64_t, uint64_t> > block_list;
+        typedef std::vector<e::intrusive_ptr<wtf::block_id> > block_list;
 
     private:
         size_t m_ref;

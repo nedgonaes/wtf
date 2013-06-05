@@ -25,7 +25,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-//WTF
+// WTF
 #include <client/wtf.h>
 #include <client/block.h>
 
@@ -53,5 +53,6 @@ wtf_client :: block :: update(uint64_t version,
         m_block_list.clear();
     }
 
-    m_block_list.push_back(std::make_pair(sid, bid));
+    e::intrusive_ptr<wtf::block_id> b = new wtf::block_id(sid, bid);
+    m_block_list.push_back(b);
 }

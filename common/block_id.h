@@ -35,6 +35,7 @@
 #include <iostream>
 
 // e
+#include <e/intrusive_ptr.h>
 #include <e/buffer.h>
 
 namespace wtf
@@ -53,12 +54,24 @@ namespace wtf
         public:
             block_id();
             explicit block_id(uint64_t sid, uint64_t bid);
+            ~block_id() throw();
 
         public: 
             uint64_t get_blocknumber() const { return m_bid; } 
             uint64_t get_serverid() const { return m_sid; } 
 
+        private:
+            friend class e::intrusive_ptr<block_id>;
+
+        private:
+            block_id(const block_id&);
+
+        private:
+            void inc() { ++m_ref; }
+            void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
+
         private: 
+            uint64_t m_ref;
             uint64_t m_sid; 
             uint64_t m_bid; 
     }; 
