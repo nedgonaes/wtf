@@ -39,6 +39,7 @@ noinst_HEADERS += client/block.h
 noinst_HEADERS += client/command.h
 noinst_HEADERS += client/coordinator_link.h
 noinst_HEADERS += client/file.h
+noinst_HEADERS += common/block_id.h
 noinst_HEADERS += common/wtf_node.h
 noinst_HEADERS += common/configuration.h
 noinst_HEADERS += common/coordinator_returncode.h
@@ -109,6 +110,7 @@ libwtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 libwtf_la_SOURCES =
 libwtf_la_SOURCES += common/wtf_node.cc
+libwtf_la_SOURCES += common/block_id.cc
 libwtf_la_SOURCES += common/configuration.cc
 libwtf_la_SOURCES += common/mapper.cc
 libwtf_la_SOURCES += common/network_msgtype.cc

@@ -25,33 +25,71 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-//WTF
-#include <client/wtf.h>
-#include <client/block.h>
+#ifndef wtf_common_block_id_h_
+#define wtf_common_block_id_h_
 
-wtf_client :: block :: block()
-   : m_ref(0)
-   , m_block_list()
-   , m_length(0)
-   , m_version(0)
-{
-}
+// C
+#include <stdint.h>
 
-wtf_client :: block :: ~block() throw()
-{
-}
+// C++
+#include <iostream>
 
-void
-wtf_client :: block :: update(uint64_t version,
-                              uint64_t length,
-                              uint64_t sid,
-                              uint64_t bid)
+// e
+#include <e/buffer.h>
+
+namespace wtf
 {
-    if(m_version < version)
-    {
-        m_version = version;
-        m_block_list.clear();
+#define OPERATOR(OP) \
+    inline bool \
+    operator OP (const block_id& lhs, const block_id& rhs) \
+    { \
+        return lhs.get_serverid() OP rhs.get_serverid() \
+                || (lhs.get_serverid() == rhs.get_serverid() \
+                && lhs.get_blocknumber() OP rhs.get_blocknumber()); \
     }
 
-    m_block_list.push_back(std::make_pair(sid, bid));
+    class block_id
+    { 
+        public:
+            block_id();
+            explicit block_id(uint64_t sid, uint64_t bid);
+
+        public: 
+            uint64_t get_blocknumber() const { return m_bid; } 
+            uint64_t get_serverid() const { return m_sid; } 
+
+        private: 
+            uint64_t m_sid; 
+            uint64_t m_bid; 
+    }; 
+
+    inline std::ostream& 
+    operator << (std::ostream& lhs, const block_id& rhs) 
+    { 
+        return lhs << "block_id(" << rhs.get_serverid() << ", " << rhs.get_blocknumber() << ")"; 
+    } 
+
+    inline e::buffer::packer 
+    operator << (e::buffer::packer pa, const block_id& rhs) 
+    { 
+        return pa << rhs.get_serverid() << rhs.get_blocknumber(); 
+    } 
+
+    inline e::unpacker 
+    operator >> (e::unpacker up, block_id& rhs) 
+    { 
+        uint64_t sid; 
+        uint64_t bid; 
+        up = up >> sid >> bid; 
+        rhs = block_id(sid, bid); 
+        return up; 
+    } 
+
+    OPERATOR(<) 
+    OPERATOR(<=) 
+    OPERATOR(==) 
+    OPERATOR(!=) 
+    OPERATOR(>=) 
+    OPERATOR(>)
 }
+#endif /* wtf_common_block_id_h_ */
