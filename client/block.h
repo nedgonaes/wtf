@@ -25,8 +25,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_file_h_
-#define wtf_file_h_
+#ifndef wtf_block_h_
+#define wtf_block_h_
 
 // e
 #include <e/intrusive_ptr.h>
@@ -34,52 +34,38 @@
 // STL
 #include <vector>
 
-//PO6
-#include <po6/pathname.h>
-
 //WTF
-#include <client/command.h>
 #include <client/wtf.h>
 
-class wtf_client::file
+class wtf_client::block
 {
     public:
-        file(const char* path);
-        ~file() throw ();
+        block();
+        ~block() throw ();
 
     public:
-        void set_fd(int64_t fd) { m_fd = fd; }
-        int64_t fd() { return m_fd; }
-        void path(const char* path) { m_path = po6::pathname(path); }
-        po6::pathname path() { return m_path; }
-        void add_command(e::intrusive_ptr<command>& c);
-        int64_t gc_completed(wtf_returncode* rc);
-        command_map::iterator commands_begin();
-        command_map::iterator commands_end(); 
-        void set_offset(uint64_t offset) { m_offset = offset; }
+        void update(uint64_t version, uint64_t length,
+                    uint64_t sid, uint64_t bid);
 
     private:
-        friend class e::intrusive_ptr<file>;
+        friend class e::intrusive_ptr<block>;
 
     private:
-        file(const file&);
+        block(const block&);
 
     private:
         void inc() { ++m_ref; }
         void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
 
     private:
-        file& operator = (const file&);
-        typedef std::map<uint64_t, std::pair<uint64_t, uint64_t> > block_map;
+        block& operator = (const block&);
+        typedef std::vector<std::pair<uint64_t, uint64_t> > block_list;
 
     private:
         size_t m_ref;
-        po6::pathname m_path;
-        wtf_client* m_client;
-        int64_t m_fd;
-        command_map m_commands;
-        block_map m_block_map;
-        uint64_t m_offset;
+        block_list m_block_list;
+        uint64_t m_length;
+        uint64_t m_version;
 };
 
-#endif // wtf_file_h_
+#endif // wtf_block_h_

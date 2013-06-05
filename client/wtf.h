@@ -143,6 +143,7 @@ class wtf_client
     private:
         class command;
         class file;
+        class block;
         typedef std::map<uint64_t, e::intrusive_ptr<command> > command_map;
         typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
 
@@ -160,6 +161,11 @@ class wtf_client
                                         std::auto_ptr<e::buffer> msg,
                                         e::unpacker up,
                                         wtf_returncode* status);
+        void handle_put(e::intrusive_ptr<command>& cmd, 
+                        e::intrusive_ptr<file>& f);
+        void handle_get(e::intrusive_ptr<command>& cmd, 
+                        e::intrusive_ptr<file>& f);
+
         // Utilities
         uint64_t generate_token();
         void reset_to_disconnected();

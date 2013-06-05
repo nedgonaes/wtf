@@ -42,6 +42,9 @@ class wtf_client::command
         command(wtf_returncode* status,
                 uint64_t nonce,
                 int64_t fd,
+                uint64_t block,
+                uint64_t offset,
+                uint64_t length,
                 wtf::wtf_network_msgtype msgtype,
                 std::auto_ptr<e::buffer> msg,
                 const char** output, size_t* output_sz);
@@ -50,8 +53,13 @@ class wtf_client::command
     public:
         uint64_t nonce() const throw () { return m_nonce; }
         wtf::wtf_network_msgtype msgtype() const throw () { return m_msgtype; }
+        const char* output() { return *m_output; }
+        size_t output_sz() { return *m_output_sz; }
         uint64_t clientid() const throw () { return m_clientid; }
         int64_t fd() const throw() { return m_fd; }
+        int64_t block() const throw() { return m_block; }
+        int64_t offset() const throw() { return m_offset; }
+        int64_t length() const throw() { return m_length; }
         e::buffer* request() const throw () { return m_request.get(); }
         const wtf::wtf_node& sent_to() const throw () { return m_sent_to; }
         const char* last_error_desc() const throw() { return m_last_error_desc; }
@@ -89,6 +97,9 @@ class wtf_client::command
         uint64_t m_nonce;
         uint64_t m_clientid;
         int64_t m_fd;
+        uint64_t m_block;
+        uint64_t m_offset;
+        uint64_t m_length;
         std::auto_ptr<e::buffer> m_request;
         wtf_returncode m_status;
         const char** m_output;

@@ -158,7 +158,9 @@ wtf_client :: send(uint64_t token,
     *status = WTF_GARBAGE;
 
     // Create the command object
-    e::intrusive_ptr<command> cmd = new command(status, nonce, fd, msgtype, msg, output, output_sz);
+    e::intrusive_ptr<command> cmd = new command(status, nonce, fd, 
+                                                0, 0, 0, /* XXX: put block id, offset, length */
+                                                msgtype, msg, output, output_sz);
     return send_to_blockserver(cmd, status);
 }
 
@@ -717,7 +719,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         std::cout << "Flushing " << cmd->nonce() << std::endl;
         std::cout << "STATUS: " << cmd->status();
 
-        if (it->second->status() != WTF_SUCCESS)
+        if (cmd->status() != WTF_SUCCESS)
         {
             *rc = WTF_GARBAGE;
 
@@ -728,6 +730,19 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
             {
                 return rid;
             }
+        }
+
+        switch (cmd->msgtype())
+        {
+            case WTFNET_PUT:
+                handle_put(cmd, f);
+                break;
+            case WTFNET_GET:
+                handle_get(cmd, f);
+                break;
+            default:
+                //XXX: handle this case.
+                abort();
         }
 
     }
@@ -812,12 +827,6 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     // Parse the command response
     uint64_t nonce;
     wtf::response_returncode rc;
-    uint64_t sid; 
-    uint64_t bid;
-
-    up = up >> nonce >> rc >> sid >> bid;
-
-    std::cout << "sid: " << sid << "bid: " << bid << std::endl;
 
     if (up.error())
     {
@@ -882,6 +891,39 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     map->erase(it);
     m_complete.insert(std::make_pair(c->nonce(), c));
     return 0;
+}
+
+void
+wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
+                         e::intrusive_ptr<file>& f)
+{
+    uint64_t sid; 
+    uint64_t bid;
+    uint64_t offset = cmd->offset();
+    uint64_t len = cmd->length();
+    e::buffer* msg(e::buffer::create(cmd->output(), cmd->output_sz()));
+    e::unpacker up = msg->unpack_from(0);
+    up = up >> sid >> bid;
+
+    if (up.error())
+    {
+        m_last_error_host = cmd->sent_to().address;
+        //XXX: implement proper return value
+        return;
+    }
+
+    std::cout << "sid: " << sid << "bid: " << bid << std::endl;
+
+    //f->update_blocks(offset, len, sid, bid);
+
+    //XXX: Apply changes to cached block mapping in f.
+    
+}
+
+void
+wtf_client :: handle_get(e::intrusive_ptr<command>& cmd,
+                         e::intrusive_ptr<file>& f)
+{
 }
 
 void
