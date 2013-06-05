@@ -183,7 +183,7 @@ class wtf_client
         const char* m_last_error_file;
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
-        hyperclient* m_hyperclient;
+        struct hyperclient* m_hyperclient;
 };
 
 std::ostream&

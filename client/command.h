@@ -32,6 +32,7 @@
 #include <e/intrusive_ptr.h>
 
 // WTF
+#include "common/network_msgtype.h"
 #include "common/wtf_node.h"
 #include "client/wtf.h"
 
@@ -40,9 +41,9 @@ class wtf_client::command
     public:
         command(wtf_returncode* status,
                 uint64_t nonce,
+                wtf::wtf_network_msgtype msgtype,
                 std::auto_ptr<e::buffer> msg,
-                const char** output,
-                size_t* output_sz);
+                const char** output, size_t* output_sz);
         ~command() throw ();
 
     public:
@@ -91,6 +92,7 @@ class wtf_client::command
         const char** m_output;
         size_t* m_output_sz;
         wtf::wtf_node m_sent_to;
+        wtf::wtf_network_msgtype m_msgtype;
         const char* m_last_error_desc;
         const char* m_last_error_file;
         uint64_t m_last_error_line;

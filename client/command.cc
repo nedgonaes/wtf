@@ -37,6 +37,7 @@ using wtf::wtf_node;
 
 wtf_client :: command :: command(wtf_returncode* st,
                                        uint64_t n,
+                                       wtf::wtf_network_msgtype msgtype,
                                        std::auto_ptr<e::buffer> m,
                                        const char** output,
                                        size_t* output_sz)
@@ -48,6 +49,7 @@ wtf_client :: command :: command(wtf_returncode* st,
     , m_output(output)
     , m_output_sz(output_sz)
     , m_sent_to()
+    , m_msgtype(msgtype)
     , m_last_error_desc()
     , m_last_error_file()
     , m_last_error_line()

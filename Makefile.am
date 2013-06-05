@@ -118,7 +118,7 @@ libwtf_la_SOURCES += client/coordinator_link.cc
 libwtf_la_SOURCES += client/file.cc
 libwtf_la_SOURCES += client/wtf.cc
 
-libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) $(HYPERDEX_LIBS) -lglog
+libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) -lglog
 
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 
@@ -126,7 +126,7 @@ wtf_SOURCES = wtf.cc
 wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 
 wtf_cli_SOURCES = tools/cli.cc
-wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS)
+wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt

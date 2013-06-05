@@ -125,6 +125,12 @@ wtf_client :: wtf_client(const char* host, in_port_t port,
     , m_last_error_host()
     , m_hyperclient()
 {
+    m_hyperclient = hyperclient_create(hyper_host, hyper_port);
+    if(!m_hyperclient)
+    {
+        //XXX: take appropriate action.
+        abort();
+    }
 }
 
 wtf_client :: ~wtf_client() throw ()
@@ -152,7 +158,7 @@ wtf_client :: send(uint64_t token,
     *status = WTF_GARBAGE;
 
     // Create the command object
-    e::intrusive_ptr<command> cmd = new command(status, nonce, msg, output, output_sz);
+    e::intrusive_ptr<command> cmd = new command(status, nonce, msgtype, msg, output, output_sz);
     cmd->set_fd(fd);
     return send_to_blockserver(cmd, status);
 }
@@ -706,9 +712,11 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
     for (command_map::iterator it = f->commands_begin();
          it != f->commands_end(); ++it)
     {
-        std::cout << "Flushing " << it->second->nonce() << std::endl;
-        std::cout << "it->first: " << it->first << std::endl;
-        std::cout << "STATUS: " << it->second->status();
+        e::intrusive_ptr<command> cmd = it->second;
+        uint64_t id = it->first;
+
+        std::cout << "Flushing " << cmd->nonce() << std::endl;
+        std::cout << "STATUS: " << cmd->status();
 
         if (it->second->status() != WTF_SUCCESS)
         {
@@ -722,6 +730,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
                 return rid;
             }
         }
+
     }
 
     std::cout << "Done flushing." << std::endl;
