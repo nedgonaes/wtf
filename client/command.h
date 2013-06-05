@@ -41,6 +41,7 @@ class wtf_client::command
     public:
         command(wtf_returncode* status,
                 uint64_t nonce,
+                int64_t fd,
                 wtf::wtf_network_msgtype msgtype,
                 std::auto_ptr<e::buffer> msg,
                 const char** output, size_t* output_sz);
@@ -48,6 +49,7 @@ class wtf_client::command
 
     public:
         uint64_t nonce() const throw () { return m_nonce; }
+        wtf::wtf_network_msgtype msgtype() const throw () { return m_msgtype; }
         uint64_t clientid() const throw () { return m_clientid; }
         int64_t fd() const throw() { return m_fd; }
         e::buffer* request() const throw () { return m_request.get(); }

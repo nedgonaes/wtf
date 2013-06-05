@@ -158,8 +158,7 @@ wtf_client :: send(uint64_t token,
     *status = WTF_GARBAGE;
 
     // Create the command object
-    e::intrusive_ptr<command> cmd = new command(status, nonce, msgtype, msg, output, output_sz);
-    cmd->set_fd(fd);
+    e::intrusive_ptr<command> cmd = new command(status, nonce, fd, msgtype, msg, output, output_sz);
     return send_to_blockserver(cmd, status);
 }
 

@@ -37,12 +37,14 @@ using wtf::wtf_node;
 
 wtf_client :: command :: command(wtf_returncode* st,
                                        uint64_t n,
+                                       int64_t fd,
                                        wtf::wtf_network_msgtype msgtype,
                                        std::auto_ptr<e::buffer> m,
                                        const char** output,
                                        size_t* output_sz)
     : m_ref(0)
     , m_nonce(n)
+    , m_fd(fd)
     , m_clientid(n)
     , m_request(m)
     , m_status(*st)
