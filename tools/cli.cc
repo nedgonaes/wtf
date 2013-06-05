@@ -58,8 +58,6 @@ main(int argc, const char* argv[])
     e::guard g = e::makeguard(poptFreeContext, poptcon); g.use_variable();
     poptSetOtherOptionHelp(poptcon, "[OPTIONS]");
     int rc;
-    bool h = false;
-    bool p = false;
 
     while ((rc = poptGetNextOpt(poptcon)) != -1)
     {
@@ -70,14 +68,24 @@ main(int argc, const char* argv[])
                 {
                     return EXIT_FAILURE;
                 }
-                h = true;
                 break;
             case 'p':
                 if (!check_port())
                 {
                     return EXIT_FAILURE;
                 }
-                p = true;
+                break;
+            case 'H':
+                if (!check_hyper_host())
+                {
+                    return EXIT_FAILURE;
+                }
+                break;
+            case 'P':
+                if (!check_hyper_port())
+                {
+                    return EXIT_FAILURE;
+                }
                 break;
             case POPT_ERROR_NOARG:
             case POPT_ERROR_BADOPT:
@@ -92,16 +100,6 @@ main(int argc, const char* argv[])
                 std::cerr << "logic error in argument parsing" << std::endl;
                 return EXIT_FAILURE;
         }
-    }
-
-    if (!h)
-    {
-        _connect_host = "127.0.0.1";
-    }
-    
-    if (!p)
-    {
-        _connect_port = 1982;
     }
 
     const char** args = poptGetArgs(poptcon);
@@ -121,7 +119,7 @@ main(int argc, const char* argv[])
 
     try
     {
-        wtf_client r(_connect_host, _connect_port);
+        wtf_client r(_connect_host, _connect_port, _hyper_host, _hyper_port);
         std::string s;
 
         while (std::getline(std::cin, s))

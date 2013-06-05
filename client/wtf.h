@@ -41,7 +41,7 @@
 #include <e/intrusive_ptr.h>
 
 // HyperDex
-#include <hyperdex.h>
+#include <hyperclient.h>
 
 //wtf
 #include <common/network_msgtype.h>
@@ -183,7 +183,7 @@ class wtf_client
         const char* m_last_error_file;
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
-        hyperclient m_hyperclient;
+        hyperclient* m_hyperclient;
 };
 
 std::ostream&

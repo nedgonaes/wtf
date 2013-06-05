@@ -118,7 +118,7 @@ libwtf_la_SOURCES += client/coordinator_link.cc
 libwtf_la_SOURCES += client/file.cc
 libwtf_la_SOURCES += client/wtf.cc
 
-libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) -lglog
+libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) $(HYPERDEX_LIBS) -lglog
 
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 

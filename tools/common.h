@@ -32,7 +32,9 @@
 #include <iostream>
 
 static const char* _connect_host = "127.0.0.1";
+static const char* _hyper_host = "127.0.0.1";
 static unsigned long _connect_port = 1982;
+static unsigned long _hyper_port = 1980;
 
 extern "C"
 {
@@ -43,6 +45,12 @@ static struct poptOption connect_popts[] = {
      "addr"},
     {"port", 'p', POPT_ARG_LONG, &_connect_port, 'p',
      "connect to an alternative port (default: 1982)",
+     "port"},
+    {"hyperdex host", 'H', POPT_ARG_STRING, &_hyper_host, 'H',
+     "HyperDex cluster containing block mappings. (default: 127.0.0.1)",
+     "IP"},
+    {"hyperdex-port", 'P', POPT_ARG_LONG, &_hyper_port, 'P',
+     "listen on an alternative port (default: 1980)",
      "port"},
     POPT_TABLEEND
 };
@@ -68,3 +76,22 @@ check_port()
 
     return true;
 }
+
+static bool
+check_hyper_port()
+{
+    if (_connect_port >= (1 << 16))
+    {
+        std::cerr << "port number to connect to is out of range" << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+static bool
+check_hyper_host()
+{
+    return true;
+}
+

@@ -56,6 +56,7 @@ class wtf_client::file
         int64_t gc_completed(wtf_returncode* rc);
         command_map::iterator commands_begin();
         command_map::iterator commands_end(); 
+        void set_offset(uint64_t offset) { m_offset = offset; }
 
     private:
         friend class e::intrusive_ptr<file>;
@@ -69,6 +70,7 @@ class wtf_client::file
 
     private:
         file& operator = (const file&);
+        typedef std::map<uint64_t, std::pair<uint64_t, uint64_t> > block_map;
 
     private:
         size_t m_ref;
@@ -76,6 +78,8 @@ class wtf_client::file
         wtf_client* m_client;
         int64_t m_fd;
         command_map m_commands;
+        block_map m_block_map;
+        uint64_t m_offset;
 };
 
 #endif // wtf_file_h_

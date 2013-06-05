@@ -40,7 +40,9 @@ wtf_client :: file :: file(const char* path)
     : m_ref(0)
     , m_path(path)
     , m_commands()
-    , m_fd()
+    , m_fd(0)
+    , m_block_map()
+    , m_offset(0)
 {
 }
 

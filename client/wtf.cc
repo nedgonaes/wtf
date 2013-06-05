@@ -123,7 +123,7 @@ wtf_client :: wtf_client(const char* host, in_port_t port,
     , m_last_error_file(__FILE__)
     , m_last_error_line(__LINE__)
     , m_last_error_host()
-    , m_hyperclient(hyper_host, hyper_port)
+    , m_hyperclient()
 {
 }
 

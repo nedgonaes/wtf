@@ -132,7 +132,7 @@ main(int argc, const char* argv[])
             return EXIT_FAILURE;
         }
 
-        wtf_client h(_connect_host, _connect_port);
+        wtf_client h(_connect_host, _connect_port, _hyper_host, _hyper_port);
         wtf::tool_wrapper t(&h);
 
         for (size_t i = 0; i < paths.size(); ++i)
