@@ -91,3 +91,13 @@ wtf_client :: file :: add_command(e::intrusive_ptr<command>& cmd)
 {
     m_commands[cmd->nonce()] = cmd;
 }
+
+void
+wtf_client :: file :: update_blocks(uint64_t offset, uint64_t len, 
+                           uint64_t version, uint64_t sid,
+                           uint64_t bid)
+{
+    //compute block number from offset
+    //get block object from the block map
+    //update the block
+}

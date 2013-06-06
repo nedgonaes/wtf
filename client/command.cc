@@ -41,6 +41,7 @@ wtf_client :: command :: command(wtf_returncode* st,
                                        uint64_t block,
                                        uint64_t offset,
                                        uint64_t length,
+                                       uint64_t version,
                                        wtf::wtf_network_msgtype msgtype,
                                        std::auto_ptr<e::buffer> m,
                                        const char** output,
@@ -51,6 +52,7 @@ wtf_client :: command :: command(wtf_returncode* st,
     , m_block(block)
     , m_offset(offset)
     , m_length(length)
+    , m_version(version)
     , m_clientid(n)
     , m_request(m)
     , m_status(*st)

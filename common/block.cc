@@ -35,6 +35,7 @@ block :: block()
    : m_ref(0)
    , m_block_list()
    , m_version(0)
+   , m_length(0)
 {
 }
 
@@ -44,10 +45,12 @@ block :: ~block() throw()
 
 void
 block :: update(uint64_t version,
-                              const wtf::block_id& bid)
+                uint64_t len,
+                const wtf::block_id& bid)
 {
     if(m_version < version)
     {
+        m_length = len;
         m_version = version;
         m_block_list.clear();
     }

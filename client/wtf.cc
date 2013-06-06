@@ -159,7 +159,7 @@ wtf_client :: send(uint64_t token,
 
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, fd, 
-                                                0, 0, 0, /* XXX: put block id, offset, length */
+                                                0, 0, 0, 0, /* XXX: put block id, offset, length, version*/
                                                 msgtype, msg, output, output_sz);
     return send_to_blockserver(cmd, status);
 }
@@ -914,7 +914,7 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 
     std::cout << "sid: " << sid << "bid: " << bid << std::endl;
 
-    //f->update_blocks(offset, len, sid, bid);
+    f->update_blocks(offset, len, cmd->version(), sid, bid);
 
     //XXX: Apply changes to cached block mapping in f.
     

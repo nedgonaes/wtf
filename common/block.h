@@ -48,7 +48,7 @@ class block
         ~block() throw ();
 
     public:
-        void update(uint64_t version, const wtf::block_id& bid);
+        void update(uint64_t version, uint64_t len, const wtf::block_id& bid);
         uint64_t size() { return m_block_list.size(); }
 
     private:
@@ -75,6 +75,7 @@ class block
         size_t m_ref;
         block_list m_block_list;
         uint64_t m_version;
+        uint64_t m_length;
 };
 
 template <typename T>
@@ -99,15 +100,23 @@ operator << (std::ostream& lhs, const std::vector<T>& rhs)
 inline std::ostream& 
 operator << (std::ostream& lhs, const block& rhs) 
 { 
-    lhs << "block(";
+    lhs << "block(len=" << rhs.m_length << ", chunks=[";
+
+    bool first = true;
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)
     {
+        if(!first)
+        {
+            lhs << ",";
+            first = false;
+        }
+
         lhs << *it;
     }
 
-    lhs << ")";
+    lhs << "])";
 
     return lhs;
 } 
@@ -115,7 +124,7 @@ operator << (std::ostream& lhs, const block& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const block& rhs) 
 { 
-    pa = pa << rhs.m_block_list.size(); 
+    pa = pa << rhs.m_length << rhs.m_block_list.size(); 
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)
@@ -126,17 +135,19 @@ operator << (e::buffer::packer pa, const block& rhs)
     return pa;
 } 
 
-    inline e::unpacker 
+inline e::unpacker 
 operator >> (e::unpacker up, block& rhs) 
 { 
     uint64_t size;
-    up = up >> size; 
+    uint64_t len;
+
+    up = up >> len >> size; 
 
     for (uint64_t i = 0; i < size; ++i)
     {
         block_id bid;
         up = up >> bid;
-        rhs.update(0, bid);
+        rhs.update(0, len, bid);
     }
 
     return up; 
