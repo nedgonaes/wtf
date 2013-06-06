@@ -468,8 +468,8 @@ daemon :: process_put(const wtf::connection& conn,
                             e::unpacker up)
 {
     wtf::response_returncode rc;
-    server_id sid;
-    block_id bid;
+    uint64_t sid;
+    uint64_t bid;
     ssize_t ret = 0;
 
     e::slice data = up.as_slice();
@@ -505,8 +505,8 @@ daemon :: process_get(const wtf::connection& conn,
                       e::unpacker up)
 {
     wtf::response_returncode rc;
-    server_id sid;
-    block_id bid;
+    uint64_t sid;
+    uint64_t bid;
     uint32_t len;
     ssize_t ret;
 

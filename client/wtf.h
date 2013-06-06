@@ -143,7 +143,6 @@ class wtf_client
     private:
         class command;
         class file;
-        class block;
         typedef std::map<uint64_t, e::intrusive_ptr<command> > command_map;
         typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
 

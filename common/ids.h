@@ -88,7 +88,6 @@ namespace wtf
 CREATE_ID(cluster)
 CREATE_ID(version)
 CREATE_ID(server)
-CREATE_ID(block)
 
 } // namespace wtf
 

@@ -27,25 +27,24 @@
 
 // WTF
 #include <client/wtf.h>
-#include <client/block.h>
+#include <common/block.h>
 
-wtf_client :: block :: block()
+using wtf::block;
+
+block :: block()
    : m_ref(0)
    , m_block_list()
-   , m_length(0)
    , m_version(0)
 {
 }
 
-wtf_client :: block :: ~block() throw()
+block :: ~block() throw()
 {
 }
 
 void
-wtf_client :: block :: update(uint64_t version,
-                              uint64_t length,
-                              uint64_t sid,
-                              uint64_t bid)
+block :: update(uint64_t version,
+                              const wtf::block_id& bid)
 {
     if(m_version < version)
     {
@@ -53,6 +52,5 @@ wtf_client :: block :: update(uint64_t version,
         m_block_list.clear();
     }
 
-    e::intrusive_ptr<wtf::block_id> b = new wtf::block_id(sid, bid);
-    m_block_list.push_back(b);
+    m_block_list.push_back(bid);
 }

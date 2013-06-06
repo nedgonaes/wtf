@@ -40,6 +40,7 @@
 //WTF
 #include <client/command.h>
 #include <client/wtf.h>
+#include <common/block.h>
 
 class wtf_client::file
 {
@@ -70,7 +71,7 @@ class wtf_client::file
 
     private:
         file& operator = (const file&);
-        typedef std::map<uint64_t, std::pair<uint64_t, uint64_t> > block_map;
+        typedef std::map<uint64_t, wtf::block > block_map;
 
     private:
         size_t m_ref;

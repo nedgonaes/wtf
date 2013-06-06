@@ -44,7 +44,7 @@ using wtf::block_storage_manager;
 
 block_storage_manager::block_storage_manager()
    : m_prefix()
-   , m_last_block_id()
+   , m_last_block_num()
    , m_path()
 {
 }
@@ -63,8 +63,8 @@ block_storage_manager::setup(uint64_t sid,
                              const po6::pathname path)
 {
     m_path = path;
-    m_prefix = server_id(sid);
-    m_last_block_id = block_id(0);
+    m_prefix = sid;
+    m_last_block_num = 0;
     if (mkdir(m_path.get(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0)
     {
         switch(errno)
@@ -84,12 +84,12 @@ block_storage_manager::setup(uint64_t sid,
 
 ssize_t
 block_storage_manager::write_block(const e::slice& data,
-                                   server_id& sid,
-                                   block_id& bid)
+                                   uint64_t sid,
+                                   uint64_t bid)
 {
     sid = m_prefix;
-    bid = block_id(m_last_block_id.get() + 1);
-    m_last_block_id = bid;
+    bid = m_last_block_num + 1;
+    m_last_block_num = bid;
 
     std::stringstream p;
     p << std::string(m_path.get()) << '/' << sid << bid;
@@ -112,8 +112,8 @@ block_storage_manager::write_block(const e::slice& data,
 }
 
 ssize_t
-block_storage_manager::read_block(server_id& sid,
-                                  block_id& bid,
+block_storage_manager::read_block(uint64_t sid,
+                                  uint64_t bid,
                                   std::vector<uint8_t>& data)
 {
     int ret;

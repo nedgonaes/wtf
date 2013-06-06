@@ -31,15 +31,13 @@
 using wtf::block_id;
 
 block_id :: block_id()
-    : m_ref(0)
-    , m_sid(0)
+    : m_sid(0)
     , m_bid(0)
 {
 }
 
 block_id :: block_id(uint64_t sid, uint64_t bid)
-    : m_ref(0)
-    , m_sid(sid)
+    : m_sid(sid)
     , m_bid(bid)
 {
 }

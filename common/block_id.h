@@ -40,13 +40,16 @@
 
 namespace wtf
 {
+
+#define OPERATORDECL(OP) \
+    bool \
+    operator OP (const block_id& lhs, const block_id& rhs)
 #define OPERATOR(OP) \
-    inline bool \
-    operator OP (const block_id& lhs, const block_id& rhs) \
+    inline OPERATORDECL(OP) \
     { \
-        return lhs.get_serverid() OP rhs.get_serverid() \
-                || (lhs.get_serverid() == rhs.get_serverid() \
-                && lhs.get_blocknumber() OP rhs.get_blocknumber()); \
+        return lhs.m_sid OP rhs.m_sid \
+                || (lhs.m_sid == rhs.m_sid \
+                && lhs.m_bid OP rhs.m_bid); \
     }
 
     class block_id
@@ -56,22 +59,21 @@ namespace wtf
             explicit block_id(uint64_t sid, uint64_t bid);
             ~block_id() throw();
 
-        public: 
-            uint64_t get_blocknumber() const { return m_bid; } 
-            uint64_t get_serverid() const { return m_sid; } 
-
         private:
-            friend class e::intrusive_ptr<block_id>;
-
-        private:
-            block_id(const block_id&);
-
-        private:
-            void inc() { ++m_ref; }
-            void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
+            friend std::ostream&
+                operator << (std::ostream& lhs, const block_id& rhs);
+            friend e::buffer::packer
+                operator << (e::buffer::packer pa, const block_id& rhs);
+            friend e::unpacker
+                operator >> (e::unpacker up, block_id& rhs);
+            friend OPERATORDECL(<);
+            friend OPERATORDECL(<=);
+            friend OPERATORDECL(==); 
+            friend OPERATORDECL(!=); 
+            friend OPERATORDECL(>=); 
+            friend OPERATORDECL(>);
 
         private: 
-            uint64_t m_ref;
             uint64_t m_sid; 
             uint64_t m_bid; 
     }; 
@@ -79,22 +81,19 @@ namespace wtf
     inline std::ostream& 
     operator << (std::ostream& lhs, const block_id& rhs) 
     { 
-        return lhs << "block_id(" << rhs.get_serverid() << ", " << rhs.get_blocknumber() << ")"; 
+        return lhs << "block_id(server=" << rhs.m_sid << ", chunk=" << rhs.m_bid << ")"; 
     } 
 
     inline e::buffer::packer 
     operator << (e::buffer::packer pa, const block_id& rhs) 
     { 
-        return pa << rhs.get_serverid() << rhs.get_blocknumber(); 
+        return pa << rhs.m_sid << rhs.m_bid; 
     } 
 
     inline e::unpacker 
     operator >> (e::unpacker up, block_id& rhs) 
     { 
-        uint64_t sid; 
-        uint64_t bid; 
-        up = up >> sid >> bid; 
-        rhs = block_id(sid, bid); 
+        up = up >> rhs.m_sid >> rhs.m_bid; 
         return up; 
     } 
 

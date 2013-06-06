@@ -38,18 +38,27 @@
 #include <client/wtf.h>
 #include <common/block_id.h>
 
-class wtf_client::block
+namespace wtf
+{
+
+class block
 {
     public:
         block();
         ~block() throw ();
 
     public:
-        void update(uint64_t version, uint64_t length,
-                    uint64_t sid, uint64_t bid);
+        void update(uint64_t version, const wtf::block_id& bid);
+        uint64_t size() { return m_block_list.size(); }
 
     private:
         friend class e::intrusive_ptr<block>;
+        friend std::ostream& 
+            operator << (std::ostream& lhs, const block& rhs);
+        friend e::buffer::packer
+            operator << (e::buffer::packer pa, const block& rhs);
+        friend e::unpacker
+            operator >> (e::unpacker up, block& rhs);
 
     private:
         block(const block&);
@@ -60,13 +69,78 @@ class wtf_client::block
 
     private:
         block& operator = (const block&);
-        typedef std::vector<e::intrusive_ptr<wtf::block_id> > block_list;
+        typedef std::vector<wtf::block_id> block_list;
 
     private:
         size_t m_ref;
         block_list m_block_list;
-        uint64_t m_length;
         uint64_t m_version;
 };
 
+template <typename T>
+    std::ostream&
+operator << (std::ostream& lhs, const std::vector<T>& rhs)
+{
+    for (size_t i = 0; i < rhs.size(); ++i)
+    {
+        if (i > 0)
+        {
+            lhs << " " << rhs;
+        }
+        else
+        {
+            lhs << rhs;
+        }
+    }
+
+    return lhs;
+}
+
+inline std::ostream& 
+operator << (std::ostream& lhs, const block& rhs) 
+{ 
+    lhs << "block(";
+
+    for (block::block_list::const_iterator it = rhs.m_block_list.begin();
+            it < rhs.m_block_list.end(); ++it)
+    {
+        lhs << *it;
+    }
+
+    lhs << ")";
+
+    return lhs;
+} 
+
+inline e::buffer::packer 
+operator << (e::buffer::packer pa, const block& rhs) 
+{ 
+    pa = pa << rhs.m_block_list.size(); 
+
+    for (block::block_list::const_iterator it = rhs.m_block_list.begin();
+            it < rhs.m_block_list.end(); ++it)
+    {
+        pa = pa << *it;
+    }
+
+    return pa;
+} 
+
+    inline e::unpacker 
+operator >> (e::unpacker up, block& rhs) 
+{ 
+    uint64_t size;
+    up = up >> size; 
+
+    for (uint64_t i = 0; i < size; ++i)
+    {
+        block_id bid;
+        up = up >> bid;
+        rhs.update(0, bid);
+    }
+
+    return up; 
+} 
+
+}
 #endif // wtf_block_h_

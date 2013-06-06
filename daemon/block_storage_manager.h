@@ -57,16 +57,16 @@ namespace wtf
 
         public:
             ssize_t write_block(const e::slice& data,
-                             server_id& sid,
-                             block_id& bid);
-            ssize_t read_block(server_id& sid,
-                            block_id& bid,
+                             uint64_t sid,
+                             uint64_t bid);
+            ssize_t read_block(uint64_t sid,
+                            uint64_t bid,
                             std::vector<uint8_t>& data);
             void stat();
 
         private:
-            server_id m_prefix;
-            block_id m_last_block_id;
+            uint64_t m_prefix;
+            uint64_t m_last_block_num;
             po6::pathname m_path;
     };
 }
