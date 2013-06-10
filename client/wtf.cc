@@ -635,11 +635,16 @@ wtf_client :: open(const char* path)
     return m_fileno++;
 }
 
+void
+wtf_client :: lseek(int64_t fd, uint64_t offset)
+{
+    m_fds[fd]->set_offset(offset);
+}
+
 int64_t
 wtf_client :: write(int64_t fd,
                     const char* data,
                     uint32_t data_sz,
-                    uint64_t offset,
                     uint32_t replicas,
                     wtf_returncode* status)
 {
@@ -661,14 +666,14 @@ wtf_client :: write(int64_t fd,
 
     while(rem > 0)
     {
-        uint64_t bid = offset/CHUNKSIZE;
-        uint64_t len = ROUNDUP(offset, CHUNKSIZE) - offset + 1;
+        uint64_t bid = f->offset()/CHUNKSIZE;
+        uint64_t len = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
         uint64_t version = f->get_block_version(bid) + 1;
-        uint64_t block_off = offset - offset/CHUNKSIZE * offset;
+        uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * f->offset();
 
         for (int i = 0; i < replicas; ++i)
         {
-            rid = send(0, msgtype, data + offset, len,
+            rid = send(0, msgtype, data, len,
                     bid, block_off, version,
                     status, &output, &output_sz, fd);
 
@@ -679,7 +684,8 @@ wtf_client :: write(int64_t fd,
         }
 
         rem -= len;
-        offset += len;
+        data += len;
+        f->set_offset(f->offset() + len);
     }
 
     return rid;

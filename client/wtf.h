@@ -105,10 +105,11 @@ class wtf_client
 
     public:
         int64_t open(const char* path);
+
+        void lseek(int64_t fd, uint64_t offset);
         int64_t write(int64_t fd,
                       const char* data,
                       uint32_t data_sz,
-                      uint64_t offset,
                       uint32_t replicas,
                       wtf_returncode* status);
         int64_t read(const char* data,

@@ -59,6 +59,7 @@ class wtf_client::file
         command_map::iterator commands_begin();
         command_map::iterator commands_end(); 
         void set_offset(uint64_t offset) { m_offset = offset; }
+        uint64_t offset() { return m_offset; }
         void update_blocks(uint64_t offset, uint64_t len, 
                            uint64_t version, uint64_t sid,
                            uint64_t bid);
