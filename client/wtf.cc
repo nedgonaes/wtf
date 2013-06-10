@@ -818,11 +818,6 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
     }
 }
 
-void
-update_inodes(int64_t fd)
-{
-}
-
 int64_t
 wtf_client :: handle_command_response(const po6::net::location& from,
                                             std::auto_ptr<e::buffer> msg,
