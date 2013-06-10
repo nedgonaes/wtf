@@ -664,6 +664,8 @@ wtf_client :: write(int64_t fd,
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
+    f->truncate();
+
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
@@ -929,20 +931,47 @@ int64_t
 wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
 {
     int64_t ret = 0;
-    std::auto_ptr<e::buffer> buf(e::buffer::create(f->pack_size()));
-    e::buffer::packer pa = buf->pack();
-    pa = pa << *f;
-    struct hyperclient_attribute attrs;
+    int i = 0;
 
-    //XXX; get rid of magic string.
-    attrs.attr = "blockmap";
-    attrs.value = reinterpret_cast<const char*>(buf->as_slice().data());
-    attrs.value_sz = buf->size();
-    attrs.datatype = HYPERDATATYPE_STRING;
+    std::vector<struct hyperclient_map_attribute> attrs;
     hyperclient_returncode status;
 
+    typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
+
     //XXX; get rid of magic string.
-    ret = m_hyperclient.put("wtf", f->path().get(), strlen(f->path().get()), &attrs, 1, &status);
+    const char* name = "blockmap";
+
+    for (block_map::const_iterator it = f->blocks_begin();
+         it != f->blocks_end(); ++it)
+    {
+        if (it->second->dirty())
+        {
+            ++i;
+            struct hyperclient_map_attribute attr;
+            attrs.push_back(attr);
+            attrs[i].attr = name;
+            attrs[i].map_key = reinterpret_cast<const char*>(&it->first); 
+            attrs[i].map_key_sz = sizeof(uint64_t);
+            attrs[i].map_key_datatype = HYPERDATATYPE_STRING;
+
+            std::auto_ptr<e::buffer> buf(e::buffer::create(it->second->pack_size()));
+            e::buffer::packer pa = buf->pack();
+            pa = pa << *it->second;
+            attrs[i].value = reinterpret_cast<const char*>(buf->as_slice().data());
+
+            attrs[i].value_datatype = HYPERDATATYPE_STRING;
+        }
+    }
+    
+    //XXX; get rid of magic string.
+    ret = m_hyperclient.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
+
+    for (std::vector<struct hyperclient_map_attribute>::iterator it = attrs.begin();
+         it != attrs.end(); ++it)
+    {
+       delete it->value;
+    }
+
 
     if (ret > 0)
     {
@@ -961,7 +990,8 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
             break;
         } 
     }
-    
+
+   
     return ret;
 }
 

@@ -48,10 +48,13 @@ class block
         ~block() throw ();
 
     public:
-        void update(uint64_t version, uint64_t len, const wtf::block_id& bid);
+        void update(uint64_t version, uint64_t len, 
+                    const wtf::block_id& bid, bool dirty);
         uint64_t size() { return m_block_list.size(); }
         uint64_t version() { return m_version; }
         uint64_t pack_size();
+        uint64_t resize(uint64_t sz) { m_length = sz; }
+        bool dirty() { return m_dirty; }
 
     private:
         friend class e::intrusive_ptr<block>;
@@ -78,6 +81,7 @@ class block
         block_list m_block_list;
         uint64_t m_version;
         uint64_t m_length;
+        bool m_dirty;
 };
 
 template <typename T>
@@ -149,7 +153,7 @@ operator >> (e::unpacker up, block& rhs)
     {
         block_id bid;
         up = up >> bid;
-        rhs.update(0, len, bid);
+        rhs.update(0, len, bid, false);
     }
 
     return up; 

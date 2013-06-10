@@ -36,6 +36,7 @@ block :: block()
    , m_block_list()
    , m_version(0)
    , m_length(0)
+   , m_dirty(false)
 {
 }
 
@@ -46,8 +47,14 @@ block :: ~block() throw()
 void
 block :: update(uint64_t version,
                 uint64_t len,
-                const wtf::block_id& bid)
+                const wtf::block_id& bid,
+                bool dirty)
 {
+    if (dirty)
+    {
+        m_dirty = dirty;
+    }
+
     if(m_version < version)
     {
         m_length = len;

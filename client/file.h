@@ -66,6 +66,8 @@ class wtf_client::file
         void update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b);
         uint64_t get_block_version(uint64_t bid);
         uint64_t pack_size();
+        uint64_t size() { return m_block_map.size(); }
+        void truncate();
 
     private:
         friend class e::intrusive_ptr<file>;
@@ -93,6 +95,10 @@ class wtf_client::file
         command_map m_commands;
         block_map m_block_map;
         uint64_t m_offset;
+
+    public:
+        block_map::iterator blocks_begin() { return m_block_map.begin(); }
+        block_map::iterator blocks_end() { return m_block_map.end(); }
 };
 
 inline e::buffer::packer 

@@ -98,7 +98,7 @@ wtf_client :: file :: update_blocks(uint64_t offset, uint64_t len,
                            uint64_t bid)
 {
     uint64_t block_index = offset/CHUNKSIZE;
-    m_block_map[block_index]->update(version, len, wtf::block_id(sid, bid)); 
+    m_block_map[block_index]->update(version, len, wtf::block_id(sid, bid), true); 
 }
 
 void
@@ -125,4 +125,16 @@ wtf_client :: file :: pack_size()
     }
 
     return ret;
+}
+
+void
+wtf_client :: file :: truncate()
+{
+    uint64_t block_index = m_offset/CHUNKSIZE;
+    uint64_t sz = m_block_map.size();
+
+    for (int i = block_index + 1; i < sz; ++i)
+    {
+        m_block_map.erase(i);
+    }
 }
