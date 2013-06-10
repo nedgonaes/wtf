@@ -101,8 +101,28 @@ wtf_client :: file :: update_blocks(uint64_t offset, uint64_t len,
     m_block_map[block_index]->update(version, len, wtf::block_id(sid, bid)); 
 }
 
+void
+wtf_client :: file :: update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b)
+{
+    m_block_map[bid] = b;
+}
+
 uint64_t
 wtf_client :: file :: get_block_version(uint64_t bid)
 {
     return m_block_map[bid]->version();
+}
+
+uint64_t
+wtf_client :: file :: pack_size()
+{
+    uint64_t ret = sizeof(uint64_t); /* number of blocks */
+
+    for (wtf_client::file::block_map::const_iterator it = m_block_map.begin();
+         it != m_block_map.end(); ++it)
+    {
+        ret += sizeof(uint64_t) + it->second->pack_size();
+    }
+
+    return ret;
 }

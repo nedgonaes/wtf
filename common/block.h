@@ -51,6 +51,7 @@ class block
         void update(uint64_t version, uint64_t len, const wtf::block_id& bid);
         uint64_t size() { return m_block_list.size(); }
         uint64_t version() { return m_version; }
+        uint64_t pack_size();
 
     private:
         friend class e::intrusive_ptr<block>;

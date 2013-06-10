@@ -57,3 +57,11 @@ block :: update(uint64_t version,
 
     m_block_list.push_back(bid);
 }
+
+uint64_t
+block :: pack_size()
+{
+    uint64_t ret = sizeof(uint64_t);  /* length */
+    ret += m_block_list.size() * 2 * sizeof(uint64_t); /* server, block */
+    return ret;
+}

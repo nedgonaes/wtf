@@ -33,6 +33,7 @@
 
 // STL
 #include <vector>
+#include <map>
 
 //PO6
 #include <po6/pathname.h>
@@ -61,8 +62,9 @@ class wtf_client::file
         void update_blocks(uint64_t offset, uint64_t len, 
                            uint64_t version, uint64_t sid,
                            uint64_t bid);
+        void update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b);
         uint64_t get_block_version(uint64_t bid);
-        uint64_t pack_size() {/*XXX: implement pack size */};
+        uint64_t pack_size();
 
     private:
         friend class e::intrusive_ptr<file>;
@@ -95,12 +97,30 @@ class wtf_client::file
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const wtf_client::file& rhs) 
 { 
+    pa = pa << rhs.m_block_map.size(); 
+
+    for (wtf_client::file::block_map::const_iterator it = rhs.m_block_map.begin();
+            it != rhs.m_block_map.end(); ++it)
+    {
+        pa = pa << it->first << *it->second;
+    }
+
     return pa;
 } 
 
-    inline e::unpacker 
+inline e::unpacker 
 operator >> (e::unpacker up, wtf_client::file& rhs) 
 { 
+    uint64_t sz;
+    up = up >> sz; 
+
+    for (int i = 0; i < sz; ++i) 
+    {
+        e::intrusive_ptr<wtf::block> b = new wtf::block();
+        up = up >> *b;
+        rhs.update_blocks(i, b); 
+    }
+
     return up; 
 }
 
