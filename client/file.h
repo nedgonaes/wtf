@@ -61,9 +61,15 @@ class wtf_client::file
         void update_blocks(uint64_t offset, uint64_t len, 
                            uint64_t version, uint64_t sid,
                            uint64_t bid);
+        uint64_t get_block_version(uint64_t bid);
+        uint64_t pack_size() {/*XXX: implement pack size */};
 
     private:
         friend class e::intrusive_ptr<file>;
+        friend e::buffer::packer 
+            operator << (e::buffer::packer pa, const wtf_client::file& rhs);
+        friend e::unpacker 
+            operator >> (e::unpacker up, wtf_client::file& rhs);
 
     private:
         file(const file&);
@@ -74,7 +80,7 @@ class wtf_client::file
 
     private:
         file& operator = (const file&);
-        typedef std::map<uint64_t, wtf::block > block_map;
+        typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
     private:
         size_t m_ref;
@@ -85,5 +91,17 @@ class wtf_client::file
         block_map m_block_map;
         uint64_t m_offset;
 };
+
+inline e::buffer::packer 
+operator << (e::buffer::packer pa, const wtf_client::file& rhs) 
+{ 
+    return pa;
+} 
+
+    inline e::unpacker 
+operator >> (e::unpacker up, wtf_client::file& rhs) 
+{ 
+    return up; 
+}
 
 #endif // wtf_file_h_

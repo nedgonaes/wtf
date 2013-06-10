@@ -25,6 +25,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+// C
+#include <string.h>
+
 // e
 #include <e/endian.h>
 #include <e/time.h>
@@ -123,14 +126,8 @@ wtf_client :: wtf_client(const char* host, in_port_t port,
     , m_last_error_file(__FILE__)
     , m_last_error_line(__LINE__)
     , m_last_error_host()
-    , m_hyperclient()
+    , m_hyperclient(hyper_host, hyper_port)
 {
-    m_hyperclient = hyperclient_create(hyper_host, hyper_port);
-    if(!m_hyperclient)
-    {
-        //XXX: take appropriate action.
-        abort();
-    }
 }
 
 wtf_client :: ~wtf_client() throw ()
@@ -141,6 +138,8 @@ int64_t
 wtf_client :: send(uint64_t token,
                    wtf_network_msgtype msgtype,
                    const char* data, size_t data_sz,
+                   uint64_t bid, uint64_t offset,
+                   uint64_t version,
                    wtf_returncode* status,
                    const char** output, size_t* output_sz,
                    int64_t fd)
@@ -157,9 +156,10 @@ wtf_client :: send(uint64_t token,
 
     *status = WTF_GARBAGE;
 
+
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, fd, 
-                                                0, 0, 0, 0, /* XXX: put block id, offset, length, version*/
+                                                bid, offset, data_sz, version, 
                                                 msgtype, msg, output, output_sz);
     return send_to_blockserver(cmd, status);
 }
@@ -639,11 +639,10 @@ int64_t
 wtf_client :: write(int64_t fd,
                     const char* data,
                     uint32_t data_sz,
+                    uint64_t offset,
+                    uint32_t replicas,
                     wtf_returncode* status)
 {
-#define CHUNKSIZE 1048576 
-#define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
-#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
     int64_t rid = 0;
     int64_t lid = 0;
     const char* output;
@@ -658,23 +657,29 @@ wtf_client :: write(int64_t fd,
         return -1;
     }
 
-    for (int i = 0; i < chunks; ++i)
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    while(rem > 0)
     {
-        std::cout << "Sending chunk " << i << std::endl;
+        uint64_t bid = offset/CHUNKSIZE;
+        uint64_t len = ROUNDUP(offset, CHUNKSIZE) - offset + 1;
+        uint64_t version = f->get_block_version(bid) + 1;
+        uint64_t block_off = offset - offset/CHUNKSIZE * offset;
 
-        rid = send(0, msgtype, data, MIN(rem, CHUNKSIZE),
-                status, &output, &output_sz, fd);
-
-        rem -= CHUNKSIZE;
-        data += CHUNKSIZE;
-
-        if (rid < 0)
+        for (int i = 0; i < replicas; ++i)
         {
-            return -1;
+            rid = send(0, msgtype, data + offset, len,
+                    bid, block_off, version,
+                    status, &output, &output_sz, fd);
+
+            if (rid < 0)
+            {
+                return -1;
+            }
         }
 
-        std::cout << "Chunk " << i << " done." << std::endl;
-        
+        rem -= len;
+        offset += len;
     }
 
     return rid;
@@ -916,8 +921,47 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 
     f->update_blocks(offset, len, cmd->version(), sid, bid);
 
-    //XXX: Apply changes to cached block mapping in f.
+    update_hyperdex(f);
+}
+
+int64_t
+wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
+{
+    int64_t ret = 0;
+    std::auto_ptr<e::buffer> buf(e::buffer::create(f->pack_size()));
+    e::buffer::packer pa = buf->pack();
+    pa = pa << *f;
+    struct hyperclient_attribute attrs;
+
+    //XXX; get rid of magic string.
+    attrs.attr = "blockmap";
+    attrs.value = reinterpret_cast<const char*>(buf->as_slice().data());
+    attrs.value_sz = buf->size();
+    attrs.datatype = HYPERDATATYPE_STRING;
+    hyperclient_returncode status;
+
+    //XXX; get rid of magic string.
+    ret = m_hyperclient.put("wtf", f->path().get(), strlen(f->path().get()), &attrs, 1, &status);
+
+    if (ret > 0)
+    {
+        while(1)
+        {
+            int64_t id = m_hyperclient.loop(10, &status);
+
+            if(id < 0 && status == HYPERCLIENT_TIMEOUT){
+                continue;
+            }
+
+            if(id < 0){
+                ret = id;
+            }
+
+            break;
+        } 
+    }
     
+    return ret;
 }
 
 void

@@ -29,6 +29,10 @@
 #ifndef wtf_h_
 #define wtf_h_
 
+#define CHUNKSIZE 1048576 
+#define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+
 // STL
 #include <map>
 #include <memory>
@@ -41,7 +45,7 @@
 #include <e/intrusive_ptr.h>
 
 // HyperDex
-#include <hyperclient.h>
+#include <hyperclient.hpp>
 
 //wtf
 #include <common/network_msgtype.h>
@@ -104,6 +108,8 @@ class wtf_client
         int64_t write(int64_t fd,
                       const char* data,
                       uint32_t data_sz,
+                      uint64_t offset,
+                      uint32_t replicas,
                       wtf_returncode* status);
         int64_t read(const char* data,
                       uint32_t data_sz,
@@ -114,6 +120,8 @@ class wtf_client
         int64_t send(uint64_t token,
                      wtf::wtf_network_msgtype msg, 
                      const char* data, size_t data_sz,
+                     uint64_t bid, uint64_t offset,
+                     uint64_t version,
                      wtf_returncode* status,
                      const char** output, size_t* output_sz,
                      int64_t fd);
@@ -143,6 +151,10 @@ class wtf_client
     private:
         class command;
         class file;
+        friend e::unpacker 
+            operator >> (e::unpacker up, wtf_client::file& rhs);
+        friend e::buffer::packer 
+            operator << (e::buffer::packer pa, const wtf_client::file& rhs);
         typedef std::map<uint64_t, e::intrusive_ptr<command> > command_map;
         typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
 
@@ -151,6 +163,7 @@ class wtf_client
 
     private:
         int64_t inner_loop(wtf_returncode* status);
+
         // Send commands and receive responses
         int64_t send_to_blockserver(e::intrusive_ptr<command> cmd,
                                     wtf_returncode* status);
@@ -164,10 +177,12 @@ class wtf_client
                         e::intrusive_ptr<file>& f);
         void handle_get(e::intrusive_ptr<command>& cmd, 
                         e::intrusive_ptr<file>& f);
-
         // Utilities
         uint64_t generate_token();
         void reset_to_disconnected();
+
+        //communicate with hyperdex
+        int64_t update_hyperdex(e::intrusive_ptr<file>& f);
 
     private:
         wtf_client& operator = (const wtf_client& rhs);
@@ -188,7 +203,7 @@ class wtf_client
         const char* m_last_error_file;
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
-        struct hyperclient* m_hyperclient;
+        hyperclient m_hyperclient;
 };
 
 std::ostream&

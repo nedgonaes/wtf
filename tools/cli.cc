@@ -167,7 +167,7 @@ main(int argc, const char* argv[])
 
             std::cout << "FD is " << fd << std::endl;
 
-            rid = r.write(fd,item.c_str(), item.size()+1, &re);
+            rid = r.write(fd,item.c_str(), item.size()+1, 0, 3, &re);
 
             if (rid < 0)
             {

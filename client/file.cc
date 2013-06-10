@@ -97,7 +97,12 @@ wtf_client :: file :: update_blocks(uint64_t offset, uint64_t len,
                            uint64_t version, uint64_t sid,
                            uint64_t bid)
 {
-    //compute block number from offset
-    //get block object from the block map
-    //update the block
+    uint64_t block_index = offset/CHUNKSIZE;
+    m_block_map[block_index]->update(version, len, wtf::block_id(sid, bid)); 
+}
+
+uint64_t
+wtf_client :: file :: get_block_version(uint64_t bid)
+{
+    return m_block_map[bid]->version();
 }
