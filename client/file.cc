@@ -110,12 +110,22 @@ wtf_client :: file :: update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& 
 uint64_t
 wtf_client :: file :: get_block_version(uint64_t bid)
 {
+    if (m_block_map.find(bid) == m_block_map.end())
+    {
+        return 0;
+    }
+
     return m_block_map[bid]->version();
 }
 
 uint64_t
 wtf_client :: file :: get_block_length(uint64_t bid)
 {
+    if (m_block_map.find(bid) == m_block_map.end())
+    {
+        return 0;
+    }
+
     return m_block_map[bid]->length();
 }
 

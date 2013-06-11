@@ -487,6 +487,8 @@ daemon :: process_put(const wtf::connection& conn,
         rc = wtf::RESPONSE_SUCCESS;
     }
 
+    LOG(INFO) << "Returning " << rc << " to client.";
+
 
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* token */

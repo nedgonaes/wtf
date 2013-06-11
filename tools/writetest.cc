@@ -143,7 +143,7 @@ main(int argc, const char* argv[])
 
             wtf::wtf_network_msgtype msgtype = wtf::WTFNET_NOP;
             
-            std::string item;
+            std::string *item = new std::string();
             std::string path;
 
             std::stringstream ss(s);
@@ -153,7 +153,7 @@ main(int argc, const char* argv[])
                 std::cerr << "Invalid input file.  Aborting." << std::endl;
             }
 
-            if (!std::getline(ss, item, ' '))
+            if (!std::getline(ss, *item, ' '))
             {
                 std::cerr << "Invalid input file.  Aborting." << std::endl;
             }
@@ -162,7 +162,7 @@ main(int argc, const char* argv[])
 
             std::cout << "FD is " << fd << std::endl;
 
-            rid = r.write(fd, item.c_str(), item.size()+1, 3, &re);
+            rid = r.write(fd, item->c_str(), item->size()+1, 3, &re);
 
             if (rid < 0)
             {
@@ -191,11 +191,10 @@ main(int argc, const char* argv[])
 
             std::cout << "rid: " << rid << " lid: " << lid << " " << re << std::endl;
 
-            //e::slice out(output, output_sz);
-            //std::cout << "RESPONSE: " << out.hex() << std::endl;
-            //wtf_destroy_output(output, output_sz);
+            delete item;
         }
 
+        std::cout << "Done flushing." << std::endl;
         wtf_returncode e = WTF_SUCCESS; 
 
         return EXIT_SUCCESS;

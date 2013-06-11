@@ -669,10 +669,14 @@ wtf_client :: write(int64_t fd,
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
-        uint64_t len = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
+        uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset() + 1;
+        len = MIN(len, rem); 
         uint64_t version = f->get_block_version(bid) + 1;
         uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * f->offset();
 
+        std::cout << "data_sz = " << data_sz << std::endl;
+        std::cout << "Len = " << len << std::endl;
+        std::cout << "Rem = " << rem << std::endl;
         for (int i = 0; i < replicas; ++i)
         {
             uint64_t bl = f->get_block_length(bid);
