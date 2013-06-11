@@ -63,6 +63,7 @@ bin_PROGRAMS += wtf
 
 noinst_PROGRAMS =
 noinst_PROGRAMS += wtf-cli
+noinst_PROGRAMS += wtf-writetest 
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -131,6 +132,9 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 
 wtf_cli_SOURCES = tools/cli.cc
 wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
+wtf_writetest_SOURCES = tools/writetest.cc
+wtf_writetest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt

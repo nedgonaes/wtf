@@ -29,6 +29,7 @@ missing
 testdata
 wtf
 wtf-cli
+wtf-writetest
 wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster
