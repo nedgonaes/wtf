@@ -632,6 +632,9 @@ wtf_client :: open(const char* path)
 {
     e::intrusive_ptr<file> f = new file(path);
     m_fds[m_fileno] = f; 
+    
+    update_file_cache(path, f);
+
     return m_fileno++;
 }
 
@@ -654,7 +657,6 @@ wtf_client :: write(int64_t fd,
     uint32_t rem = data_sz;
     size_t output_sz;
     int chunks = ROUNDUP(data_sz, CHUNKSIZE)/CHUNKSIZE; 
-    wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
 
     if (m_fds.find(fd) == m_fds.end())
     {
@@ -663,8 +665,6 @@ wtf_client :: write(int64_t fd,
     }
 
     e::intrusive_ptr<file> f = m_fds[fd];
-
-    f->truncate();
 
     while(rem > 0)
     {
@@ -675,13 +675,38 @@ wtf_client :: write(int64_t fd,
 
         for (int i = 0; i < replicas; ++i)
         {
-            rid = send(0, msgtype, data, len,
-                    bid, block_off, version,
-                    status, &output, &output_sz, fd);
+            uint64_t bl = f->get_block_length(bid);
 
-            if (rid < 0)
+            if (bl > 0 && block_off > 0 || len < bl)
             {
-                return -1;
+                //Overwrite a partial block.
+
+                /*XXX: send a special instruction to servers that already have the
+                  block so that we can copy it and append new
+                  data rather than copy the whole block over the network. */ 
+
+                  std::cout << "ERROR (not implemented): You tried "
+                            << "over-writing a partial block." << std::endl;
+                  abort();
+
+                  wtf::wtf_network_msgtype msgtype = wtf::WTFNET_UPDATE;
+                  rid = send(0, msgtype, data, len,
+                          bid, block_off, version,
+                          status, &output, &output_sz, fd);
+            }
+            else
+            {
+                //write new blocks or full-blocks.
+
+                wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
+                rid = send(0, msgtype, data, len,
+                        bid, block_off, version,
+                        status, &output, &output_sz, fd);
+
+                if (rid < 0)
+                {
+                    return -1;
+                }
             }
         }
 
@@ -694,16 +719,31 @@ wtf_client :: write(int64_t fd,
 }
 
 int64_t
-wtf_client :: read(const char* data,
+wtf_client :: read(int64_t fd, const char* data,
                    uint32_t data_sz,
                    wtf_returncode* status)
 {
+//    e::intrusive_ptr<file> f = m_fds[fd];
+//    //XXX: maybe check if it's already there?
+//    //XXX: Make sure not to overwrite the outstanding changes.
+//    /*
+//     * Always read from hyperdex.  If we want to see latest
+//     * changes, must call flush() first.
+//     */ 
+//    update_file_cache(f->path(), f);
+//    
+//    //compute block number from offset
+//    uint64_t bid = f->offset()/CHUNKSIZE;
+//    uint64_t block_offset = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
+//    //m_config->node_from_token(
     return -1;
+     
 }
 
 int64_t
 wtf_client :: close(int64_t fd)
 {
+    //XXX: call flush; deallocate memory
     return -1;
 }
 
@@ -748,7 +788,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         switch (cmd->msgtype())
         {
             case WTFNET_PUT:
-                handle_put(cmd, f);
+                handle_put(cmd, f); //XXX: rename
                 break;
             case WTFNET_GET:
                 handle_get(cmd, f);
@@ -759,6 +799,8 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         }
 
     }
+
+    update_hyperdex(f);
 
     std::cout << "Done flushing." << std::endl;
     
@@ -793,6 +835,7 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
             sent = true;
             break;
         case BUSYBEE_DISRUPTED:
+            //XXX
             handle_disruption(send_to, status);
             WTFSETERROR(WTF_BACKOFF, "backoff before retrying");
             BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
@@ -924,7 +967,42 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 
     f->update_blocks(offset, len, cmd->version(), sid, bid);
 
-    update_hyperdex(f);
+}
+
+int64_t
+wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
+{
+    struct hyperclient_attribute* attrs;
+    size_t attrs_sz;
+    int64_t ret = 0;
+    //XXX; get rid of magic string.
+    const char* name = "blockmap";
+    hyperclient_returncode status;
+
+    //XXX: get rid of magic string.
+    ret = m_hyperclient.get("wtf", path, strlen(path), &status, &attrs, &attrs_sz);
+
+    if (ret > 0)
+    {
+        while(1)
+        {
+            int64_t id = m_hyperclient.loop(10, &status);
+
+            if(id < 0 && status == HYPERCLIENT_TIMEOUT){
+                continue;
+            }
+
+            if(id < 0){
+                ret = id;
+            }
+
+            break;
+        } 
+    }
+
+    //XXX: Find out the layout of a map attribute so we can update the block map for real.
+   
+    return ret;
 }
 
 int64_t
@@ -941,6 +1019,9 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     //XXX; get rid of magic string.
     const char* name = "blockmap";
 
+    /*
+     * construct a hyperdex attribute list for all dirty blocks
+     */
     for (block_map::const_iterator it = f->blocks_begin();
          it != f->blocks_end(); ++it)
     {
@@ -964,6 +1045,10 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     }
     
     //XXX; get rid of magic string.
+    //XXX; atomic map add?
+    /*
+     * Update hyperdex to point to location of new blocks
+     */
     ret = m_hyperclient.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
 
     for (std::vector<struct hyperclient_map_attribute>::iterator it = attrs.begin();
@@ -973,12 +1058,16 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     }
 
 
+    /*
+     * Wait for hyperdex to reply
+     */
     if (ret > 0)
     {
         while(1)
         {
             int64_t id = m_hyperclient.loop(10, &status);
 
+            //XXX: Match id to id of pending operation.
             if(id < 0 && status == HYPERCLIENT_TIMEOUT){
                 continue;
             }
@@ -991,7 +1080,6 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
         } 
     }
 
-   
     return ret;
 }
 
@@ -999,6 +1087,7 @@ void
 wtf_client :: handle_get(e::intrusive_ptr<command>& cmd,
                          e::intrusive_ptr<file>& f)
 {
+    //no need to do anything
 }
 
 void

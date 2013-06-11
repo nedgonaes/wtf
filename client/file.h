@@ -42,6 +42,7 @@
 #include <client/command.h>
 #include <client/wtf.h>
 #include <common/block.h>
+#include <common/block_id.h>
 
 class wtf_client::file
 {
@@ -65,8 +66,10 @@ class wtf_client::file
                            uint64_t bid);
         void update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b);
         uint64_t get_block_version(uint64_t bid);
+        uint64_t get_block_length(uint64_t bid);
         uint64_t pack_size();
         uint64_t size() { return m_block_map.size(); }
+        wtf::block_id lookup_block(uint64_t index) { return m_block_map[index]->get_first_location(); }
         void truncate();
 
     private:

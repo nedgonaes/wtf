@@ -39,6 +39,7 @@
 
 // po6
 #include <po6/net/hostname.h>
+#include <po6/pathname.h>
 
 // e
 #include <e/buffer.h>
@@ -112,9 +113,10 @@ class wtf_client
                       uint32_t data_sz,
                       uint32_t replicas,
                       wtf_returncode* status);
-        int64_t read(const char* data,
-                      uint32_t data_sz,
-                      wtf_returncode* status);
+        int64_t read(int64_t fd,
+                     const char* data,
+                     uint32_t data_sz,
+                     wtf_returncode* status);
         int64_t close(int64_t fd);
         int64_t flush(int64_t fd,
                       wtf_returncode* status);
@@ -184,6 +186,7 @@ class wtf_client
 
         //communicate with hyperdex
         int64_t update_hyperdex(e::intrusive_ptr<file>& f);
+        int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f);
 
     private:
         wtf_client& operator = (const wtf_client& rhs);

@@ -40,6 +40,7 @@ wtf :: operator << (std::ostream& lhs, wtf_network_msgtype rhs)
         stringify(WTFNET_NOP);
         stringify(WTFNET_GET);
         stringify(WTFNET_PUT);
+        stringify(WTFNET_UPDATE);
         default:
             lhs << "unknown msgtype";
     }

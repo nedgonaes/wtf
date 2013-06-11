@@ -114,6 +114,12 @@ wtf_client :: file :: get_block_version(uint64_t bid)
 }
 
 uint64_t
+wtf_client :: file :: get_block_length(uint64_t bid)
+{
+    return m_block_map[bid]->length();
+}
+
+uint64_t
 wtf_client :: file :: pack_size()
 {
     uint64_t ret = sizeof(uint64_t); /* number of blocks */

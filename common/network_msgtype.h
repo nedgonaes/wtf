@@ -39,6 +39,7 @@ enum wtf_network_msgtype
     WTFNET_NOP,
     WTFNET_GET,
     WTFNET_PUT,
+    WTFNET_UPDATE,
     WTFNET_COMMAND_RESPONSE
 };
 
