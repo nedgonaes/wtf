@@ -61,7 +61,7 @@ class wtf_client::file
         command_map::iterator commands_end(); 
         void set_offset(uint64_t offset) { m_offset = offset; }
         uint64_t offset() { return m_offset; }
-        void update_blocks(uint64_t offset, uint64_t len, 
+        void update_blocks(uint64_t block_index, uint64_t len, 
                            uint64_t version, uint64_t sid,
                            uint64_t bid);
         void update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b);
@@ -100,8 +100,8 @@ class wtf_client::file
         uint64_t m_offset;
 
     public:
-        block_map::iterator blocks_begin() { return m_block_map.begin(); }
-        block_map::iterator blocks_end() { return m_block_map.end(); }
+        block_map::const_iterator blocks_begin() { return m_block_map.begin(); }
+        block_map::const_iterator blocks_end() { return m_block_map.end(); }
 };
 
 inline e::buffer::packer 

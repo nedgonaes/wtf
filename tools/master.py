@@ -4,7 +4,4 @@ c.add_space('''
 space wtf
 key path 
 attributes map(string, string) blockmap
-subspace blockmap 
-create 8 partitions
-tolerate 2 failures
 ''')

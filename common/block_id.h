@@ -59,6 +59,9 @@ namespace wtf
             explicit block_id(uint64_t sid, uint64_t bid);
             ~block_id() throw();
 
+        public:
+            static uint64_t pack_size() { return 2 * sizeof(uint64_t); }
+            void pack(char* buf) const;
         private:
             friend std::ostream&
                 operator << (std::ostream& lhs, const block_id& rhs);

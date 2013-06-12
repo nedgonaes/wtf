@@ -45,3 +45,11 @@ block_id :: block_id(uint64_t sid, uint64_t bid)
 block_id :: ~block_id() throw()
 {
 }
+
+void 
+block_id :: pack(char* buf) const
+{
+    memmove(buf, &m_sid, sizeof(uint64_t));
+    buf += sizeof(uint64_t);
+    memmove(buf, &m_bid, sizeof(uint64_t));
+}

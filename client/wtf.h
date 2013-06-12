@@ -126,7 +126,6 @@ class wtf_client
                      uint64_t bid, uint64_t offset,
                      uint64_t version,
                      wtf_returncode* status,
-                     const char** output, size_t* output_sz,
                      int64_t fd);
         int64_t wait(const char* object,
                      const char* cond,
@@ -187,6 +186,7 @@ class wtf_client
         //communicate with hyperdex
         int64_t update_hyperdex(e::intrusive_ptr<file>& f);
         int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f);
+        hyperclient_returncode hyperdex_wait_for_result(int64_t reqid, hyperclient_returncode& status);
 
     private:
         wtf_client& operator = (const wtf_client& rhs);

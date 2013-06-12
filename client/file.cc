@@ -89,17 +89,21 @@ wtf_client :: file :: gc_completed(wtf_returncode* rc)
 void
 wtf_client :: file :: add_command(e::intrusive_ptr<command>& cmd)
 {
+    std::cout << "Adding cmd " << cmd->nonce() << std::endl;
     m_commands[cmd->nonce()] = cmd;
 }
 
 void
-wtf_client :: file :: update_blocks(uint64_t offset, uint64_t len, 
+wtf_client :: file :: update_blocks(uint64_t block_index, uint64_t len, 
                            uint64_t version, uint64_t sid,
                            uint64_t bid)
 {
-    uint64_t block_index = offset/CHUNKSIZE;
+
+    std::cout << "Updating block " << block_index << std::endl;
+
     if (m_block_map.find(block_index) == m_block_map.end())
     {
+        std::cout << "block didn't exist." << std::endl;
         m_block_map[block_index] = new wtf::block();
     }
 

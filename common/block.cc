@@ -68,7 +68,26 @@ block :: update(uint64_t version,
 uint64_t
 block :: pack_size()
 {
-    uint64_t ret = sizeof(uint64_t);  /* length */
-    ret += m_block_list.size() * 2 * sizeof(uint64_t); /* server, block */
+    uint64_t ret = 2 * sizeof(uint64_t);  /* length, size */
+    ret += m_block_list.size() * block_id::pack_size() ; /* server, block */
     return ret;
+}
+
+void 
+block :: pack(char* buf) const
+{
+    uint64_t sz = m_block_list.size();
+
+    memmove(buf, &m_length, sizeof(uint64_t));  
+    buf += sizeof(uint64_t);
+
+    memmove(buf, &sz, sizeof(uint64_t));  
+    buf += sizeof(uint64_t);
+
+    for (block::block_list::const_iterator it = m_block_list.begin();
+            it != m_block_list.end(); ++it)
+    {
+        it->pack(buf);
+        buf += block_id::pack_size();
+    }
 }

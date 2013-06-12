@@ -141,7 +141,6 @@ wtf_client :: send(uint64_t token,
                    uint64_t bid, uint64_t offset,
                    uint64_t version,
                    wtf_returncode* status,
-                   const char** output, size_t* output_sz,
                    int64_t fd)
 {
     MAINTAIN_COORD_CONNECTION(status);
@@ -160,7 +159,7 @@ wtf_client :: send(uint64_t token,
     // Create the command object
     e::intrusive_ptr<command> cmd = new command(status, nonce, fd, 
                                                 bid, offset, data_sz, version, 
-                                                msgtype, msg, output, output_sz);
+                                                msgtype, msg);
     return send_to_blockserver(cmd, status);
 }
 
@@ -655,7 +654,6 @@ wtf_client :: write(int64_t fd,
     int64_t lid = 0;
     const char* output;
     uint32_t rem = data_sz;
-    size_t output_sz;
     int chunks = ROUNDUP(data_sz, CHUNKSIZE)/CHUNKSIZE; 
 
     if (m_fds.find(fd) == m_fds.end())
@@ -669,6 +667,8 @@ wtf_client :: write(int64_t fd,
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
+        std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
+        std::cout << "bid " << bid << std::endl; 
         uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset() + 1;
         len = MIN(len, rem); 
         uint64_t version = f->get_block_version(bid) + 1;
@@ -694,9 +694,9 @@ wtf_client :: write(int64_t fd,
                   abort();
 
                   wtf::wtf_network_msgtype msgtype = wtf::WTFNET_UPDATE;
-                  rid = send(0, msgtype, data, len,
+                  rid = send(0 /*token*/, msgtype, data, len,
                           bid, block_off, version,
-                          status, &output, &output_sz, fd);
+                          status, fd);
             }
             else
             {
@@ -705,7 +705,7 @@ wtf_client :: write(int64_t fd,
                 wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
                 rid = send(0, msgtype, data, len,
                         bid, block_off, version,
-                        status, &output, &output_sz, fd);
+                        status, fd);
 
                 if (rid < 0)
                 {
@@ -767,14 +767,15 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         std::cout << "no commands" << std::endl;
     }
 
-    for (command_map::iterator it = f->commands_begin();
+    for (command_map::const_iterator it = f->commands_begin();
          it != f->commands_end(); ++it)
     {
         e::intrusive_ptr<command> cmd = it->second;
         uint64_t id = it->first;
 
         std::cout << "Flushing " << cmd->nonce() << std::endl;
-        std::cout << "STATUS: " << cmd->status();
+        std::cout << "STATUS: " << cmd->status() << std::endl;
+        std::cout << "id: " << id << std::endl;
 
         if (cmd->status() != WTF_SUCCESS)
         {
@@ -958,7 +959,7 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 {
     uint64_t sid; 
     uint64_t bid;
-    uint64_t offset = cmd->offset();
+    uint64_t block_index = cmd->block();
     uint64_t len = cmd->length();
     std::auto_ptr<e::buffer> msg(e::buffer::create(cmd->output(), cmd->output_sz()));
     e::unpacker up = msg->unpack_from(0);
@@ -973,7 +974,7 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 
     std::cout << "sid: " << sid << "bid: " << bid << std::endl;
 
-    f->update_blocks(offset, len, cmd->version(), sid, bid);
+    f->update_blocks(block_index, len, cmd->version(), sid, bid);
 
 }
 
@@ -1016,11 +1017,10 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
 int64_t
 wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
 {
-    int64_t ret = 0;
+    int64_t ret = -1;
     int i = 0;
 
     std::vector<struct hyperclient_map_attribute> attrs;
-    std::vector<e::buffer*> backing;
     hyperclient_returncode status;
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
@@ -1036,22 +1036,20 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     {
         if (it->second->dirty())
         {
-            ++i;
             struct hyperclient_map_attribute attr;
             attrs.push_back(attr);
             attrs[i].attr = name;
-            attrs[i].map_key = reinterpret_cast<const char*>(&it->first); 
+            attrs[i].map_key = (const char*)malloc(sizeof(uint64_t));
+            memmove(const_cast<char*>(attrs[i].map_key), &it->first, sizeof(uint64_t));
             attrs[i].map_key_sz = sizeof(uint64_t);
             attrs[i].map_key_datatype = HYPERDATATYPE_STRING;
 
-            std::auto_ptr<e::buffer> buf(e::buffer::create(it->second->pack_size()));
-            e::buffer::packer pa = buf->pack();
-            pa = pa << *it->second;
-            char* v = new char[it->second->pack_size()];
-            memmove(v, buf->data(), buf->size());
-            attrs[i].value = v;
-
+            uint64_t sz = it->second->pack_size();
+            attrs[i].value = (const char*)malloc(sz);
+            it->second->pack(const_cast<char*>(attrs[i].value)); 
             attrs[i].value_datatype = HYPERDATATYPE_STRING;
+            attrs[i].value_sz = sz;
+            ++i;
         }
     }
     
@@ -1060,38 +1058,69 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     /*
      * Update hyperdex to point to location of new blocks
      */
+    retry:
     ret = m_hyperclient.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
-
-    for (std::vector<struct hyperclient_map_attribute>::iterator it = attrs.begin();
-         it != attrs.end(); ++it)
-    {
-       delete [] it->value;
-    }
-
 
     /*
      * Wait for hyperdex to reply
      */
-    if (ret > 0)
+
+    hyperclient_returncode res = hyperdex_wait_for_result(ret, status);
+
+    if (res == HYPERCLIENT_NOTFOUND)
     {
-        while(1)
+        ret = m_hyperclient.put_if_not_exist("wtf", f->path().get(), strlen(f->path().get()), NULL, 0, &status);
+        res = hyperdex_wait_for_result(ret, status);
+        if (res == HYPERCLIENT_SUCCESS || res == HYPERCLIENT_CMPFAIL)
         {
-            int64_t id = m_hyperclient.loop(10, &status);
-
-            //XXX: Match id to id of pending operation.
-            if(id < 0 && status == HYPERCLIENT_TIMEOUT){
-                continue;
-            }
-
-            if(id < 0){
-                ret = id;
-            }
-
-            break;
-        } 
+            //GUN DID IT.
+            goto retry;
+        }
+        else
+        {
+            std::cout << "ERROR: Hyperdex returned " << res << std::endl;
+        }
+    }
+    else
+    {
+        std::cout << "Hyperdex returned " << res << std::endl;
     }
 
+    for (std::vector<struct hyperclient_map_attribute>::iterator it = attrs.begin();
+         it != attrs.end(); ++it)
+    {
+       free(const_cast<char*>(it->value));
+       free(const_cast<char*>(it->map_key));
+    }
+
+
     return ret;
+}
+
+hyperclient_returncode
+wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperclient_returncode& status)
+{
+    while(1)
+    {
+        hyperclient_returncode lstatus;
+        int64_t id = m_hyperclient.loop(-1, &lstatus);
+
+        if (id < 0) 
+        {
+            return lstatus;
+        }
+
+        if (id != reqid){
+            std::cout << "ERROR: Hyperdex returned id:" << id << " status:"<< lstatus << std::endl;
+            std::cout << "expected id:" << reqid<< std::endl;
+        }
+        else
+        {
+            std::cout << "Hyperdex returned " << status << std::endl;
+            return status;
+        }
+
+    } 
 }
 
 void

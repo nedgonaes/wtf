@@ -43,9 +43,7 @@ wtf_client :: command :: command(wtf_returncode* st,
                                        uint64_t length,
                                        uint64_t version,
                                        wtf::wtf_network_msgtype msgtype,
-                                       std::auto_ptr<e::buffer> m,
-                                       const char** output,
-                                       size_t* output_sz)
+                                       std::auto_ptr<e::buffer> m)
     : m_ref(0)
     , m_nonce(n)
     , m_fd(fd)
@@ -56,8 +54,8 @@ wtf_client :: command :: command(wtf_returncode* st,
     , m_clientid(n)
     , m_request(m)
     , m_status(*st)
-    , m_output(output)
-    , m_output_sz(output_sz)
+    , m_output()
+    , m_output_sz(0)
     , m_sent_to()
     , m_msgtype(msgtype)
     , m_last_error_desc()
@@ -95,19 +93,16 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
                                        const e::slice& resp,
                                        wtf_returncode status)
 {
-    if (m_output)
-    {
-        char* base = reinterpret_cast<char*>(backing.get());
-        const char* data = reinterpret_cast<const char*>(resp.data());
-        assert(data >= base);
-        assert(data - base < UINT16_MAX);
-        uint16_t diff = data - base;
-        assert(diff >= 2);
-        e::pack16le(diff, base + diff - 2);
-        *m_output = data;
-        *m_output_sz = resp.size();
-        backing.release();
-    }
+    char* base = reinterpret_cast<char*>(backing.get());
+    const char* data = reinterpret_cast<const char*>(resp.data());
+    assert(data >= base);
+    assert(data - base < UINT16_MAX);
+    uint16_t diff = data - base;
+    assert(diff >= 2);
+    e::pack16le(diff, base + diff - 2);
+    m_output.insert(m_output.begin(), data, data + resp.size());
+    m_output_sz = resp.size();
+    backing.release();
 
     m_status = status;
 }

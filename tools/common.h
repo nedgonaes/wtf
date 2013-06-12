@@ -34,7 +34,7 @@
 static const char* _connect_host = "127.0.0.1";
 static const char* _hyper_host = "127.0.0.1";
 static unsigned long _connect_port = 1982;
-static unsigned long _hyper_port = 1980;
+static unsigned long _hyper_port = 1981;
 
 extern "C"
 {

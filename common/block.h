@@ -53,6 +53,7 @@ class block
         uint64_t size() { return m_block_list.size(); }
         uint64_t version() { return m_version; }
         uint64_t pack_size();
+        void pack(char* buf) const;
         uint64_t resize(uint64_t sz) { m_length = sz; }
         uint64_t length() { return m_length; }
         block_id get_first_location() { return m_block_list[0]; }
@@ -132,7 +133,8 @@ operator << (std::ostream& lhs, const block& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const block& rhs) 
 { 
-    pa = pa << rhs.m_length << rhs.m_block_list.size(); 
+    uint64_t sz = rhs.m_block_list.size();
+    pa = pa << rhs.m_length << sz; 
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)
