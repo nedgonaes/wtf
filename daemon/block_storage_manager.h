@@ -57,8 +57,8 @@ namespace wtf
 
         public:
             ssize_t write_block(const e::slice& data,
-                             uint64_t sid,
-                             uint64_t bid);
+                             uint64_t& sid,
+                             uint64_t& bid);
             ssize_t read_block(uint64_t sid,
                             uint64_t bid,
                             std::vector<uint8_t>& data);

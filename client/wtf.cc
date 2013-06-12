@@ -960,7 +960,7 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
     uint64_t bid;
     uint64_t offset = cmd->offset();
     uint64_t len = cmd->length();
-    e::buffer* msg(e::buffer::create(cmd->output(), cmd->output_sz()));
+    std::auto_ptr<e::buffer> msg(e::buffer::create(cmd->output(), cmd->output_sz()));
     e::unpacker up = msg->unpack_from(0);
     up = up >> sid >> bid;
 
@@ -1020,6 +1020,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     int i = 0;
 
     std::vector<struct hyperclient_map_attribute> attrs;
+    std::vector<e::buffer*> backing;
     hyperclient_returncode status;
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
@@ -1046,7 +1047,9 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
             std::auto_ptr<e::buffer> buf(e::buffer::create(it->second->pack_size()));
             e::buffer::packer pa = buf->pack();
             pa = pa << *it->second;
-            attrs[i].value = reinterpret_cast<const char*>(buf->as_slice().data());
+            char* v = new char[it->second->pack_size()];
+            memmove(v, buf->data(), buf->size());
+            attrs[i].value = v;
 
             attrs[i].value_datatype = HYPERDATATYPE_STRING;
         }
@@ -1062,7 +1065,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     for (std::vector<struct hyperclient_map_attribute>::iterator it = attrs.begin();
          it != attrs.end(); ++it)
     {
-       delete it->value;
+       delete [] it->value;
     }
 
 

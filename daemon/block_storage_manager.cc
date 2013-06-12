@@ -84,8 +84,8 @@ block_storage_manager::setup(uint64_t sid,
 
 ssize_t
 block_storage_manager::write_block(const e::slice& data,
-                                   uint64_t sid,
-                                   uint64_t bid)
+                                   uint64_t& sid,
+                                   uint64_t& bid)
 {
     sid = m_prefix;
     bid = m_last_block_num + 1;
