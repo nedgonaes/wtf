@@ -117,7 +117,7 @@ class wtf_client
                      const char* data,
                      uint32_t data_sz,
                      wtf_returncode* status);
-        int64_t close(int64_t fd);
+        int64_t close(int64_t fd, wtf_returncode* status);
         int64_t flush(int64_t fd,
                       wtf_returncode* status);
         int64_t send(uint64_t token,

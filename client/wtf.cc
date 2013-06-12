@@ -100,6 +100,9 @@ using namespace wtf;
         reset_to_disconnected(); \
         return -1
 
+#define WTFSPACE "wtf"
+#define WTFBLOCKMAP "blockmap"
+
 void
 wtf_destroy_output(const char* output, size_t)
 {
@@ -745,9 +748,16 @@ wtf_client :: read(int64_t fd, const char* data,
 }
 
 int64_t
-wtf_client :: close(int64_t fd)
+wtf_client :: close(int64_t fd, wtf_returncode* rc)
 {
-    //XXX: call flush; deallocate memory
+    int64_t ret = flush(fd, rc);
+
+    if (ret > 0)
+    {
+        m_fds.erase(fd);
+        return 0;
+    }
+
     return -1;
 }
 
@@ -985,11 +995,11 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
     size_t attrs_sz;
     int64_t ret = 0;
     //XXX; get rid of magic string.
-    const char* name = "blockmap";
+    const char* name = WTFBLOCKMAP;
     hyperclient_returncode status;
 
     //XXX: get rid of magic string.
-    ret = m_hyperclient.get("wtf", path, strlen(path), &status, &attrs, &attrs_sz);
+    ret = m_hyperclient.get(WTFSPACE, path, strlen(path), &status, &attrs, &attrs_sz);
 
     if (ret > 0)
     {
@@ -1026,7 +1036,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
     //XXX; get rid of magic string.
-    const char* name = "blockmap";
+    const char* name = WTFBLOCKMAP;
 
     /*
      * construct a hyperdex attribute list for all dirty blocks
@@ -1058,8 +1068,8 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     /*
      * Update hyperdex to point to location of new blocks
      */
-    retry:
-    ret = m_hyperclient.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
+retry:
+    ret = m_hyperclient.map_add(WTFSPACE, f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
 
     /*
      * Wait for hyperdex to reply
@@ -1069,8 +1079,9 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
 
     if (res == HYPERCLIENT_NOTFOUND)
     {
-        ret = m_hyperclient.put_if_not_exist("wtf", f->path().get(), strlen(f->path().get()), NULL, 0, &status);
+        ret = m_hyperclient.put_if_not_exist(WTFSPACE, f->path().get(), strlen(f->path().get()), NULL, 0, &status);
         res = hyperdex_wait_for_result(ret, status);
+
         if (res == HYPERCLIENT_SUCCESS || res == HYPERCLIENT_CMPFAIL)
         {
             //GUN DID IT.
@@ -1119,7 +1130,6 @@ wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperclient_returncode& stat
             std::cout << "Hyperdex returned " << status << std::endl;
             return status;
         }
-
     } 
 }
 
