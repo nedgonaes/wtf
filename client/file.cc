@@ -98,6 +98,11 @@ wtf_client :: file :: update_blocks(uint64_t offset, uint64_t len,
                            uint64_t bid)
 {
     uint64_t block_index = offset/CHUNKSIZE;
+    if (m_block_map.find(block_index) == m_block_map.end())
+    {
+        m_block_map[block_index] = new wtf::block();
+    }
+
     m_block_map[block_index]->update(version, len, wtf::block_id(sid, bid), true); 
 }
 

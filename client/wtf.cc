@@ -883,6 +883,10 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     uint64_t nonce;
     wtf::response_returncode rc;
 
+    up = up >> nonce >> rc;
+
+    std::cout << "nonce: " << nonce << " rc: " << rc << std::endl;
+
     if (up.error())
     {
         WTFSETERROR(WTF_SERVERERROR, "unpack failed");
