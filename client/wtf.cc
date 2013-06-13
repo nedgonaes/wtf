@@ -994,33 +994,40 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
     struct hyperclient_attribute* attrs;
     size_t attrs_sz;
     int64_t ret = 0;
-    //XXX; get rid of magic string.
-    const char* name = WTFBLOCKMAP;
     hyperclient_returncode status;
 
-    //XXX: get rid of magic string.
     ret = m_hyperclient.get(WTFSPACE, path, strlen(path), &status, &attrs, &attrs_sz);
 
-    if (ret > 0)
+    hyperclient_returncode res = hyperdex_wait_for_result(ret, status);
+
+    if (res == HYPERCLIENT_NOTFOUND)
     {
-        while(1)
-        {
-            int64_t id = m_hyperclient.loop(10, &status);
-
-            if(id < 0 && status == HYPERCLIENT_TIMEOUT){
-                continue;
-            }
-
-            if(id < 0){
-                ret = id;
-            }
-
-            break;
-        } 
+        /* The file does not exist or was deleted, truncate it. */
+        f->set_offset(0);
+        f->truncate();
     }
-
-    //XXX: Find out the layout of a map attribute so we can update the block map for real.
-   
+    else
+    {
+        for (size_t i = 0; i < attrs_sz; ++i)
+        {
+            if (strcmp(attrs[i].attr, WTFBLOCKMAP))
+            {
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                uint32_t idlen;
+                uint64_t id;
+                uint32_t num_blocks;
+                up = up >> idlen >> id >> num_blocks;
+                for (uint32_t j = 0; j < num_blocks; ++j)
+                {
+                    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                    up = up >> *b;
+                    f->update_blocks(id, b);
+                }
+                break;
+            }
+        }
+    }
+    
     return ret;
 }
 
