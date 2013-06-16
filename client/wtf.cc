@@ -1010,19 +1010,23 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
     {
         for (size_t i = 0; i < attrs_sz; ++i)
         {
-            if (strcmp(attrs[i].attr, WTFBLOCKMAP))
+            if (strcmp(attrs[i].attr, WTFBLOCKMAP) == 0)
             {
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                uint32_t idlen;
-                uint64_t id;
-                uint32_t num_blocks;
-                up = up >> idlen >> id >> num_blocks;
-                for (uint32_t j = 0; j < num_blocks; ++j)
+
+                while (!up.empty())
                 {
+                    uint32_t idlen;
+                    uint64_t id;
+                    uint32_t valuelen;
+                    up = up >> idlen >> id >> valuelen;
+                    e::unpack32be((uint8_t*)&idlen, &idlen);
+                    e::unpack32be((uint8_t*)&valuelen, &valuelen);
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
                     up = up >> *b;
                     f->update_blocks(id, b);
                 }
+
                 break;
             }
         }

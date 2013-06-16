@@ -37,6 +37,7 @@
 // e
 #include <e/intrusive_ptr.h>
 #include <e/buffer.h>
+#include <e/endian.h>
 
 namespace wtf
 {
@@ -97,6 +98,8 @@ namespace wtf
     operator >> (e::unpacker up, block_id& rhs) 
     { 
         up = up >> rhs.m_sid >> rhs.m_bid; 
+        e::unpack64be((uint8_t*)&rhs.m_sid, &rhs.m_sid);
+        e::unpack64be((uint8_t*)&rhs.m_bid, &rhs.m_bid);
         return up; 
     } 
 

@@ -153,6 +153,11 @@ operator >> (e::unpacker up, block& rhs)
 
     up = up >> len >> size; 
 
+    e::unpack64be((uint8_t *)&len, &len);
+    e::unpack64be((uint8_t *)&size, &size);
+
+    std::cout << "Unpacking block, len: " << len << " size:" << size << std::endl;
+
     for (uint64_t i = 0; i < size; ++i)
     {
         block_id bid;
