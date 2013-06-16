@@ -113,6 +113,7 @@ wtf_client :: file :: update_blocks(uint64_t block_index, uint64_t len,
 void
 wtf_client :: file :: update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b)
 {
+    std::cout << "Caching block " << bid << ": " << *b << std::endl;
     m_block_map[bid] = b;
 }
 

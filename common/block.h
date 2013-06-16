@@ -67,6 +67,9 @@ class block
             operator << (e::buffer::packer pa, const block& rhs);
         friend e::unpacker
             operator >> (e::unpacker up, block& rhs);
+        friend e::unpacker
+            operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs);
+
 
     private:
         block(const block&);
@@ -168,5 +171,27 @@ operator >> (e::unpacker up, block& rhs)
     return up; 
 } 
 
+inline e::unpacker 
+operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs) 
+{ 
+    uint64_t size;
+    uint64_t len;
+
+    up = up >> len >> size; 
+
+    e::unpack64be((uint8_t *)&len, &len);
+    e::unpack64be((uint8_t *)&size, &size);
+
+    std::cout << "Unpacking block, len: " << len << " size:" << size << std::endl;
+
+    for (uint64_t i = 0; i < size; ++i)
+    {
+        block_id bid;
+        up = up >> bid;
+        rhs->update(0, len, bid, false);
+    }
+
+    return up; 
+}
 }
 #endif // wtf_block_h_

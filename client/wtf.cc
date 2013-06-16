@@ -672,10 +672,10 @@ wtf_client :: write(int64_t fd,
         uint64_t bid = f->offset()/CHUNKSIZE;
         std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
         std::cout << "bid " << bid << std::endl; 
-        uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset() + 1;
+        uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
         len = MIN(len, rem); 
         uint64_t version = f->get_block_version(bid) + 1;
-        uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * f->offset();
+        uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
 
         std::cout << "data_sz = " << data_sz << std::endl;
         std::cout << "Len = " << len << std::endl;
@@ -684,7 +684,7 @@ wtf_client :: write(int64_t fd,
         {
             uint64_t bl = f->get_block_length(bid);
 
-            if (bl > 0 && block_off > 0 || len < bl)
+            if ((bl > 0 && block_off > 0) || (len < bl))
             {
                 //Overwrite a partial block.
 
@@ -694,6 +694,15 @@ wtf_client :: write(int64_t fd,
 
                   std::cout << "ERROR (not implemented): You tried "
                             << "over-writing a partial block." << std::endl;
+                  if (block_off > 0)
+                  {
+                      std::cout << "Block offset is " << block_off << std::endl;
+                  }    
+                  else
+                  {
+                      std::cout << "Block length " << len << " does not match "
+                          << "existing block length " << bl << std::endl;
+                  }
                   abort();
 
                   wtf::wtf_network_msgtype msgtype = wtf::WTFNET_UPDATE;
@@ -1021,9 +1030,10 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
                     uint32_t valuelen;
                     up = up >> idlen >> id >> valuelen;
                     e::unpack32be((uint8_t*)&idlen, &idlen);
+                    e::unpack64be((uint8_t*)&id, &id);
                     e::unpack32be((uint8_t*)&valuelen, &valuelen);
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
-                    up = up >> *b;
+                    up = up >> b;
                     f->update_blocks(id, b);
                 }
 

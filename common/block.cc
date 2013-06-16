@@ -55,7 +55,7 @@ block :: update(uint64_t version,
         m_dirty = dirty;
     }
 
-    if(m_version < version)
+    if(version == 0 || m_version < version)
     {
         m_length = len;
         m_version = version;
