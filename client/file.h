@@ -70,6 +70,8 @@ class wtf_client::file
         uint64_t pack_size();
         uint64_t size() { return m_block_map.size(); }
         wtf::block_id lookup_block(uint64_t index) { return m_block_map[index]->get_first_location(); }
+        std::vector<wtf::block_id>::iterator lookup_block_begin(uint64_t index) { return m_block_map[index]->blocks_begin(); }
+        std::vector<wtf::block_id>::iterator lookup_block_end(uint64_t index) { return m_block_map[index]->blocks_end(); }
         void truncate();
 
     private:

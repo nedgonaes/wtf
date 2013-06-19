@@ -680,37 +680,47 @@ wtf_client :: write(int64_t fd,
         std::cout << "data_sz = " << data_sz << std::endl;
         std::cout << "Len = " << len << std::endl;
         std::cout << "Rem = " << rem << std::endl;
-        for (int i = 0; i < replicas; ++i)
+        uint64_t bl = f->get_block_length(bid);
+
+        if ((bl > 0 && block_off > 0) || (len < bl))
         {
-            uint64_t bl = f->get_block_length(bid);
+            //Overwrite a partial block.
 
-            if ((bl > 0 && block_off > 0) || (len < bl))
+            /*XXX: send a special instruction to servers that already have the
+              block so that we can copy it and append new
+              data rather than copy the whole block over the network. */ 
+
+            std::cout << "ERROR (not implemented): You tried "
+                << "over-writing a partial block." << std::endl;
+            if (block_off > 0)
             {
-                //Overwrite a partial block.
-
-                /*XXX: send a special instruction to servers that already have the
-                  block so that we can copy it and append new
-                  data rather than copy the whole block over the network. */ 
-
-                  std::cout << "ERROR (not implemented): You tried "
-                            << "over-writing a partial block." << std::endl;
-                  if (block_off > 0)
-                  {
-                      std::cout << "Block offset is " << block_off << std::endl;
-                  }    
-                  else
-                  {
-                      std::cout << "Block length " << len << " does not match "
-                          << "existing block length " << bl << std::endl;
-                  }
-                  abort();
-
-                  wtf::wtf_network_msgtype msgtype = wtf::WTFNET_UPDATE;
-                  rid = send(0 /*token*/, msgtype, data, len,
-                          bid, block_off, version,
-                          status, fd);
-            }
+                std::cout << "Block offset is " << block_off << std::endl;
+            }    
             else
+            {
+                std::cout << "Block length " << len << " does not match "
+                    << "existing block length " << bl << std::endl;
+            }
+            abort();
+
+            typedef std::vector<wtf::block_id> block_map;
+            block_map::iterator it = f->lookup_block_begin(bid);
+
+            /* XXX: Need to handle cases where replicas != existing replica set */
+            for (block_map::iterator it = f->lookup_block_begin(bid);
+                 it != f->lookup_block_end(bid); ++it)
+            {
+                /*XXX: need to move command() construction up a layer
+                 *     So that we can set the destination here */
+                wtf::wtf_network_msgtype msgtype = wtf::WTFNET_UPDATE;
+                rid = send(0 /*token*/, msgtype, data, len,
+                        bid, block_off, version,
+                        status, fd);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < replicas; ++i)
             {
                 //write new blocks or full-blocks.
 
