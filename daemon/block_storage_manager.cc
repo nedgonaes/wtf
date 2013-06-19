@@ -245,6 +245,8 @@ block_storage_manager::update_block(const e::slice& data,
 close_files:
     f_old.close();
     f_new.close();
+    ::close(pfd[0]);
+    ::close(pfd[1]);
     return ret;
 }
 
