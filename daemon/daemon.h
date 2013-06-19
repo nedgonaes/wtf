@@ -84,6 +84,11 @@ class daemon
                           uint64_t nonce,
                           std::auto_ptr<e::buffer> msg,
                           e::unpacker up);
+        void process_update(const wtf::connection& conn,
+                          uint64_t nonce,
+                          std::auto_ptr<e::buffer> msg,
+                          e::unpacker up);
+
 
     // Manage communication
     private:

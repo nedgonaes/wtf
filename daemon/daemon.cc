@@ -356,6 +356,9 @@ daemon :: loop(size_t thread)
             case WTFNET_PUT:
                 process_put(conn, nonce, msg, up);
                 break;
+            case WTFNET_UPDATE:
+                process_update(conn, nonce, msg, up);
+                break;
             default:
                 LOG(WARNING) << "unknown message type; here's some hex:  " << msg->hex();
                 break;
@@ -534,6 +537,61 @@ daemon :: process_get(const wtf::connection& conn,
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
             << sid << bid << data;
+    send(conn, resp);
+}
+
+
+void
+daemon :: process_update(const wtf::connection& conn,
+                            uint64_t nonce,
+                            std::auto_ptr<e::buffer> msg,
+                            e::unpacker up)
+{
+    wtf::response_returncode rc;
+    uint64_t sid;
+    uint64_t bid;
+    uint64_t offset;
+    ssize_t ret = 0;
+
+
+    up = up >> sid >> bid >> offset;
+
+    e::slice data = up.as_slice();
+    LOG(INFO) << "UPDATE: " << data.hex();
+
+    if (sid != m_us.token)
+    {
+        LOG(ERROR) << "Rejecting UPDATE because server ID " << sid
+                   << " from the message did not match this server's ID "
+                   << m_us.token;
+        sid = 0;
+        bid = 0;
+        ret = -1;
+    }
+    else
+    {
+        ret = m_blockman.update_block(data, offset, sid, bid); 
+    }
+
+    if (ret < data.size())
+    {
+        rc = wtf::RESPONSE_SERVER_ERROR;
+    }
+    else
+    {
+        rc = wtf::RESPONSE_SUCCESS;
+    }
+
+    LOG(INFO) << "Returning " << rc << " to client.";
+
+
+    size_t sz = COMMAND_HEADER_SIZE + 
+                sizeof(uint64_t) + /* token */
+                sizeof(uint64_t);  /* block id */
+    std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
+    e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
+    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
+            << sid << bid;
     send(conn, resp);
 }
 

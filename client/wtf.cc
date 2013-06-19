@@ -1029,7 +1029,6 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
                     uint64_t id;
                     uint32_t valuelen;
                     up = up >> idlen >> id >> valuelen;
-                    e::unpack32be((uint8_t*)&idlen, &idlen);
                     e::unpack64be((uint8_t*)&id, &id);
                     e::unpack32be((uint8_t*)&valuelen, &valuelen);
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
