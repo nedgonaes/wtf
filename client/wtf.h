@@ -120,13 +120,6 @@ class wtf_client
         int64_t close(int64_t fd, wtf_returncode* status);
         int64_t flush(int64_t fd,
                       wtf_returncode* status);
-        int64_t send(uint64_t token,
-                     wtf::wtf_network_msgtype msg, 
-                     const char* data, size_t data_sz,
-                     uint64_t bid, uint64_t offset,
-                     uint64_t version,
-                     wtf_returncode* status,
-                     int64_t fd);
         int64_t wait(const char* object,
                      const char* cond,
                      uint64_t state,
@@ -135,6 +128,10 @@ class wtf_client
         int64_t loop(int64_t id, int timeout, wtf_returncode* status);
 
     friend class wtf::tool_wrapper;
+
+    private:
+        class command;
+        class file;
 
     // these are the only private things that tool_wrapper should touch
     private:
@@ -149,10 +146,10 @@ class wtf_client
 #else
         int poll_fd();
 #endif
+        int64_t send(e::intrusive_ptr<command>& cmd,
+                     wtf_returncode* status);
 
     private:
-        class command;
-        class file;
         friend e::unpacker 
             operator >> (e::unpacker up, wtf_client::file& rhs);
         friend e::buffer::packer 

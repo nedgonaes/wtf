@@ -39,15 +39,15 @@
 class wtf_client::command
 {
     public:
-        command(wtf_returncode* status,
-                uint64_t nonce,
+        command(wtf::wtf_node send_to,
+                uint64_t remote_bid,
                 int64_t fd,
                 uint64_t block,
                 uint64_t offset,
-                uint64_t length,
                 uint64_t version,
-                wtf::wtf_network_msgtype msgtype,
-                std::auto_ptr<e::buffer> msg);
+                const char* data,
+                uint64_t length,
+                wtf::wtf_network_msgtype msgtype);
         ~command() throw ();
 
     public:
@@ -56,7 +56,6 @@ class wtf_client::command
         wtf::wtf_network_msgtype msgtype() const throw () { return m_msgtype; }
         const char* output() { return &m_output[0]; }
         size_t output_sz() { return m_output_sz; }
-        uint64_t clientid() const throw () { return m_clientid; }
         int64_t fd() const throw() { return m_fd; }
         int64_t block() const throw() { return m_block; }
         int64_t offset() const throw() { return m_offset; }
@@ -67,6 +66,7 @@ class wtf_client::command
         const char* last_error_file() const throw() { return m_last_error_file; }
         uint64_t last_error_line() const throw() { return m_last_error_line; }
         wtf_returncode status() const throw() { return m_status; }
+        size_t req_size();
 
     public:
         void set_fd(int64_t fd) { m_fd = fd; }
@@ -96,7 +96,8 @@ class wtf_client::command
     private:
         size_t m_ref;
         uint64_t m_nonce;
-        uint64_t m_clientid;
+        wtf::wtf_node m_sent_to;
+        uint64_t m_remote_bid;
         int64_t m_fd;
         uint64_t m_block;
         uint64_t m_offset;
@@ -106,7 +107,6 @@ class wtf_client::command
         wtf_returncode m_status;
         std::vector<char> m_output;
         size_t m_output_sz;
-        wtf::wtf_node m_sent_to;
         wtf::wtf_network_msgtype m_msgtype;
         const char* m_last_error_desc;
         const char* m_last_error_file;

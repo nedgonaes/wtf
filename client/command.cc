@@ -27,42 +27,56 @@
 
 #define __STDC_LIMIT_MACROS
 
+//busybee
+#include <busybee_constants.h>
+
+// busybee header + nonce + msgtype
+#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE)
+#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE + sizeof(uint64_t))
+#define COMMAND_DATA_OFFSET (COMMAND_MSGTYPE_OFFSET + pack_size(wtf::WTFNET_PUT))
+
+
 // e
 #include <e/endian.h>
 
 // WTF
 #include "client/command.h"
+#include "common/network_msgtype.h"
+#include "common/block_id.h"
 
 using wtf::wtf_node;
 
-wtf_client :: command :: command(wtf_returncode* st,
-                                       uint64_t n,
-                                       int64_t fd,
-                                       uint64_t block,
-                                       uint64_t offset,
-                                       uint64_t length,
-                                       uint64_t version,
-                                       wtf::wtf_network_msgtype msgtype,
-                                       std::auto_ptr<e::buffer> m)
+wtf_client :: command :: command(wtf::wtf_node send_to,
+                                 uint64_t remote_bid,
+                                 int64_t fd,
+                                 uint64_t block,
+                                 uint64_t offset,
+                                 uint64_t version,
+                                 const char* data,
+                                 uint64_t length,
+                                 wtf::wtf_network_msgtype msgtype)
     : m_ref(0)
-    , m_nonce(n)
+    , m_nonce(0)
+    , m_sent_to(send_to)
+    , m_remote_bid(remote_bid)
     , m_fd(fd)
     , m_block(block)
     , m_offset(offset)
     , m_length(length)
     , m_version(version)
-    , m_clientid(n)
-    , m_request(m)
-    , m_status(*st)
+    , m_request()
+    , m_status(WTF_GARBAGE)
     , m_output()
     , m_output_sz(0)
-    , m_sent_to()
     , m_msgtype(msgtype)
     , m_last_error_desc()
     , m_last_error_file()
     , m_last_error_line()
 {
-    *st = WTF_GARBAGE;
+    m_request = std::auto_ptr<e::buffer>(e::buffer::create(req_size()));
+    e::buffer::packer pa = m_request->pack_at(COMMAND_MSGTYPE_OFFSET);
+    pa = pa << m_msgtype;
+    pa = pa.copy(e::slice(data, length));
     std::cout << "Command constructed with m_status = " << m_status << std::endl;
 }
 
@@ -74,12 +88,30 @@ void
 wtf_client :: command :: set_nonce(uint64_t n)
 {
     m_nonce = n;
+    e::buffer::packer pa = m_request->pack_at(COMMAND_NONCE_OFFSET);
+    pa = pa << m_nonce;
 }
 
 void
 wtf_client :: command :: set_sent_to(const wtf_node& s)
 {
     m_sent_to = s;
+}
+
+size_t
+wtf_client :: command :: req_size()
+{
+    switch (m_msgtype)
+    {
+        case wtf::WTFNET_PUT:
+            return COMMAND_DATA_OFFSET + m_length;
+        case wtf::WTFNET_GET:
+            return COMMAND_DATA_OFFSET + wtf::block_id::pack_size();
+        case wtf::WTFNET_UPDATE:
+            return COMMAND_DATA_OFFSET + wtf::block_id::pack_size() + m_length;
+        default:
+            return -1;
+    };
 }
 
 void

@@ -68,8 +68,10 @@ using namespace wtf;
 
 #define WTFSETSUCCESS WTFSETERROR(WTF_SUCCESS, "operation succeeded")
 
-// busybee header + msgtype + nonce
-#define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + pack_size(WTFNET_PUT) + sizeof(uint64_t))
+// busybee header + nonce + msgtype
+#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE)
+#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE + sizeof(uint64_t))
+#define COMMAND_DATA_OFFSET (COMMAND_MSGTYPE_OFFSET + pack_size(WTFNET_PUT))
 
 #define BUSYBEE_ERROR(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
@@ -138,31 +140,15 @@ wtf_client :: ~wtf_client() throw ()
 }
 
 int64_t
-wtf_client :: send(uint64_t token,
-                   wtf_network_msgtype msgtype,
-                   const char* data, size_t data_sz,
-                   uint64_t bid, uint64_t offset,
-                   uint64_t version,
-                   wtf_returncode* status,
-                   int64_t fd)
+wtf_client :: send(e::intrusive_ptr<command>& cmd, wtf_returncode* status)
 {
     MAINTAIN_COORD_CONNECTION(status);
+
     // Pack the message to send
     uint64_t nonce = m_nonce;
-    ++m_nonce;
-    size_t sz = COMMAND_HEADER_SIZE + data_sz;
-    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-    e::buffer::packer pa = msg->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << msgtype << nonce;
-    pa = pa.copy(e::slice(data, data_sz));
-
-    *status = WTF_GARBAGE;
-
+    cmd->set_nonce(m_nonce++);
 
     // Create the command object
-    e::intrusive_ptr<command> cmd = new command(status, nonce, fd, 
-                                                bid, offset, data_sz, version, 
-                                                msgtype, msg);
     return send_to_blockserver(cmd, status);
 }
 
@@ -202,7 +188,7 @@ wtf_client :: loop(int timeout, wtf_returncode* status)
         m_last_error_file = c->last_error_file();
         m_last_error_line = c->last_error_line();
         m_last_error_host = c->sent_to().address;
-        return c->clientid();
+        return c->nonce();
     }
 
     if (m_commands.empty())
@@ -252,7 +238,7 @@ wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
     m_last_error_file = c->last_error_file();
     m_last_error_line = c->last_error_line();
     m_last_error_host = c->sent_to().address;
-    return c->clientid();
+    return c->nonce();
 }
 
 int64_t
@@ -710,12 +696,13 @@ wtf_client :: write(int64_t fd,
             for (block_map::iterator it = f->lookup_block_begin(bid);
                  it != f->lookup_block_end(bid); ++it)
             {
-                /*XXX: need to move command() construction up a layer
-                 *     So that we can set the destination here */
-                wtf::wtf_network_msgtype msgtype = wtf::WTFNET_UPDATE;
-                rid = send(0 /*token*/, msgtype, data, len,
-                        bid, block_off, version,
-                        status, fd);
+                wtf::wtf_node node = *m_config->node_from_token(it->server());
+                e::intrusive_ptr<command> cmd = new command(node,
+                                                it->block(),
+                                                fd, bid, block_off, version,
+                                                data, len, wtf::WTFNET_UPDATE);
+
+                rid = send(cmd, status);
             }
         }
         else
@@ -723,11 +710,12 @@ wtf_client :: write(int64_t fd,
             for (int i = 0; i < replicas; ++i)
             {
                 //write new blocks or full-blocks.
+                e::intrusive_ptr<command> cmd = new command(wtf::wtf_node() /*send_to*/,
+                                                0 /*remote_bid*/,
+                                                fd, bid, block_off, version,
+                                                data, len, wtf::WTFNET_PUT);
 
-                wtf::wtf_network_msgtype msgtype = wtf::WTFNET_PUT;
-                rid = send(0, msgtype, data, len,
-                        bid, block_off, version,
-                        status, fd);
+                rid = send(cmd, status);
 
                 if (rid < 0)
                 {
@@ -761,8 +749,9 @@ wtf_client :: read(int64_t fd, const char* data,
 //    //compute block number from offset
 //    uint64_t bid = f->offset()/CHUNKSIZE;
 //    uint64_t block_offset = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
-//    //m_config->node_from_token(
-    return -1;
+//    uint64_t token = f->lookup_block(bid).server();
+//    wtf::wtf_node send_to = m_config->node_from_token(token);
+//    return -1;
      
 }
 
@@ -894,7 +883,7 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
         m_commands[cmd->nonce()] = cmd;
         e::intrusive_ptr<file> f = m_fds[cmd->fd()];
         f->add_command(cmd);
-        return cmd->clientid();
+        return cmd->nonce();
     }
     else
     {
