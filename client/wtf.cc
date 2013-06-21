@@ -641,9 +641,7 @@ wtf_client :: write(int64_t fd,
 {
     int64_t rid = 0;
     int64_t lid = 0;
-    const char* output;
     uint32_t rem = data_sz;
-    int chunks = ROUNDUP(data_sz, CHUNKSIZE)/CHUNKSIZE; 
 
     if (m_fds.find(fd) == m_fds.end())
     {
@@ -737,22 +735,74 @@ wtf_client :: read(int64_t fd, const char* data,
                    uint32_t data_sz,
                    wtf_returncode* status)
 {
-//    e::intrusive_ptr<file> f = m_fds[fd];
-//    //XXX: maybe check if it's already there?
+    int64_t rid = 0;
+    int64_t lid = 0;
+    uint32_t rem = data_sz;
+
+    e::intrusive_ptr<file> f = m_fds.find(fd);
+
+    if (f == m_fds.end())
+    {
+        return -1;
+    }
+
+    update_file_cache(f->path(), f);
+
+    while(rem > 0)
+    {
+        uint64_t bid = f->offset()/CHUNKSIZE;
+        std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
+        std::cout << "bid " << bid << std::endl; 
+        uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
+        len = MIN(len, rem); 
+        uint64_t version = f->get_block_version(bid);
+        uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
+
+        std::cout << "data_sz = " << data_sz << std::endl;
+        std::cout << "Len = " << len << std::endl;
+        std::cout << "Rem = " << rem << std::endl;
+
+        wtf::block_id block = f->lookup_block(bid);
+        wtf::wtf_node send_to = *m_config->node_from_token(block.server());
+        e::intrusive_ptr<command> cmd = new command(node,
+                block.block(),
+                fd, bid, block_off, version,
+                data, len, wtf::WTFNET_READ);
+
+        rid = send(cmd, status);
+
+        if (rid < 0)
+        {
+            return -1;
+        }
+
+        rem -= len;
+        data += len;
+        f->set_offset(f->offset() + len);
+    }
+
+    return rid;
+
+
 //    //XXX: Make sure not to overwrite the outstanding changes.
+
 //    /*
 //     * Always read from hyperdex.  If we want to see latest
 //     * changes, must call flush() first.
 //     */ 
-//    update_file_cache(f->path(), f);
-//    
-//    //compute block number from offset
-//    uint64_t bid = f->offset()/CHUNKSIZE;
-//    uint64_t block_offset = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
-//    uint64_t token = f->lookup_block(bid).server();
-//    wtf::wtf_node send_to = m_config->node_from_token(token);
-//    return -1;
-     
+    update_file_cache(f->path(), f);
+    
+    //compute block number from offset
+    uint64_t bid = f->offset()/CHUNKSIZE;
+    uint64_t block_offset = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
+    wtf::block_id block = f->lookup_block(bid);
+    wtf::wtf_node send_to = *m_config->node_from_token(block.server());
+    e::intrusive_ptr<command> cmd = new command(node,
+            block.block(),
+            fd, bid, block_off, version,
+            data, len, wtf::WTFNET_READ);
+
+    return send(cmd, status);
 }
 
 int64_t
@@ -894,7 +944,6 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
 
 int64_t
 wtf_client :: handle_command_response(const po6::net::location& from,
-                                            std::auto_ptr<e::buffer> msg,
                                             e::unpacker up,
                                             wtf_returncode* status)
 {
