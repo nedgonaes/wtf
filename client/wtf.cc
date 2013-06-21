@@ -69,9 +69,9 @@ using namespace wtf;
 #define WTFSETSUCCESS WTFSETERROR(WTF_SUCCESS, "operation succeeded")
 
 // busybee header + nonce + msgtype
-#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE)
-#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE + sizeof(uint64_t))
-#define COMMAND_DATA_OFFSET (COMMAND_MSGTYPE_OFFSET + pack_size(WTFNET_PUT))
+#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE)
+#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE + pack_size(wtf::WTFNET_PUT))
+#define COMMAND_DATA_OFFSET (COMMAND_NONCE_OFFSET + sizeof(uint64_t))
 
 #define BUSYBEE_ERROR(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
@@ -143,10 +143,6 @@ int64_t
 wtf_client :: send(e::intrusive_ptr<command>& cmd, wtf_returncode* status)
 {
     MAINTAIN_COORD_CONNECTION(status);
-
-    // Pack the message to send
-    uint64_t nonce = m_nonce;
-    cmd->set_nonce(m_nonce++);
 
     // Create the command object
     return send_to_blockserver(cmd, status);
@@ -698,7 +694,7 @@ wtf_client :: write(int64_t fd,
                 e::intrusive_ptr<command> cmd = new command(node,
                                                 it->block(),
                                                 fd, bid, block_off, version,
-                                                data, len, wtf::WTFNET_UPDATE);
+                                                data, len, m_nonce, wtf::WTFNET_UPDATE);
 
                 rid = send(cmd, status);
             }
@@ -711,7 +707,7 @@ wtf_client :: write(int64_t fd,
                 e::intrusive_ptr<command> cmd = new command(wtf::wtf_node() /*send_to*/,
                                                 0 /*remote_bid*/,
                                                 fd, bid, block_off, version,
-                                                data, len, wtf::WTFNET_PUT);
+                                                data, len, m_nonce, wtf::WTFNET_PUT);
 
                 rid = send(cmd, status);
 
@@ -767,7 +763,7 @@ wtf_client :: read(int64_t fd, const char* data,
         e::intrusive_ptr<command> cmd = new command(send_to,
                 block.block(),
                 fd, bid, block_off, version,
-                data, len, wtf::WTFNET_GET);
+                data, len, m_nonce, wtf::WTFNET_GET);
 
         rid = send(cmd, status);
 

@@ -1,3 +1,4 @@
+// Copyright (c) 2013, Sean Ogden
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -30,9 +31,9 @@
 #include <busybee_constants.h>
 
 // busybee header + nonce + msgtype
-#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE)
-#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE + sizeof(uint64_t))
-#define COMMAND_DATA_OFFSET (COMMAND_MSGTYPE_OFFSET + pack_size(wtf::WTFNET_PUT))
+#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE)
+#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE + pack_size(wtf::WTFNET_PUT))
+#define COMMAND_DATA_OFFSET (COMMAND_NONCE_OFFSET + sizeof(uint64_t))
 
 
 // e
@@ -53,9 +54,10 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
                                  uint64_t version,
                                  const char* data,
                                  uint64_t length,
+                                 uint64_t& nonce,
                                  wtf::wtf_network_msgtype msgtype)
     : m_ref(0)
-    , m_nonce(0)
+    , m_nonce(nonce++)
     , m_sent_to(send_to)
     , m_remote_bid(remote_bid)
     , m_fd(fd)
@@ -74,21 +76,13 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
 {
     m_request = std::auto_ptr<e::buffer>(e::buffer::create(req_size()));
     e::buffer::packer pa = m_request->pack_at(COMMAND_MSGTYPE_OFFSET);
-    pa = pa << m_msgtype;
+    pa = pa << m_msgtype << m_nonce;
     pa = pa.copy(e::slice(data, length));
     std::cout << "Command constructed with m_status = " << m_status << std::endl;
 }
 
 wtf_client :: command :: ~command() throw ()
 {
-}
-
-void
-wtf_client :: command :: set_nonce(uint64_t n)
-{
-    m_nonce = n;
-    e::buffer::packer pa = m_request->pack_at(COMMAND_NONCE_OFFSET);
-    pa = pa << m_nonce;
 }
 
 void

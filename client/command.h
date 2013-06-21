@@ -47,6 +47,7 @@ class wtf_client::command
                 uint64_t version,
                 const char* data,
                 uint64_t length,
+                uint64_t& nonce,
                 wtf::wtf_network_msgtype msgtype);
         ~command() throw ();
 
@@ -70,7 +71,6 @@ class wtf_client::command
 
     public:
         void set_fd(int64_t fd) { m_fd = fd; }
-        void set_nonce(uint64_t nonce);
         void set_sent_to(const wtf::wtf_node& sent_to);
         void fail(wtf_returncode status);
         void succeed(std::auto_ptr<e::buffer> msg,

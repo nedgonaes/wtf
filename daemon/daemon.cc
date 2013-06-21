@@ -346,6 +346,8 @@ daemon :: loop(size_t thread)
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
         up = up >> mt >> nonce;
 
+        LOG(INFO) << "msgtype: " << mt << ", nonce: " << nonce;
+
         switch (mt)
         {
             case WTFNET_NOP:
