@@ -739,14 +739,14 @@ wtf_client :: read(int64_t fd, const char* data,
     int64_t lid = 0;
     uint32_t rem = data_sz;
 
-    e::intrusive_ptr<file> f = m_fds.find(fd);
-
-    if (f == m_fds.end())
+    if (m_fds.find(fd) == m_fds.end())
     {
         return -1;
     }
 
-    update_file_cache(f->path(), f);
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    update_file_cache(f->path().get(), f);
 
     while(rem > 0)
     {
@@ -764,10 +764,10 @@ wtf_client :: read(int64_t fd, const char* data,
 
         wtf::block_id block = f->lookup_block(bid);
         wtf::wtf_node send_to = *m_config->node_from_token(block.server());
-        e::intrusive_ptr<command> cmd = new command(node,
+        e::intrusive_ptr<command> cmd = new command(send_to,
                 block.block(),
                 fd, bid, block_off, version,
-                data, len, wtf::WTFNET_READ);
+                data, len, wtf::WTFNET_GET);
 
         rid = send(cmd, status);
 
@@ -790,19 +790,6 @@ wtf_client :: read(int64_t fd, const char* data,
 //     * Always read from hyperdex.  If we want to see latest
 //     * changes, must call flush() first.
 //     */ 
-    update_file_cache(f->path(), f);
-    
-    //compute block number from offset
-    uint64_t bid = f->offset()/CHUNKSIZE;
-    uint64_t block_offset = ROUNDUP(f->offset(), CHUNKSIZE) - f->offset() + 1;
-    wtf::block_id block = f->lookup_block(bid);
-    wtf::wtf_node send_to = *m_config->node_from_token(block.server());
-    e::intrusive_ptr<command> cmd = new command(node,
-            block.block(),
-            fd, bid, block_off, version,
-            data, len, wtf::WTFNET_READ);
-
-    return send(cmd, status);
 }
 
 int64_t
@@ -944,6 +931,7 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
 
 int64_t
 wtf_client :: handle_command_response(const po6::net::location& from,
+                                            std::auto_ptr<e::buffer> msg,
                                             e::unpacker up,
                                             wtf_returncode* status)
 {
