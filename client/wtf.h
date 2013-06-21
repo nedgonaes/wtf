@@ -114,7 +114,7 @@ class wtf_client
                       uint32_t replicas,
                       wtf_returncode* status);
         int64_t read(int64_t fd,
-                     const char* data,
+                     char* data,
                      uint32_t data_sz,
                      wtf_returncode* status);
         int64_t close(int64_t fd, wtf_returncode* status);

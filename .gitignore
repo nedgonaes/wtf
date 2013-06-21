@@ -28,10 +28,12 @@ m4
 Makefile
 Makefile.in
 missing
-testdata
+writetestdata
+readtestdata
 wtf
 wtf-cli
 wtf-writetest
+wtf-readtest
 wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster

@@ -33,6 +33,7 @@
 
 // C
 #include <cmath>
+#include <stdio.h>
 
 // POSIX
 #include <signal.h>
@@ -514,31 +515,47 @@ daemon :: process_get(const wtf::connection& conn,
     wtf::response_returncode rc;
     uint64_t sid;
     uint64_t bid;
-    uint32_t len;
+    uint64_t len;
     ssize_t ret;
 
     LOG(INFO) << "GET: " << msg->as_slice().hex();
 
     up = up >> sid >> bid >> len;
-    std::vector<uint8_t> data(len);
-    ret = m_blockman.read_block(sid, bid, data);
+
+    uint8_t* data = new uint8_t[len];
+    LOG(INFO) << "len: " << len;
+    ret = m_blockman.read_block(sid, bid, data, len);
 
     if (ret < len)
     {
         rc = wtf::RESPONSE_SERVER_ERROR;
+        LOG(INFO) << "ret = " << ret << " len = " << len;
+        len = ret;
     }
     else
     {
         rc = wtf::RESPONSE_SUCCESS;
     }
 
+    LOG(INFO) << "Returning " << rc << " to client.";
     size_t sz = COMMAND_HEADER_SIZE + 
-                sizeof(uint64_t) + /* token */
-                sizeof(uint64_t);  /* block id */
+                len;
+
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
-            << sid << bid << data;
+    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc;
+
+    LOG(INFO) << "pa.remain(): " << pa.remain(); 
+    LOG(INFO) << "len: " << len;
+    LOG(INFO) << "ret: " << ret;
+    fflush(stdout);
+    if (len > 0) 
+    {
+        pa = pa.copy(e::slice(data,len));
+    }
+
+    delete [] data;
+
     send(conn, resp);
 }
 

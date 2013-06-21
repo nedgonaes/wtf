@@ -105,14 +105,7 @@ using namespace wtf;
 #define WTFSPACE "wtf"
 #define WTFBLOCKMAP "blockmap"
 
-void
-wtf_destroy_output(const char* output, size_t)
-{
-    uint16_t sz = 0;
-    e::unpack16le(output - 2, &sz);
-    const e::buffer* buf = reinterpret_cast<const e::buffer*>(output - sz);
-    delete buf;
-}
+
 
 wtf_client :: wtf_client(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
@@ -614,6 +607,8 @@ wtf_client :: inner_loop(wtf_returncode* status)
 int64_t
 wtf_client :: open(const char* path)
 {
+    wtf_returncode status;
+    MAINTAIN_COORD_CONNECTION(&status);
     e::intrusive_ptr<file> f = new file(path);
     m_fds[m_fileno] = f; 
     
@@ -694,7 +689,8 @@ wtf_client :: write(int64_t fd,
                 e::intrusive_ptr<command> cmd = new command(node,
                                                 it->block(),
                                                 fd, bid, block_off, version,
-                                                data, len, m_nonce, wtf::WTFNET_UPDATE);
+                                                data, len, m_nonce, wtf::WTFNET_UPDATE,
+                                                NULL, 0);
 
                 rid = send(cmd, status);
             }
@@ -707,7 +703,8 @@ wtf_client :: write(int64_t fd,
                 e::intrusive_ptr<command> cmd = new command(wtf::wtf_node() /*send_to*/,
                                                 0 /*remote_bid*/,
                                                 fd, bid, block_off, version,
-                                                data, len, m_nonce, wtf::WTFNET_PUT);
+                                                data, len, m_nonce, wtf::WTFNET_PUT,
+                                                NULL, 0);
 
                 rid = send(cmd, status);
 
@@ -727,7 +724,7 @@ wtf_client :: write(int64_t fd,
 }
 
 int64_t
-wtf_client :: read(int64_t fd, const char* data,
+wtf_client :: read(int64_t fd, char* data,
                    uint32_t data_sz,
                    wtf_returncode* status)
 {
@@ -760,10 +757,14 @@ wtf_client :: read(int64_t fd, const char* data,
 
         wtf::block_id block = f->lookup_block(bid);
         wtf::wtf_node send_to = *m_config->node_from_token(block.server());
+        //XXX: pass in output buffer.
+        //XXX: If read fails, read from the next node on the list.
+
         e::intrusive_ptr<command> cmd = new command(send_to,
                 block.block(),
                 fd, bid, block_off, version,
-                data, len, m_nonce, wtf::WTFNET_GET);
+                NULL, 0, m_nonce, wtf::WTFNET_GET,
+                data, len);
 
         rid = send(cmd, status);
 
@@ -1057,6 +1058,7 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
 
                 while (!up.empty())
                 {
+                    std::cout << up.as_slice().hex() << std::endl;
                     uint32_t idlen;
                     uint64_t id;
                     uint32_t valuelen;

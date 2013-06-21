@@ -65,7 +65,7 @@ namespace wtf
                                  uint64_t& bid);
             ssize_t read_block(uint64_t sid,
                                uint64_t bid,
-                               std::vector<uint8_t>& data);
+                               uint8_t* data, size_t len);
             void stat();
         private:
             ssize_t splice(int fd_in, size_t offset_in, 

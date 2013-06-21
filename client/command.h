@@ -48,14 +48,16 @@ class wtf_client::command
                 const char* data,
                 uint64_t length,
                 uint64_t& nonce,
-                wtf::wtf_network_msgtype msgtype);
+                wtf::wtf_network_msgtype msgtype,
+                char* output,
+                size_t output_sz);
         ~command() throw ();
 
     public:
         uint64_t nonce() const throw () { return m_nonce; }
         uint64_t version() const throw () { return m_version; }
         wtf::wtf_network_msgtype msgtype() const throw () { return m_msgtype; }
-        const char* output() { return &m_output[0]; }
+        const char* output() { return m_output; }
         size_t output_sz() { return m_output_sz; }
         int64_t fd() const throw() { return m_fd; }
         int64_t block() const throw() { return m_block; }
@@ -105,7 +107,7 @@ class wtf_client::command
         uint64_t m_version;
         std::auto_ptr<e::buffer> m_request;
         wtf_returncode m_status;
-        std::vector<char> m_output;
+        char* m_output;
         size_t m_output_sz;
         wtf::wtf_network_msgtype m_msgtype;
         const char* m_last_error_desc;

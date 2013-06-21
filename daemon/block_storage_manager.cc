@@ -251,29 +251,34 @@ close_files:
 }
 
 
-    ssize_t
+ssize_t
 block_storage_manager::read_block(uint64_t sid,
         uint64_t bid,
-        std::vector<uint8_t>& data)
+        uint8_t* data, size_t data_sz)
 {
-    int ret;
+    int ret = -1;
     std::stringstream p;
 
     p << std::string(m_path.get()) << '/' << sid << bid;
     po6::io::fd f(open(p.str().c_str(), O_RDONLY));
 
+    PLOG(INFO) << "Opening path " << p.str();
+
     if (f.get() < 0)
     {
         PLOG(ERROR) << "read_block failed";
+        return -1;
     }
 
-    ret = f.xread(&data[0], data.size());
+    ret = f.xread(data, data_sz);
 
     if (ret < 0)
     {
         PLOG(ERROR) << "read_block failed";
+        return -1;
     }
 
+    return ret;
 }
 
 void

@@ -34,6 +34,7 @@
 #define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE)
 #define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE + pack_size(wtf::WTFNET_PUT))
 #define COMMAND_DATA_OFFSET (COMMAND_NONCE_OFFSET + sizeof(uint64_t))
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
 
 // e
@@ -55,7 +56,9 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
                                  const char* data,
                                  uint64_t length,
                                  uint64_t& nonce,
-                                 wtf::wtf_network_msgtype msgtype)
+                                 wtf::wtf_network_msgtype msgtype,
+                                 char* output,
+                                 size_t output_sz)
     : m_ref(0)
     , m_nonce(nonce++)
     , m_sent_to(send_to)
@@ -67,8 +70,8 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
     , m_version(version)
     , m_request()
     , m_status(WTF_GARBAGE)
-    , m_output()
-    , m_output_sz(0)
+    , m_output(output)
+    , m_output_sz(output_sz)
     , m_msgtype(msgtype)
     , m_last_error_desc()
     , m_last_error_file()
@@ -77,12 +80,48 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
     m_request = std::auto_ptr<e::buffer>(e::buffer::create(req_size()));
     e::buffer::packer pa = m_request->pack_at(COMMAND_MSGTYPE_OFFSET);
     pa = pa << m_msgtype << m_nonce;
-    pa = pa.copy(e::slice(data, length));
-    std::cout << "Command constructed with m_status = " << m_status << std::endl;
+
+    switch(m_msgtype)
+    {
+        case wtf::WTFNET_PUT:
+            pa = pa.copy(e::slice(data, length));
+            m_output = new char[sizeof(uint64_t)*2];
+            m_output_sz = sizeof(uint64_t)*2;
+            break;
+        case wtf::WTFNET_UPDATE:
+            pa = pa << m_sent_to.token << remote_bid << m_length;
+            pa = pa.copy(e::slice(data, length));
+            m_output = new char[sizeof(uint64_t)*2];
+            m_output_sz = sizeof(uint64_t)*2;
+            break;
+        case wtf::WTFNET_GET:
+            pa = pa << m_sent_to.token << remote_bid << uint64_t(m_output_sz);
+            break;
+        default:
+            break;
+    }
 }
 
 wtf_client :: command :: ~command() throw ()
 {
+    //XXX:  Make this into separate classes.
+    switch(m_msgtype)
+    {
+        /* Put and update must clean up their own
+           output, which is created in constructor */
+        case wtf::WTFNET_PUT:
+        case wtf::WTFNET_UPDATE:
+            delete [] m_output;
+            m_output = NULL;
+            break;
+        /* Get output is created by the user, they clean
+           it up */
+        case wtf::WTFNET_GET:
+        default:
+            break;
+    }
+
+    return;
 }
 
 void
@@ -99,9 +138,9 @@ wtf_client :: command :: req_size()
         case wtf::WTFNET_PUT:
             return COMMAND_DATA_OFFSET + m_length;
         case wtf::WTFNET_GET:
-            return COMMAND_DATA_OFFSET + wtf::block_id::pack_size();
+            return COMMAND_DATA_OFFSET + wtf::block_id::pack_size() + sizeof(uint64_t);
         case wtf::WTFNET_UPDATE:
-            return COMMAND_DATA_OFFSET + wtf::block_id::pack_size() + m_length;
+            return COMMAND_DATA_OFFSET + wtf::block_id::pack_size() + sizeof(uint64_t) + m_length;
         default:
             return -1;
     };
@@ -125,9 +164,8 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
     uint16_t diff = data - base;
     assert(diff >= 2);
     e::pack16le(diff, base + diff - 2);
-    m_output.insert(m_output.begin(), data, data + resp.size());
-    m_output_sz = resp.size();
+    m_output_sz = MIN(m_output_sz, resp.size());
+    memmove(m_output, data, m_output_sz);
     backing.release();
-
     m_status = status;
 }

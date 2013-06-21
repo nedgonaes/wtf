@@ -45,7 +45,7 @@
 #include "client/wtf.h"
 #include "tools/common.h"
 
-static const char* _file = "writetestdata";
+static const char* _file = "readtestdata";
 
 static struct poptOption popts[] = {
     POPT_AUTOHELP
@@ -141,7 +141,7 @@ main(int argc, const char* argv[])
 
             wtf::wtf_network_msgtype msgtype = wtf::WTFNET_NOP;
             
-            std::string *item = new std::string();
+            size_t item_sz;
             std::string path;
 
             std::stringstream ss(s);
@@ -151,16 +151,14 @@ main(int argc, const char* argv[])
                 std::cerr << "Invalid input file.  Aborting." << std::endl;
             }
 
-            if (!std::getline(ss, *item, ' '))
-            {
-                std::cerr << "Invalid input file.  Aborting." << std::endl;
-            }
+            ss >> item_sz;
+            char* item = new char[item_sz];
 
             int64_t fd = r.open(path.c_str());
 
             std::cout << "FD is " << fd << std::endl;
 
-            rid = r.write(fd, item->c_str(), item->size()+1, 3, &re);
+            rid = r.read(fd, item, item_sz, &re);
 
             if (rid < 0)
             {
@@ -189,7 +187,8 @@ main(int argc, const char* argv[])
 
             std::cout << "rid: " << rid << " lid: " << lid << " " << re << std::endl;
 
-            delete item;
+            std::cout << std::string(item) << std::endl;
+            delete [] item;
         }
 
         std::cout << "Done flushing." << std::endl;
