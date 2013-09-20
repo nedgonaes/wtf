@@ -36,7 +36,7 @@
 #include <e/buffer.h>
 
 // WTF
-#include "wtf.h"
+#include "client/wtf.h"
 
 namespace wtf
 {

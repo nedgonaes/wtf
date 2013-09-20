@@ -65,6 +65,7 @@ noinst_PROGRAMS =
 noinst_PROGRAMS += wtf-cli
 noinst_PROGRAMS += wtf-writetest 
 noinst_PROGRAMS += wtf-readtest
+noinst_PROGRAMS += wtf-async-benchmark
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -142,6 +143,10 @@ wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt
+
+wtf_async_benchmark_SOURCES = tools/async-benchmark.cc
+wtf_async_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
+wtf_async_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
 
 wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
 wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)

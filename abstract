@@ -1,0 +1,17 @@
+    We have designed and implemented the Warp Transactional
+Filesystem, a distributed filesystem for storing large
+data.  It supports atomic file operations, and has
+better aggregate throughput, latency, and fault
+tolerance properties than existing publically available
+distributed file systems.
+    While previous distributed filesystems have many of the
+same features as WTF, they do not provide strong enough
+consistency guarantees to implement useful features such
+as atomic file append.  Furthermore, existing designs
+rely on a single master to store metadata in memory,
+resulting in non-uniform hardware requirements, weak fault
+tolerance properties, filesystem size limitations, 
+and performance bottlenecks.
+    In this paper we present the transactional API, 
+design and implementation details, and performance
+evaluation of the Warp Transactional Filesystem.

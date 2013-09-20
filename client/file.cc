@@ -89,7 +89,7 @@ wtf_client :: file :: gc_completed(wtf_returncode* rc)
 void
 wtf_client :: file :: add_command(e::intrusive_ptr<command>& cmd)
 {
-    std::cout << "Adding cmd " << cmd->nonce() << std::endl;
+    //std::cout << "Adding cmd " << cmd->nonce() << std::endl;
     m_commands[cmd->nonce()] = cmd;
 }
 
@@ -99,11 +99,11 @@ wtf_client :: file :: update_blocks(uint64_t block_index, uint64_t len,
                            uint64_t bid)
 {
 
-    std::cout << "Updating block " << block_index << std::endl;
+    //std::cout << "Updating block " << block_index << std::endl;
 
     if (m_block_map.find(block_index) == m_block_map.end())
     {
-        std::cout << "block didn't exist." << std::endl;
+        //std::cout << "block didn't exist." << std::endl;
         m_block_map[block_index] = new wtf::block();
     }
 
@@ -113,7 +113,7 @@ wtf_client :: file :: update_blocks(uint64_t block_index, uint64_t len,
 void
 wtf_client :: file :: update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b)
 {
-    std::cout << "Caching block " << bid << ": " << *b << std::endl;
+    //std::cout << "Caching block " << bid << ": " << *b << std::endl;
     m_block_map[bid] = b;
 }
 
