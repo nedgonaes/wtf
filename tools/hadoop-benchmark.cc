@@ -106,8 +106,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             std::string v = val();
             char filename[71] = "/tmp/";
             strcat(filename, f.data());
-            std::cout << filename << std::endl;
 
+            tll->start(&ts,1);
             hdfsFile fd = hdfsOpenFile(cl, filename, O_WRONLY|O_CREAT, 0, 0, 0);
             if(!fd) {
                 std::cerr << "Failed to open " << f.data() << " for writing!\n";
@@ -121,6 +121,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             }
 
             hdfsCloseFile(cl, fd);
+            tll->finish(&ts);
         }
     }
     catch (po6::error& e)
