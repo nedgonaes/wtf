@@ -36,10 +36,10 @@ wtf :: operator << (std::ostream& lhs, response_returncode rhs)
 {
     switch (rhs)
     {
-        stringify(RESPONSE_SUCCESS);
-        stringify(RESPONSE_OBJ_NOT_EXIST);
-        stringify(RESPONSE_SERVER_ERROR);
-        stringify(RESPONSE_MALFORMED);
+        STRINGIFY(RESPONSE_SUCCESS);
+        STRINGIFY(RESPONSE_OBJ_NOT_EXIST);
+        STRINGIFY(RESPONSE_SERVER_ERROR);
+        STRINGIFY(RESPONSE_MALFORMED);
         default:
             lhs << "unknown returncode";
     }

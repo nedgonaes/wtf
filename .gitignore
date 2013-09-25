@@ -33,6 +33,8 @@ writetestdata
 readtestdata
 wtf
 wtf-async-benchmark
+wtf-sync-benchmark
+wtf-hadoop-benchmark
 wtf-cli
 wtf-writetest
 wtf-readtest

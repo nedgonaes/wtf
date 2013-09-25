@@ -28,11 +28,12 @@
 #ifndef wtf_macros_h_
 #define wtf_macros_h_
 
-#define str(x) #x
-#define xstr(x) str(x)
-#define stringify(x) case (x): lhs << xstr(x); break
+#define XSTR(x) #x
+#define STR(x) XSTR(x)
+#define STRINGIFY(x) case (x): lhs << STR(x); break
+#define CSTRINGIFY(x) case (x): return STR(x);
 
-#define _CONCAT(x, y) x ## y
-#define CONCAT(x, y) _CONCAT(x, y)
+#define XCONCAT(x, y) x ## y
+#define CONCAT(x, y) XCONCAT(x, y)
 
 #endif // wtf_macros_h_

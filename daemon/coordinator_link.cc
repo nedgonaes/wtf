@@ -486,10 +486,9 @@ coordinator_link :: wait_for_config(configuration* config)
             if (m_shutdown1_id < 0)
             {
                 LOG(ERROR) << "dirty shutdown because shutdown1 failed: "
-                           << m_repl->last_error_desc()
+                           << m_repl->last_error().msg()
                            << "(" << m_get_config_status << ";"
-                           << m_repl->last_error_file() << ":"
-                           << m_repl->last_error_line() << ")";
+                           << m_repl->last_error().loc() << ")";
                 m_state = DIRTY_SHUTDOWN;
             }
 
@@ -519,10 +518,9 @@ coordinator_link :: wait_for_config(configuration* config)
                     if (timeout < 0)
                     {
                         LOG(ERROR) << "replicant returned REPLICANT_TIMEOUT when we requested an infinite timeout: "
-                                   << m_repl->last_error_desc()
+                                   << m_repl->last_error().msg()
                                    << "(" << lstatus << ";"
-                                   << m_repl->last_error_file() << ":"
-                                   << m_repl->last_error_line() << ")";
+                                   << m_repl->last_error().loc() << ")";
                     }
                     else
                     {
@@ -539,10 +537,9 @@ coordinator_link :: wait_for_config(configuration* config)
                     break;
                 case REPLICANT_NEED_BOOTSTRAP:
                     LOG(ERROR) << "communication error with the coordinator: "
-                               << m_repl->last_error_desc()
+                               << m_repl->last_error().msg()
                                << "(" << lstatus << ";"
-                               << m_repl->last_error_file() << ":"
-                               << m_repl->last_error_line() << ")";
+                               << m_repl->last_error().loc() << ")";
                     break;
                 case REPLICANT_SUCCESS:
                 case REPLICANT_NAME_TOO_LONG:
@@ -558,10 +555,9 @@ coordinator_link :: wait_for_config(configuration* config)
                 case REPLICANT_NONE_PENDING:
                 case REPLICANT_GARBAGE:
                     LOG(ERROR) << "unexpected error with coordinator connection: "
-                               << m_repl->last_error_desc()
+                               << m_repl->last_error().msg()
                                << "(" << lstatus << ";"
-                               << m_repl->last_error_file() << ":"
-                               << m_repl->last_error_line() << ")";
+                               << m_repl->last_error().loc() << ")";
                     break;
                 default:
                     abort();
@@ -596,17 +592,15 @@ coordinator_link :: wait_for_config(configuration* config)
                     break;
                 case REPLICANT_FUNC_NOT_FOUND:
                     LOG(ERROR) << "coordinator missing \"get-config\" function: "
-                               << m_repl->last_error_desc()
+                               << m_repl->last_error().msg()
                                << "(" << m_get_config_status << ";"
-                               << m_repl->last_error_file() << ":"
-                               << m_repl->last_error_line() << ")";
+                               << m_repl->last_error().loc() << ")";
                     continue;
                 case REPLICANT_OBJ_NOT_FOUND:
                     LOG(ERROR) << "coordinator missing \"wtf\" object: "
-                               << m_repl->last_error_desc()
+                               << m_repl->last_error().msg()
                                << "(" << m_get_config_status << ";"
-                               << m_repl->last_error_file() << ":"
-                               << m_repl->last_error_line() << ")";
+                               << m_repl->last_error().loc() << ")";
                     continue;
                 case REPLICANT_TIMEOUT:
                 case REPLICANT_BACKOFF:
@@ -614,10 +608,9 @@ coordinator_link :: wait_for_config(configuration* config)
                     continue;
                 case REPLICANT_NEED_BOOTSTRAP:
                     LOG(ERROR) << "communication error with the coordinator: "
-                               << m_repl->last_error_desc()
+                               << m_repl->last_error().msg()
                                << "(" << m_get_config_status << ";"
-                               << m_repl->last_error_file() << ":"
-                               << m_repl->last_error_line() << ")";
+                               << m_repl->last_error().loc() << ")";
                     continue;
                 case REPLICANT_NAME_TOO_LONG:
                 case REPLICANT_OBJ_EXIST:
@@ -630,10 +623,9 @@ coordinator_link :: wait_for_config(configuration* config)
                 case REPLICANT_NONE_PENDING:
                 case REPLICANT_GARBAGE:
                     LOG(ERROR) << "unexpected error with coordinator connection: "
-                               << m_repl->last_error_desc()
+                               << m_repl->last_error().msg()
                                << "(" << m_get_config_status << ";"
-                               << m_repl->last_error_file() << ":"
-                               << m_repl->last_error_line() << ")";
+                               << m_repl->last_error().loc() << ")";
                     continue;
                 default:
                     abort();
@@ -775,10 +767,9 @@ coordinator_link :: shutdown()
     if (shutdown2_id < 0)
     {
         LOG(ERROR) << "dirty shutdown because shutdown2 failed: "
-                   << m_repl->last_error_desc()
+                   << m_repl->last_error().msg()
                    << "(" << m_get_config_status << ";"
-                   << m_repl->last_error_file() << ":"
-                   << m_repl->last_error_line() << ")";
+                   << m_repl->last_error().loc() << ")";
         m_state = DIRTY_SHUTDOWN;
         return;
     }
@@ -802,10 +793,9 @@ coordinator_link :: shutdown()
                 break;
             case REPLICANT_NEED_BOOTSTRAP:
                 LOG(ERROR) << "communication error with the coordinator: "
-                           << m_repl->last_error_desc()
+                           << m_repl->last_error().msg()
                            << "(" << lstatus << ";"
-                           << m_repl->last_error_file() << ":"
-                           << m_repl->last_error_line() << ")";
+                           << m_repl->last_error().loc() << ")";
                 break;
             case REPLICANT_SUCCESS:
             case REPLICANT_NAME_TOO_LONG:
@@ -821,10 +811,9 @@ coordinator_link :: shutdown()
             case REPLICANT_NONE_PENDING:
             case REPLICANT_GARBAGE:
                 LOG(ERROR) << "unexpected error with coordinator connection: "
-                           << m_repl->last_error_desc()
+                           << m_repl->last_error().msg()
                            << "(" << lstatus << ";"
-                           << m_repl->last_error_file() << ":"
-                           << m_repl->last_error_line() << ")";
+                           << m_repl->last_error().loc() << ")";
                 break;
             default:
                 abort();
@@ -883,10 +872,9 @@ coordinator_link :: ack_config(uint64_t version)
     if (req_id < 0)
     {
         LOG(ERROR) << "could ack new config: "
-                   << m_repl->last_error_desc()
+                   << m_repl->last_error().msg()
                    << "(" << ret.get() << ";"
-                   << m_repl->last_error_file() << ":"
-                   << m_repl->last_error_line() << ")";
+                   << m_repl->last_error().loc() << ")";
     }
     else
     {
@@ -912,10 +900,9 @@ coordinator_link :: initiate_wait_for_config()
     if (m_wait_config_id < 0)
     {
         LOG(ERROR) << "could wait for new config: "
-                   << m_repl->last_error_desc()
+                   << m_repl->last_error().msg()
                    << "(" << m_wait_config_status << ";"
-                   << m_repl->last_error_file() << ":"
-                   << m_repl->last_error_line() << ")";
+                   << m_repl->last_error().loc() << ")";
         return false;
     }
 
@@ -938,10 +925,9 @@ coordinator_link :: initiate_get_config()
     if (m_get_config_id < 0)
     {
         LOG(ERROR) << "could wait for new config: "
-                   << m_repl->last_error_desc()
+                   << m_repl->last_error().msg()
                    << "(" << m_get_config_status << ";"
-                   << m_repl->last_error_file() << ":"
-                   << m_repl->last_error_line() << ")";
+                   << m_repl->last_error().loc() << ")";
         return false;
     }
 

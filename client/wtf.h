@@ -46,7 +46,7 @@
 #include <e/intrusive_ptr.h>
 
 // HyperDex
-#include <hyperclient.hpp>
+#include <hyperdex/client.hpp>
 
 //wtf
 #include <common/network_msgtype.h>
@@ -183,7 +183,7 @@ class wtf_client
         //communicate with hyperdex
         int64_t update_hyperdex(e::intrusive_ptr<file>& f);
         int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f);
-        hyperclient_returncode hyperdex_wait_for_result(int64_t reqid, hyperclient_returncode& status);
+        hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
 
     private:
         wtf_client& operator = (const wtf_client& rhs);
@@ -204,7 +204,7 @@ class wtf_client
         const char* m_last_error_file;
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
-        hyperclient m_hyperclient;
+        hyperdex::Client m_hyperdex_client;
 };
 
 std::ostream&

@@ -75,36 +75,32 @@ using namespace wtf;
 
 #define BUSYBEE_ERROR(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
-        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " xstr(BBRC)); \
+        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " XSTR(BBRC)); \
         return -1
 
 #define BUSYBEE_ERROR_DISCONNECT(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
-        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " xstr(BBRC)); \
+        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " XSTR(BBRC)); \
         reset_to_disconnected(); \
         return -1
 
 #define BUSYBEE_ERROR_CONTINUE(REPRC, BBRC) \
     case BUSYBEE_ ## BBRC: \
-        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " xstr(BBRC)); \
+        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " XSTR(BBRC)); \
         continue
 
 #define WTF_UNEXPECTED(MT) \
     case WTFNET_ ## MT: \
-        WTFSETERROR(WTF_SERVERERROR, "unexpected " xstr(MT) " message"); \
+        WTFSETERROR(WTF_SERVERERROR, "unexpected " XSTR(MT) " message"); \
         m_last_error_host = from; \
         return -1
 
 #define WTF_UNEXPECTED_DISCONNECT(MT) \
     case WTFNET_ ## MT: \
-        WTFSETERROR(WTF_SERVERERROR, "unexpected " xstr(MT) " message"); \
+        WTFSETERROR(WTF_SERVERERROR, "unexpected " XSTR(MT) " message"); \
         m_last_error_host = from; \
         reset_to_disconnected(); \
         return -1
-
-#define WTFSPACE "wtf"
-#define WTFBLOCKMAP "blockmap"
-
 
 
 wtf_client :: wtf_client(const char* host, in_port_t port,
@@ -124,7 +120,7 @@ wtf_client :: wtf_client(const char* host, in_port_t port,
     , m_last_error_file(__FILE__)
     , m_last_error_line(__LINE__)
     , m_last_error_host()
-    , m_hyperclient(hyper_host, hyper_port)
+    , m_hyperdex_client(hyper_host, hyper_port)
 {
 }
 
@@ -1036,22 +1032,22 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 int64_t
 wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
 {
-    struct hyperclient_attribute* attrs;
+    const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
     int64_t ret = 0;
-    hyperclient_returncode status;
+    hyperdex_client_returncode status;
 
-    ret = m_hyperclient.get(WTFSPACE, path, strlen(path), &status, &attrs, &attrs_sz);
+    ret = m_hyperdex_client.get("wtf", path, strlen(path), &status, &attrs, &attrs_sz);
     if (ret == -1)
     {
-        //std::cout << "hyperclient_get returned " << status;
+        //std::cout << "hyperdex_client_get returned " << status;
         return -1;
     }
 
-    hyperclient_returncode res = hyperdex_wait_for_result(ret, status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
     //std::cout << "hyperdex_wait_for_result returned " << res;
 
-    if (res == HYPERCLIENT_NOTFOUND)
+    if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
         /* The file does not exist or was deleted, truncate it. */
         f->set_offset(0);
@@ -1061,7 +1057,7 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
     {
         for (size_t i = 0; i < attrs_sz; ++i)
         {
-            if (strcmp(attrs[i].attr, WTFBLOCKMAP) == 0)
+            if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
@@ -1093,13 +1089,13 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     int64_t ret = -1;
     int i = 0;
 
-    std::vector<struct hyperclient_map_attribute> attrs;
-    hyperclient_returncode status;
+    std::vector<struct hyperdex_client_map_attribute> attrs;
+    hyperdex_client_returncode status;
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
     //XXX; get rid of magic string.
-    const char* name = WTFBLOCKMAP;
+    const char* name = "blockmap";
 
     /*
      * construct a hyperdex attribute list for all dirty blocks
@@ -1109,7 +1105,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     {
         if (it->second->dirty())
         {
-            struct hyperclient_map_attribute attr;
+            struct hyperdex_client_map_attribute attr;
             attrs.push_back(attr);
             attrs[i].attr = name;
             attrs[i].map_key = (const char*)malloc(sizeof(uint64_t));
@@ -1132,20 +1128,20 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
      * Update hyperdex to point to location of new blocks
      */
 retry:
-    ret = m_hyperclient.map_add(WTFSPACE, f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
+    ret = m_hyperdex_client.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
 
     /*
      * Wait for hyperdex to reply
      */
 
-    hyperclient_returncode res = hyperdex_wait_for_result(ret, status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
 
-    if (res == HYPERCLIENT_NOTFOUND)
+    if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
-        ret = m_hyperclient.put_if_not_exist(WTFSPACE, f->path().get(), strlen(f->path().get()), NULL, 0, &status);
+        ret = m_hyperdex_client.put_if_not_exist("wtf", f->path().get(), strlen(f->path().get()), NULL, 0, &status);
         res = hyperdex_wait_for_result(ret, status);
 
-        if (res == HYPERCLIENT_SUCCESS || res == HYPERCLIENT_CMPFAIL)
+        if (res == HYPERDEX_CLIENT_SUCCESS || res == HYPERDEX_CLIENT_CMPFAIL)
         {
             //GUN DID IT.
             goto retry;
@@ -1160,7 +1156,7 @@ retry:
         //std::cout << "Hyperdex returned " << res << std::endl;
     }
 
-    for (std::vector<struct hyperclient_map_attribute>::iterator it = attrs.begin();
+    for (std::vector<struct hyperdex_client_map_attribute>::iterator it = attrs.begin();
          it != attrs.end(); ++it)
     {
        free(const_cast<char*>(it->value));
@@ -1171,13 +1167,13 @@ retry:
     return ret;
 }
 
-hyperclient_returncode
-wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperclient_returncode& status)
+hyperdex_client_returncode
+wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status)
 {
     while(1)
     {
-        hyperclient_returncode lstatus;
-        int64_t id = m_hyperclient.loop(-1, &lstatus);
+        hyperdex_client_returncode lstatus;
+        int64_t id = m_hyperdex_client.loop(-1, &lstatus);
 
         if (id < 0) 
         {
@@ -1256,27 +1252,27 @@ operator << (std::ostream& lhs, wtf_returncode rhs)
 {
     switch (rhs)
     {
-        stringify(WTF_SUCCESS);
-        stringify(WTF_NOTFOUND);
-        stringify(WTF_READONLY);
-        stringify(WTF_UNKNOWNSPACE);
-        stringify(WTF_COORDFAIL);
-        stringify(WTF_SERVERERROR);
-        stringify(WTF_POLLFAILED);
-        stringify(WTF_OVERFLOW);
-        stringify(WTF_RECONFIGURE);
-        stringify(WTF_TIMEOUT);
-        stringify(WTF_NONEPENDING);
-        stringify(WTF_NOMEM);
-        stringify(WTF_BADCONFIG);
-        stringify(WTF_DUPLICATE);
-        stringify(WTF_INTERRUPTED);
-        stringify(WTF_CLUSTER_JUMP);
-        stringify(WTF_COORD_LOGGED);
-        stringify(WTF_BACKOFF);
-        stringify(WTF_INTERNAL);
-        stringify(WTF_EXCEPTION);
-        stringify(WTF_GARBAGE);
+        STRINGIFY(WTF_SUCCESS);
+        STRINGIFY(WTF_NOTFOUND);
+        STRINGIFY(WTF_READONLY);
+        STRINGIFY(WTF_UNKNOWNSPACE);
+        STRINGIFY(WTF_COORDFAIL);
+        STRINGIFY(WTF_SERVERERROR);
+        STRINGIFY(WTF_POLLFAILED);
+        STRINGIFY(WTF_OVERFLOW);
+        STRINGIFY(WTF_RECONFIGURE);
+        STRINGIFY(WTF_TIMEOUT);
+        STRINGIFY(WTF_NONEPENDING);
+        STRINGIFY(WTF_NOMEM);
+        STRINGIFY(WTF_BADCONFIG);
+        STRINGIFY(WTF_DUPLICATE);
+        STRINGIFY(WTF_INTERRUPTED);
+        STRINGIFY(WTF_CLUSTER_JUMP);
+        STRINGIFY(WTF_COORD_LOGGED);
+        STRINGIFY(WTF_BACKOFF);
+        STRINGIFY(WTF_INTERNAL);
+        STRINGIFY(WTF_EXCEPTION);
+        STRINGIFY(WTF_GARBAGE);
         default:
             lhs << "unknown returncode (" << static_cast<unsigned int>(rhs) << ")";
     }
