@@ -92,7 +92,7 @@ wtf_daemon_SOURCES += daemon/daemon.cc
 wtf_daemon_SOURCES += daemon/main.cc
 
 wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
-                   -lglog -lleveldb -ldl -lpthread
+                   -lglog -ldl -lpthread
 
 ################################################################################
 ################################## Coordinator #################################
