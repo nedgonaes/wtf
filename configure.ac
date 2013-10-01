@@ -70,11 +70,6 @@ AC_CHECK_HEADER([popt.h],,[AC_MSG_ERROR([
 WTF relies upon the popt library.
 Please install popt to continue.
 ---------------------------------------])])
-AC_CHECK_HEADER([leveldb/db.h],,[AC_MSG_ERROR([
----------------------------------------
-WTF relies upon the LevelDB library.
-Please install LevelDB to continue.
----------------------------------------])])
 AC_CHECK_HEADER([glog/logging.h],,[AC_MSG_ERROR([
 ---------------------------------------
 WTF relies upon the glog library.
