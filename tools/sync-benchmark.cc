@@ -95,16 +95,17 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
+        std::string v = val();
+
         wtf_client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
             wtf_returncode status = WTF_GARBAGE;
             std::string f = file();
-            std::string v = val();
             int64_t fd = cl.open(f.data());
 
             tll->start(&ts, 1);
-            int64_t reqid = cl.write(fd, v.data(), v.size() + 1, 3, &status);
+            int64_t reqid = cl.write(fd, v.data(), v.size() + 1, 1, &status);
 
             if (reqid < 0)
             {
