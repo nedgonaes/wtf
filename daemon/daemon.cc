@@ -480,7 +480,7 @@ daemon :: process_put(const wtf::connection& conn,
 
     e::slice data = up.as_slice();
 
-    LOG(INFO) << "PUT: " << data.hex();
+    //LOG(INFO) << "PUT: " << data.hex();
 
     ret = m_blockman.write_block(data, sid, bid); 
 
