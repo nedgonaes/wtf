@@ -108,7 +108,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             strcat(filename, f.data());
 
             tll->start(&ts,1);
-            hdfsFile fd = hdfsOpenFile(cl, filename, O_WRONLY|O_CREAT, 0, 0, 0);
+            hdfsFile fd = hdfsOpenFile(cl, filename, O_WRONLY|O_CREAT, 0, 1, 0);
             if(!fd) {
                 std::cerr << "Failed to open " << f.data() << " for writing!\n";
                 exit(-1);
