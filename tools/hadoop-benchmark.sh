@@ -1,6 +1,7 @@
 PSSH=parallel-ssh
 NAMENODE=128.84.227.101
-PORT=8020
+PORT=54310
+WTF_DIR=${HOME}/src/wtf
 DATANODES=${WTF_DIR}/.hadoop_data_hosts
 CLIENTS=${WTF_DIR}/.hadoop_client_hosts
 OUTPUT_DIR=${HOME}/hadoop

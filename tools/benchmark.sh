@@ -27,9 +27,9 @@ kill_cluster()
 clean_cluster()
 {
     echo "CLEANING CLUSTER...\n"
-    ${PSSH} -H ${WTF_COORDINATOR} -h ${WTF_DAEMONS} -h ${HYPERDEX_DAEMONS} -i "rm -rf ${DATA_DIR}; mkdir -p ${WTF_COORDINATOR_DATA_DIR} \
+    ${PSSH} -H ${WTF_COORDINATOR} -h ${WTF_CLIENTS} -h ${WTF_DAEMONS} -h ${HYPERDEX_DAEMONS} -i "rm -rf ${DATA_DIR}; mkdir -p ${WTF_COORDINATOR_DATA_DIR} \
         && mkdir ${WTF_DAEMON_DATA_DIR} && mkdir ${HYPERDEX_COORDINATOR_DATA_DIR} \
-        && mkdir ${HYPERDEX_DAEMON_DATA_DIR} && rm wtf-*.log"
+        && mkdir ${HYPERDEX_DAEMON_DATA_DIR}; rm wtf-*.log"
 }
 
 reset_cluster()
@@ -62,5 +62,5 @@ run_iteration()
         --value-length=$2 -n $3 --output=$1'$((PSSH_NODENUM))'.log
 }
 reset_cluster
-run_iteration wtf-sync-benchmark 67108864 100
+run_iteration wtf-sync-benchmark 67108864 50
 kill_cluster

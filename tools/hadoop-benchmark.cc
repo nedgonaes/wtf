@@ -97,13 +97,13 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
+        std::string v = val();
         hdfsFS cl = hdfsConnect(_connect_host, _connect_port);
 
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
             wtf_returncode status = WTF_GARBAGE;
             std::string f = file();
-            std::string v = val();
             char filename[71] = "/tmp/";
             strcat(filename, f.data());
 
