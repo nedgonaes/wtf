@@ -97,7 +97,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
-        hdfsFS cl = hdfsConnect(_connect_host, 0);
+        hdfsFS cl = hdfsConnect(_connect_host, _connect_port);
 
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
