@@ -58,9 +58,9 @@ run_iteration()
     echo "RUNNING ITERATION...\n"
     ${PSSH} -p 100 -t 6000 -h ${WTF_CLIENTS}  -i \
         ${WTF_DIR}/$1 -h ${WTF_COORDINATOR} -p ${WTF_PORT} -H ${HYPERDEX_COORDINATOR} -P ${HYPERDEX_PORT} \
-        --file-length=64 --file-alphabet='abcdefghijklmnopqrstuvwxyz0123456789' \
+        --file-length=$((64-PSSH_NODENUM)) --file-charset='hex' \
         --value-length=$2 -n $3 --output=$1'$((PSSH_NODENUM))'.log
 }
 reset_cluster
-run_iteration wtf-sync-benchmark 67108864 50
+run_iteration wtf-sync-benchmark 67108864 100
 kill_cluster
