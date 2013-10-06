@@ -7,4 +7,6 @@ set xlabel "Seconds"
 set timefmt "%s"
 set key left top
 set grid
-plot "cdf.log" using ($1/1000):2 with lines lw 2 lt 3 title 'WTF (5 Nodes)'
+plot "cdf32.log" using ($1/1000):2 with lines lw 2 lt 3 linecolor rgb 'red' title 'WTF (32MB Blocks)', \
+"cdf.log" using ($1/1000):2 with lines lw 2 lt 3 linecolor rgb 'green' title 'WTF (64MB Blocks)', \
+"cdfh.log" using ($1/1000):2 with lines lw 2 lt 3 title 'HDFS (64MB Blocks)'

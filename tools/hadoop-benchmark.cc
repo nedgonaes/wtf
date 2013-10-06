@@ -51,6 +51,8 @@ static long _done = 0;
 static long _number = 1000;
 static long _threads = 1;
 static long _backup = 0;
+static long _blocksize = 0;
+static long _replication = 0;
 static long _connect_port = 0;
 static long _hyper_port = 1981;
 static long _concurrent = 50;
@@ -108,7 +110,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             strcat(filename, f.data());
 
             tll->start(&ts,1);
-            hdfsFile fd = hdfsOpenFile(cl, filename, O_WRONLY|O_CREAT, 0, 1, 0);
+            hdfsFile fd = hdfsOpenFile(cl, filename, O_WRONLY|O_CREAT, 0, _replication, _blocksize);
             if(!fd) {
                 std::cerr << "Failed to open " << f.data() << " for writing!\n";
                 exit(-1);
@@ -171,6 +173,12 @@ main(int argc, const char* argv[])
     ap.arg().name('c', "concurrent")
         .description("number of concurrent ops (default=50)")
         .as_long(&_concurrent);
+    ap.arg().name('b', "blocksize")
+        .description("size of blocks")
+        .as_long(&_blocksize);
+    ap.arg().name('r', "replication")
+        .description("number of replicas")
+        .as_long(&_replication);
     armnod::argparser file_parser("file-");
     armnod::argparser value_parser("value-");
     ap.add("Filename Generation:", file_parser.parser());
