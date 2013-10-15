@@ -31,12 +31,12 @@ reset_cluster()
 run_iteration()
 {
     echo "RUNNING ITERATION...\n"
-    ${PSSH} -p 100 -t 6000 -h ${CLIENTS}  -i \
+    ${PSSH} -p 100 -t 600000 -h ${CLIENTS}  -i \
         ${WTF_DIR}/$1 -h ${NAMENODE} -p ${PORT} \
         -b $2 -r $4 \
         --file-length='$((64-PSSH_NODENUM))' --file-charset="hex" \
         --value-length=$2 -n $3 --output=$1'$((PSSH_NODENUM))'.log
 }
 reset_cluster
-run_iteration wtf-hadoop-benchmark 8388608 1000 1
+run_iteration wtf-hadoop-benchmark 512 100000 1
 kill_cluster

@@ -62,5 +62,5 @@ run_iteration()
         --value-length=$2 -n $3 --output=$1'$((PSSH_NODENUM))'.log
 }
 reset_cluster
-run_iteration wtf-sync-benchmark 67108864 100
+run_iteration wtf-sync-benchmark 512 100000
 kill_cluster
