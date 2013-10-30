@@ -137,6 +137,7 @@ daemon :: daemon()
     , m_blockman()
     , m_periodic()
     , m_temporary_servers()
+    , m_db()
 {
     trip_periodic(0, &daemon::periodic_stat);
 }
@@ -154,6 +155,7 @@ install_signal_handler(int signum, void (*f)(int))
 int
 daemon :: run(bool daemonize,
               po6::pathname data,
+              po6::pathname backing_path,
               bool set_bind_to,
               po6::net::location bind_to,
               bool set_coordinator,
@@ -246,7 +248,7 @@ daemon :: run(bool daemonize,
     m_busybee->set_ignore_signals();
 
     LOG(INFO) << "token " << m_us.token;
-    m_blockman.setup(m_us.token, data);
+    m_blockman.setup(m_us.token, data, backing_path);
 
     if (!m_coord.register_id(server_id(m_us.token), m_us.address))
     {
@@ -576,7 +578,7 @@ daemon :: process_update(const wtf::connection& conn,
     up = up >> sid >> bid >> offset;
 
     e::slice data = up.as_slice();
-    LOG(INFO) << "UPDATE: " << data.hex();
+    //LOG(INFO) << "UPDATE: " << data.hex();
 
     if (sid != m_us.token)
     {

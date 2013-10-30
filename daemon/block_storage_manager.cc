@@ -48,7 +48,7 @@ using wtf::block_storage_manager;
     block_storage_manager::block_storage_manager()
     : m_prefix()
     , m_last_block_num()
-      , m_path()
+    , m_blockmap()
 {
 }
 
@@ -63,25 +63,16 @@ block_storage_manager::shutdown()
 
     void
 block_storage_manager::setup(uint64_t sid,
-        const po6::pathname path)
+        const po6::pathname path,
+        const po6::pathname backing_path)
 {
-    m_path = path;
+
     m_prefix = sid;
     m_last_block_num = 0;
-    if (mkdir(m_path.get(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) < 0)
+
+    if (!m_blockmap.setup(m_path, m_backing_path))
     {
-        switch(errno)
-        {
-            case EEXIST:
-                break;
-            case ENOENT:
-            case ENOSPC:
-            case ENOTDIR:
-            case EROFS:
-            default:
-                PLOG(ERROR) << "Failed to create data directory.";
-                abort();
-        }
+        abort();
     }
 }
 
