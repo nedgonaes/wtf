@@ -68,6 +68,7 @@ noinst_PROGRAMS += wtf-readtest
 noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
 #noinst_PROGRAMS += wtf-hadoop-benchmark
+noinst_PROGRAMS += wtf-shelltest
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -139,6 +140,9 @@ wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_writetest_SOURCES = tools/writetest.cc
 wtf_writetest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
+wtf_shelltest_SOURCES = tools/shelltest.cc
+wtf_shelltest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_readtest_SOURCES = tools/readtest.cc
 wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
