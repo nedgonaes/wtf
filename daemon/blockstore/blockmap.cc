@@ -1,13 +1,15 @@
 #include "blockmap.h"
 #define BACKING_SIZE 2147483648
+#define ROUND_UP(X, Y) ((X + Y - 1) ^ (Y - 1))
 
 using wtf::blockmap;
-
-blockmap::blockmap(daemon* d) : m_db()
-                              , m_backing_size(BACKING_SIZE)
-                              , m_backing_offset()
+blockmap::blockmap() : m_db()
+                     , m_backing_size(ROUND_UP(BACKING_SIZE, getpagesize()))
+                     , m_backing_offset()
 {
 }
+
+blockmap::~blockmap() {};
 
 size_t
 get_filesize(const po6::pathname& path)
@@ -120,6 +122,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
         return false;
     }
 
+    //create a new disk.
     if (first_time)
     {
         m_fd = open(backing_path.get(), O_RDWR | O_CREAT);
@@ -135,49 +138,76 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
             return false;
         }
 
-        m_backing = mmap(NULL, m_backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        char* backing = (char*)mmap(NULL, m_backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd.get(), 0);
 
-        if (m_backing == MAP_FAILED)
+        if (backing == MAP_FAILED)
         {
             LOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << backing_path << " failed.";
             return false;
         }
 
+        m_disk = new disk(backing, m_backing_size);
+
         return true;
     }
-    else
+
+    //use an existing disk.
+    e::unpacker up(sbacking.data(), sbacking.size());
+    up = up >> m_backing_offset >> m_backing_size;
+    if (up.error())
     {
-        e::unpacker up(sbacking.data(), sbacking.size());
-        up = up >> m_backing_offset >> m_backing_size;
-        if (up.error())
-        {
-            LOG(ERROR) << "could not restore from LevelDB because a previous "
-                << "execution saved invalid state.";
-            return false;
-        }
+        LOG(ERROR) << "could not restore from LevelDB because a previous "
+            << "execution saved invalid state.";
+        return false;
+    }
 
-        e::slice data = up.as_slice();
-        m_fd = open(data.data(), O_RDWR);
-        if (m_fd.get() < 0)
-        {
-            LOG(ERROR) << "could not open backing file " << data.data();
-            return false;
-        }
+    e::slice data = up.as_slice();
+    m_fd = open((char*)data.data(), O_RDWR);
+    if (m_fd.get() < 0)
+    {
+        LOG(ERROR) << "could not open backing file " << data.data();
+        return false;
+    }
 
-        if (ftruncate(m_fd.get(), m_backing_size) < 0)
-        {
-            LOG(ERROR) << "could not extend backing file to size " << m_backing_size;
-            return false;
-        }
+    if (ftruncate(m_fd.get(), m_backing_size) < 0)
+    {
+        LOG(ERROR) << "could not extend backing file to size " << m_backing_size;
+        return false;
+    }
 
-        m_backing = mmap(NULL, m_backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    char* backing = (char*)mmap(NULL, m_backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd.get(), 0);
 
-        if (m_backing == MAP_FAILED)
-        {
-            LOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << m_backing_file << " failed.";
-            return false;
-        }
+    if (backing == MAP_FAILED)
+    {
+        LOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << backing_path << " failed.";
+        return false;
+    }
 
-        return true;
+    m_disk = new disk(backing, m_backing_size);
+
     return true;
 }
+
+ssize_t
+blockmap :: write(const e::slice& data,
+                 uint64_t& bid)
+{
+    return 0;
+}
+
+ssize_t
+blockmap :: update(const e::slice& data,
+             uint64_t offset,
+             uint64_t& bid)
+{
+    return 0;
+}
+
+ssize_t 
+blockmap :: read(uint64_t bid,
+                 uint8_t* data, 
+                 size_t len)
+{
+    return 0;
+}
+

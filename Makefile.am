@@ -57,6 +57,8 @@ noinst_HEADERS += daemon/block_storage_manager.h
 noinst_HEADERS += daemon/connection.h
 noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
+noinst_HEADERS += daemon/blockstore/blockmap.h
+noinst_HEADERS += daemon/blockstore/disk.h
 
 bin_PROGRAMS =
 bin_PROGRAMS += wtf
@@ -67,7 +69,9 @@ noinst_PROGRAMS += wtf-writetest
 noinst_PROGRAMS += wtf-readtest
 noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
+if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
+endif
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -85,6 +89,8 @@ wtf_daemon_SOURCES += common/mapper.cc
 wtf_daemon_SOURCES += common/network_msgtype.cc
 wtf_daemon_SOURCES += common/packing.cc
 wtf_daemon_SOURCES += common/response_returncode.cc
+wtf_daemon_SOURCES += daemon/blockstore/disk.cc
+wtf_daemon_SOURCES += daemon/blockstore/blockmap.cc
 wtf_daemon_SOURCES += daemon/block_storage_manager.cc
 wtf_daemon_SOURCES += daemon/connection.cc
 wtf_daemon_SOURCES += daemon/coordinator_link.cc
@@ -146,9 +152,11 @@ wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt
 
+if ENABLE_HDFS_BENCHMARKS
 wtf_hadoop_benchmark_SOURCES = tools/hadoop-benchmark.cc
 wtf_hadoop_benchmark_CPPFLAGS = -I${HADOOP_HOME}/src/c++/libhdfs -I${JAVA_HOME}/include -I${abs_top_srcdir}/client $(CPPFLAGS)
 wtf_hadoop_benchmark_LDADD =  -lpopt -lnumbers -larmnod -L${HADOOP_HOME}/build/c++/Linux-amd64-64/lib -L${JAVA_HOME}/jre/lib/amd64/server -lhdfs -ljvm
+endif
 
 wtf_sync_benchmark_SOURCES = tools/sync-benchmark.cc
 wtf_sync_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)

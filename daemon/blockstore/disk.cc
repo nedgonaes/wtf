@@ -25,61 +25,39 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_block_storage_manager_h_
-#define wtf_block_storage_manager_h_
+#include "disk.h"
 
-// Google Log
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
+using wtf::disk;
 
-// STL
-#include <vector>
-
-//po6
-#include <po6/io/fd.h>
-#include <po6/pathname.h>
-
-// WTF
-#include "common/ids.h"
-#include "daemon/blockstore/blockmap.h"
-
-namespace wtf
+disk::disk(char* log, size_t log_len)
+    : m_log(log)
+    , m_log_len(log_len)
 {
-    class block_map;
-    class block_storage_manager
-    {
-        public:
-            block_storage_manager();
-            ~block_storage_manager();
-
-        public:
-            void setup(uint64_t sid,
-                       po6::pathname path,
-                       po6::pathname backing_path);
-            void shutdown();
-
-        public:
-            ssize_t write_block(const e::slice& data,
-                                 uint64_t& sid,
-                                 uint64_t& bid);
-            ssize_t update_block(const e::slice& data,
-                                 uint64_t offset,
-                                 uint64_t& sid,
-                                 uint64_t& bid);
-            ssize_t read_block(uint64_t sid,
-                               uint64_t bid,
-                               uint8_t* data, size_t len);
-            void stat();
-        private:
-            ssize_t splice(int fd_in, size_t offset_in, 
-                           int fd_out, size_t offset_out, 
-                           size_t len);
-
-        private:
-            uint64_t m_prefix;
-            uint64_t m_last_block_num;
-            blockmap m_blockmap;
-    };
 }
 
-#endif // wtf_block_storage_manager_h_
+disk::~disk()
+{
+}
+
+ssize_t
+disk::write(const e::slice& data,
+                 uint64_t& bid)
+{
+    return 0;
+}
+
+ssize_t
+disk::update(const e::slice& data,
+             uint64_t offset,
+             uint64_t& bid)
+{
+    return 0;
+}
+
+ssize_t 
+disk::read(uint64_t bid,
+                 uint8_t* data, 
+                 size_t len)
+{
+    return 0;
+}

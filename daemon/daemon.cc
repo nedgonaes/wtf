@@ -137,7 +137,6 @@ daemon :: daemon()
     , m_blockman()
     , m_periodic()
     , m_temporary_servers()
-    , m_db()
 {
     trip_periodic(0, &daemon::periodic_stat);
 }

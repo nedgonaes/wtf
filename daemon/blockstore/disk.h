@@ -25,61 +25,35 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_block_storage_manager_h_
-#define wtf_block_storage_manager_h_
+#ifndef wtf_disk_h_
+#define wtf_disk_h_
 
 // Google Log
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
 
-// STL
-#include <vector>
-
-//po6
-#include <po6/io/fd.h>
-#include <po6/pathname.h>
-
-// WTF
-#include "common/ids.h"
-#include "daemon/blockstore/blockmap.h"
-
+#include <e/slice.h>
 namespace wtf
 {
-    class block_map;
-    class block_storage_manager
+    class disk 
     {
         public:
-            block_storage_manager();
-            ~block_storage_manager();
+            disk(char* log, size_t log_len);
+            ~disk();
 
         public:
-            void setup(uint64_t sid,
-                       po6::pathname path,
-                       po6::pathname backing_path);
-            void shutdown();
-
-        public:
-            ssize_t write_block(const e::slice& data,
-                                 uint64_t& sid,
+            ssize_t write(const e::slice& data,
                                  uint64_t& bid);
-            ssize_t update_block(const e::slice& data,
+            ssize_t update(const e::slice& data,
                                  uint64_t offset,
-                                 uint64_t& sid,
                                  uint64_t& bid);
-            ssize_t read_block(uint64_t sid,
-                               uint64_t bid,
-                               uint8_t* data, size_t len);
-            void stat();
+            ssize_t read(uint64_t bid,
+                         uint8_t* data, 
+                         size_t len);
         private:
-            ssize_t splice(int fd_in, size_t offset_in, 
-                           int fd_out, size_t offset_out, 
-                           size_t len);
-
-        private:
-            uint64_t m_prefix;
-            uint64_t m_last_block_num;
-            blockmap m_blockmap;
+            char* m_log;
+            size_t m_log_len;
     };
 }
 
-#endif // wtf_block_storage_manager_h_
+#endif // wtf_disk_h_

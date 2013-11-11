@@ -46,6 +46,7 @@
 
 static bool _daemonize = false;
 static const char* _data = "wtf-data/daemon/data";
+static const char* _metadata = "wtf-data/daemon/data/metadata";
 static const char* _listen_host = "auto";
 static unsigned long _listen_port = 2013;
 static po6::net::ipaddr _listen_ip;
@@ -64,6 +65,9 @@ static struct poptOption popts[] = {
      "run wtf in the background", 0},
     {"foreground", 'f', POPT_ARG_NONE, NULL, 'f',
      "run wtf in the foreground", 0},
+    {"data", 'M', POPT_ARG_STRING, &_metadata, 'M',
+     "store persistent state in this directory (default: ./daemon-data/metadata)",
+     "dir"},
     {"data", 'D', POPT_ARG_STRING, &_data, 'D',
      "store persistent state in this directory (default: ./daemon-data)",
      "dir"},
@@ -193,10 +197,11 @@ main(int argc, const char* argv[])
         }
 
         po6::pathname data(_data);
+        po6::pathname metadata(_metadata);
         po6::net::location bind_to(_listen_ip, _listen_port);
         po6::net::hostname coord(_coordinator_host, _coordinator_port);
 
-        return d.run(_daemonize, data, _listen, bind_to, _coordinator, coord, _threads);
+        return d.run(_daemonize, data, metadata, _listen, bind_to, _coordinator, coord, _threads);
     }
     catch (po6::error& e)
     {
