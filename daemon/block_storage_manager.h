@@ -41,7 +41,7 @@
 
 // WTF
 #include "common/ids.h"
-#include "daemon/blockstore/blockmap.h"
+#include "blockstore/blockmap.h"
 
 namespace wtf
 {

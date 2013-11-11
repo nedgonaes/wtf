@@ -125,10 +125,10 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     //create a new disk.
     if (first_time)
     {
-        m_fd = open(backing_path.get(), O_RDWR | O_CREAT);
+        m_fd = open(backing_path.get(), O_RDWR | O_CREAT, 0666);
         if (m_fd.get() < 0)
         {
-            LOG(ERROR) << "could not open backing file " << backing_path;
+            PLOG(ERROR) << "could not open backing file " << backing_path;
             return false;
         }
 
@@ -162,7 +162,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     }
 
     e::slice data = up.as_slice();
-    m_fd = open((char*)data.data(), O_RDWR);
+    m_fd = open((char*)data.data(), O_RDWR, 0666);
     if (m_fd.get() < 0)
     {
         LOG(ERROR) << "could not open backing file " << data.data();

@@ -29,6 +29,7 @@ AM_CXXFLAGS = $(WANAL_CXXFLAGS) $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(LR
 AM_LDFLAGS = $(PO6_LDFLAGS) $(E_LDFLAGS) $(BUSYBEE_LDFLAGS) $(REPLICANT_FLAGS)
 
 lib_LTLIBRARIES =
+lib_LTLIBRARIES += libwtfblockstore.la
 lib_LTLIBRARIES += libwtf.la
 lib_LTLIBRARIES += libwtfcoordinator.la
 
@@ -57,8 +58,8 @@ noinst_HEADERS += daemon/block_storage_manager.h
 noinst_HEADERS += daemon/connection.h
 noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
-noinst_HEADERS += daemon/blockstore/blockmap.h
-noinst_HEADERS += daemon/blockstore/disk.h
+noinst_HEADERS += blockstore/blockmap.h
+noinst_HEADERS += blockstore/disk.h
 
 bin_PROGRAMS =
 bin_PROGRAMS += wtf
@@ -69,6 +70,7 @@ noinst_PROGRAMS += wtf-writetest
 noinst_PROGRAMS += wtf-readtest
 noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
+noinst_PROGRAMS += wtf-test-blockstore
 if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
 endif
@@ -77,6 +79,15 @@ wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
 wtfexec_PROGRAMS += wtf-daemon 
 wtfexec_PROGRAMS += wtf-initialize-cluster
+
+################################################################################
+################################## Blockstore ##################################
+################################################################################
+libwtfblockstore_la_SOURCES = 
+libwtfblockstore_la_SOURCES += blockstore/disk.cc
+libwtfblockstore_la_SOURCES += blockstore/blockmap.cc
+
+libwtfblockstore_la_LIBADD = $(E_LIBS) $(HYPERLEVELDB_LIBS) -lglog -ldl
 
 ################################################################################
 ################################## Daemon ######################################
@@ -89,8 +100,6 @@ wtf_daemon_SOURCES += common/mapper.cc
 wtf_daemon_SOURCES += common/network_msgtype.cc
 wtf_daemon_SOURCES += common/packing.cc
 wtf_daemon_SOURCES += common/response_returncode.cc
-wtf_daemon_SOURCES += daemon/blockstore/disk.cc
-wtf_daemon_SOURCES += daemon/blockstore/blockmap.cc
 wtf_daemon_SOURCES += daemon/block_storage_manager.cc
 wtf_daemon_SOURCES += daemon/connection.cc
 wtf_daemon_SOURCES += daemon/coordinator_link.cc
@@ -98,7 +107,7 @@ wtf_daemon_SOURCES += daemon/daemon.cc
 wtf_daemon_SOURCES += daemon/main.cc
 
 wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
-                   $(HYPERLEVELDB_LIBS) -lglog -ldl -lpthread
+                   $(HYPERLEVELDB_LIBS) libwtfblockstore.la -lglog -ldl -lpthread
 
 ################################################################################
 ################################## Coordinator #################################
@@ -169,6 +178,10 @@ wtf_async_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnum
 wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
 wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
+
+wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
+wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt
+
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wtf.pc
