@@ -43,16 +43,14 @@ namespace wtf
 
         public:
             ssize_t write(const e::slice& data,
-                                 uint64_t& bid);
-            ssize_t update(const e::slice& data,
-                                 uint64_t offset,
-                                 uint64_t& bid);
-            ssize_t read(uint64_t bid,
-                         uint8_t* data, 
-                         size_t len);
+                          size_t& offset);
+            ssize_t read(size_t offset,
+                         size_t len,
+                         char* data);
         private:
             char* m_log;
             size_t m_log_len;
+            size_t m_log_offset;
     };
 }
 

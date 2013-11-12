@@ -28,6 +28,10 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_CXXFLAGS = $(WANAL_CXXFLAGS) $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(LRT_CFLAGS)
 AM_LDFLAGS = $(PO6_LDFLAGS) $(E_LDFLAGS) $(BUSYBEE_LDFLAGS) $(REPLICANT_FLAGS)
 
+if ENABLE_DEBUG
+    AM_CXXFLAGS += -ggdb -O0
+endif
+
 lib_LTLIBRARIES =
 lib_LTLIBRARIES += libwtfblockstore.la
 lib_LTLIBRARIES += libwtf.la
@@ -180,7 +184,7 @@ wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
 
 wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
-wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt
+wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog
 
 
 pkgconfigdir = $(libdir)/pkgconfig

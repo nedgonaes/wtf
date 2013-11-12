@@ -1,12 +1,13 @@
 #include "blockmap.h"
 #define BACKING_SIZE 2147483648
-#define ROUND_UP(X, Y) ((X + Y - 1) ^ (Y - 1))
+#define ROUND_UP(X, Y) ((X + Y - 1) & (X))
 
 using wtf::blockmap;
 blockmap::blockmap() : m_db()
                      , m_backing_size(ROUND_UP(BACKING_SIZE, getpagesize()))
-                     , m_backing_offset()
+                     , m_block_id(0)
 {
+    LOG(INFO) << "m_backing_size = " << BACKING_SIZE << " + " << getpagesize();
 }
 
 blockmap::~blockmap() {};
@@ -123,7 +124,8 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     }
 
     //create a new disk.
-    if (first_time)
+    //XXX: Set to true for testing
+    if (true)
     {
         m_fd = open(backing_path.get(), O_RDWR | O_CREAT, 0666);
         if (m_fd.get() < 0)
@@ -146,6 +148,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
             return false;
         }
 
+        LOG(INFO) << "mmaping region " << (void*)backing << "->" << (void*)(backing + m_backing_size);
         m_disk = new disk(backing, m_backing_size);
 
         return true;
@@ -153,7 +156,8 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
 
     //use an existing disk.
     e::unpacker up(sbacking.data(), sbacking.size());
-    up = up >> m_backing_offset >> m_backing_size;
+    uint64_t backing_offset;
+    up = up >> backing_offset >> m_backing_size;
     if (up.error())
     {
         LOG(ERROR) << "could not restore from LevelDB because a previous "
@@ -194,18 +198,27 @@ blockmap :: write(const e::slice& data,
                  uint64_t& bid)
 {
     ssize_t status = 0;
-    status = m_disk->write(data, bid);
+    uint64_t offset;
+
+    status = m_disk->write(data, offset);
+    if (status < 0)
+    {
+        return status;
+    }
 
     leveldb::WriteBatch updates;
 
+
     // create the key
-    leveldb::Slice v_block_id((char*)bid, sizeof(bid));
+    leveldb::Slice v_block_id((char*)&bid, sizeof(bid));
+
+    bid++;
 
     // create the value
-    leveldb::Slice offset_map(m_backing_offset);
+    leveldb::Slice offset_map((char*)&offset, sizeof(offset));
 
     // put the object
-    updates.Put(lkey, lval);
+    updates.Put(v_block_id, offset_map);
 
     // Perform the write
     leveldb::WriteOptions opts;
@@ -214,14 +227,13 @@ blockmap :: write(const e::slice& data,
 
     if (st.ok())
     {
-        return SUCCESS;
+        return status;
     }
     else
     {
-        return handle_error(st);
+        return -1;
     }
-   m_db.
-    m_disk.write(data, bid);
+
 }
 
 ssize_t
@@ -236,7 +248,23 @@ ssize_t
 blockmap :: read(uint64_t bid,
                  uint8_t* data, 
                  size_t len)
-{
-    return 0;
+{   
+    leveldb::ReadOptions ropts;
+    ropts.fill_cache = true;
+    ropts.verify_checksums = true;
+
+    leveldb::Slice rk((char*)&bid, sizeof(bid));
+    std::string rbacking;
+    leveldb::Status st = m_db->Get(ropts, rk, &rbacking);
+
+    if (!st.ok())
+    {
+        return -1;
+    }
+
+    uint64_t offset;
+    memmove(&offset, rbacking.data(), rbacking.size());
+
+    return m_disk->read(offset, len, (char*)data);
 }
 

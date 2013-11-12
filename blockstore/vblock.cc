@@ -50,3 +50,19 @@ vblock :: pack_size()
     return ret;
 }
 
+vblock :: slice :: slice()
+    : m_offset(0)
+    , m_length(0)
+{
+}
+
+vblock :: slice :: slice(uint64_t offset, uint64_t length)
+    : m_offset(offset)
+    , m_length(length)
+{
+}
+
+vblock :: slice :: ~slice() throw()
+{
+}
+

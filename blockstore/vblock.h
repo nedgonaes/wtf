@@ -45,7 +45,6 @@ class vblock
 
     public:
         void update(uint64_t offset, uint64_t len);
-        void update(uint64_t offset, uint64_t len);
         uint64_t size() { return m_block_list.size(); }
         uint64_t pack_size();
         uint64_t resize(uint64_t sz) { m_length = sz; }
@@ -68,6 +67,7 @@ class vblock
     private:
         class slice;
         vblock(const vblock&);
+        void update(slice& s);
 
     private:
         void inc() { ++m_ref; }
@@ -82,6 +82,30 @@ class vblock
         slice_list m_slice_list;
         uint64_t m_length;
 };
+
+class vblock::slice
+{
+    public:
+        slice();
+        slice(uint64_t offset, uint64_t length);
+        ~slice() throw();
+
+     private:
+        friend class e::intrusive_ptr<slice>;
+        friend std::ostream& 
+            operator << (std::ostream& lhs, const slice& rhs);
+        friend e::buffer::packer
+            operator << (e::buffer::packer pa, const slice& rhs);
+        friend e::unpacker
+            operator >> (e::unpacker up, slice& rhs);
+        friend e::unpacker
+            operator >> (e::unpacker up, e::intrusive_ptr<slice>& rhs);
+     private:
+        uint64_t m_offset;
+        uint64_t m_length;
+};
+        
+
 
 template <typename T>
     std::ostream&
@@ -126,13 +150,14 @@ operator << (std::ostream& lhs, const vblock& rhs)
     return lhs;
 } 
 
+//VBLOCK SERIALIZATION
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const vblock& rhs) 
 { 
     uint64_t sz = rhs.m_slice_list.size();
     pa = pa << rhs.m_length << sz; 
 
-    for (block::slice_list::const_iterator it = rhs.m_slice_list.begin();
+    for (vblock::slice_list::const_iterator it = rhs.m_slice_list.begin();
             it < rhs.m_slice_list.end(); ++it)
     {
         pa = pa << *it;
@@ -176,5 +201,30 @@ operator >> (e::unpacker up, e::intrusive_ptr<vblock>& rhs)
 
     return up; 
 }
+
+
+//SLICE SERIALIZATION
+inline e::buffer::packer 
+operator << (e::buffer::packer pa, const vblock::slice& rhs) 
+{ 
+    pa = pa << rhs.m_offset << rhs.m_length; 
+    return pa;
+} 
+
+inline e::unpacker 
+operator >> (e::unpacker up, vblock::slice& rhs) 
+{ 
+    up = up >> rhs.m_offset >> rhs.m_length; 
+    return up; 
+} 
+
+inline e::unpacker 
+operator >> (e::unpacker up, e::intrusive_ptr<vblock::slice>& rhs) 
+{ 
+    up >> rhs.m_offset >> rhs.m_length;
+    return up; 
+}
+
+
 }
 #endif // wtf_vblock_h_

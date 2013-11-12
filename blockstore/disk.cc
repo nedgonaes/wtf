@@ -32,6 +32,7 @@ using wtf::disk;
 disk::disk(char* log, size_t log_len)
     : m_log(log)
     , m_log_len(log_len)
+    , m_log_offset(0)
 {
 }
 
@@ -41,23 +42,27 @@ disk::~disk()
 
 ssize_t
 disk::write(const e::slice& data,
-                 uint64_t& bid)
+            size_t& offset)
 {
-    return 0;
-}
+    char* buffer = m_log + m_log_offset;
 
-ssize_t
-disk::update(const e::slice& data,
-             uint64_t offset,
-             uint64_t& bid)
-{
-    return 0;
+    if (m_log_offset + data.size() > m_log_len)
+    {
+        return -1;
+    }
+
+    memmove(buffer, data.data(), data.size());
+    offset = m_log_offset;
+    m_log_offset += data.size();
+    return data.size();
 }
 
 ssize_t 
-disk::read(uint64_t bid,
-                 uint8_t* data, 
-                 size_t len)
+disk::read(size_t offset,
+           size_t len,
+           char* data)
 {
-    return 0;
+    char* buffer = m_log + offset;
+    memmove(data, buffer, len);
+    return len;
 }
