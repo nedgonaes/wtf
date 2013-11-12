@@ -188,11 +188,40 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     return true;
 }
 
+//Write a completely new block.
 ssize_t
 blockmap :: write(const e::slice& data,
                  uint64_t& bid)
 {
-    return 0;
+    ssize_t status = 0;
+    status = m_disk->write(data, bid);
+
+    leveldb::WriteBatch updates;
+
+    // create the key
+    leveldb::Slice v_block_id((char*)bid, sizeof(bid));
+
+    // create the value
+    leveldb::Slice offset_map(m_backing_offset);
+
+    // put the object
+    updates.Put(lkey, lval);
+
+    // Perform the write
+    leveldb::WriteOptions opts;
+    opts.sync = false;
+    leveldb::Status st = m_db->Write(opts, &updates);
+
+    if (st.ok())
+    {
+        return SUCCESS;
+    }
+    else
+    {
+        return handle_error(st);
+    }
+   m_db.
+    m_disk.write(data, bid);
 }
 
 ssize_t
