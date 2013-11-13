@@ -268,9 +268,9 @@ blockmap :: write(const e::slice& data,
                  uint64_t& bid)
 {
     ssize_t status = -1;
-    size_t offset;
+    size_t disk_offset;
 
-    status = m_disk->write(data, offset);
+    status = m_disk->write(data, disk_offset);
     if (status < 0)
     {
         return status;
@@ -279,7 +279,7 @@ blockmap :: write(const e::slice& data,
     bid = m_block_id++;
 
     vblock vb;
-    vb.update(0, data.size(), offset);
+    vb.update(0, data.size(), disk_offset);
 
     if (write_offset_map(bid, vb) < 0)
     {
@@ -293,9 +293,25 @@ blockmap :: write(const e::slice& data,
 
 ssize_t
 blockmap :: update(const e::slice& data,
-             uint64_t offset,
+             size_t offset,
              uint64_t& bid)
 {
+    ssize_t status = -1;
+    size_t disk_offset;
+
+    status = m_disk->write(data, disk_offset);
+    if (status < 0)
+    {
+        return status;
+    }
+
+    bid = m_block_id++;
+
+    vblock vb;
+    read_offset_map(bid, vb);
+
+    vb.update(offset, data.size(), disk_offset);
+
     return 0;
 }
 
@@ -315,6 +331,8 @@ blockmap :: read(uint64_t bid,
 
     size_t readlen = len > s->length() ? s->length() : len;
 
+    //XXX: This only works for a single unmodified block consisting of only
+    //     one slice so far.
     return m_disk->read(s->offset(), readlen, (char*)data);
 }
 
