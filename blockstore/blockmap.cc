@@ -304,22 +304,12 @@ blockmap :: read(uint64_t bid,
                  uint8_t* data, 
                  size_t len)
 {   
-    leveldb::ReadOptions ropts;
-    ropts.fill_cache = true;
-    ropts.verify_checksums = true;
+    vblock vb;
 
-    leveldb::Slice rk((char*)&bid, sizeof(bid));
-    std::string rbacking;
-    leveldb::Status st = m_db->Get(ropts, rk, &rbacking);
-
-    if (!st.ok())
+    if (read_offset_map(bid, vb) < 0)
     {
         return -1;
     }
-
-    e::unpacker up(rbacking.data(), rbacking.size());
-    vblock vb;
-    up = up >> vb;
 
     e::intrusive_ptr<vblock::slice> s = vb.slice_at(0);
 
