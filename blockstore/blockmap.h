@@ -54,6 +54,7 @@ namespace wtf
                         size_t data_sz);
         private:
             ssize_t read_offset_map(uint64_t bid, vblock& vb);
+            ssize_t write_offset_map(uint64_t bid, vblock& vb);
             ssize_t update_offset_map(uint64_t bid, vblock& vb, size_t offset, size_t len, size_t disk_offset);
 
         private:

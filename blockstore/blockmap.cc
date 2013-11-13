@@ -225,32 +225,15 @@ blockmap :: update_offset_map(uint64_t bid, vblock& vb, size_t offset, size_t le
     vb.update(offset, len, disk_offset);
 }
 
-
-//Write a completely new block.
 ssize_t
-blockmap :: write(const e::slice& data,
-                 uint64_t& bid)
+blockmap :: write_offset_map(uint64_t bid, vblock& vb)
 {
-    ssize_t status = 0;
-    size_t offset;
-
-    status = m_disk->write(data, offset);
-    if (status < 0)
-    {
-        return status;
-    }
-
-    leveldb::WriteBatch updates;
-
-
-    bid = m_block_id++;
-
-    vblock vb;
-    vb.update(0, data.size(), offset);
 
     std::auto_ptr<e::buffer> buf(e::buffer::create(vb.pack_size()));
     e::buffer::packer pa = buf->pack_at(0);
     pa = pa << vb;
+
+    leveldb::WriteBatch updates;
 
     // create the key
     leveldb::Slice v_block_id((char*)&bid, sizeof(bid));
@@ -269,13 +252,43 @@ blockmap :: write(const e::slice& data,
 
     if (st.ok())
     {
-        return status;
+        return 0;
     }
     else
     {
         return -1;
     }
 
+}
+
+
+//Write a completely new block.
+ssize_t
+blockmap :: write(const e::slice& data,
+                 uint64_t& bid)
+{
+    ssize_t status = -1;
+    size_t offset;
+
+    status = m_disk->write(data, offset);
+    if (status < 0)
+    {
+        return status;
+    }
+
+    bid = m_block_id++;
+
+    vblock vb;
+    vb.update(0, data.size(), offset);
+
+    if (write_offset_map(bid, vb) < 0)
+    {
+        return -1;
+    }
+    else
+    {
+        return status;
+    }
 }
 
 ssize_t
