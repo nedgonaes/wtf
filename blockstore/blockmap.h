@@ -29,6 +29,8 @@
 
 #include "disk.h"
 
+#include "vblock.h"
+
 #ifndef wtf_blockmap_h_
 #define wtf_blockmap_h_
 
@@ -50,6 +52,10 @@ namespace wtf
             ssize_t read(uint64_t bid,
                         uint8_t* data, 
                         size_t data_sz);
+        private:
+            ssize_t read_offset_map(uint64_t bid, vblock& vb);
+            ssize_t update_offset_map(uint64_t bid, vblock& vb, size_t offset, size_t len, size_t disk_offset);
+
         private:
             typedef std::tr1::shared_ptr<leveldb::DB> leveldb_db_ptr;
             leveldb_db_ptr m_db;

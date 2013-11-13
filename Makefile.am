@@ -88,6 +88,7 @@ wtfexec_PROGRAMS += wtf-initialize-cluster
 ################################## Blockstore ##################################
 ################################################################################
 libwtfblockstore_la_SOURCES = 
+libwtfblockstore_la_SOURCES += blockstore/vblock.cc
 libwtfblockstore_la_SOURCES += blockstore/disk.cc
 libwtfblockstore_la_SOURCES += blockstore/blockmap.cc
 

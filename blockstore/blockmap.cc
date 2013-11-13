@@ -3,6 +3,8 @@
 #define ROUND_UP(X, Y) ((X + Y - 1) & (X))
 
 using wtf::blockmap;
+using wtf::vblock;
+
 blockmap::blockmap() : m_db()
                      , m_backing_size(ROUND_UP(BACKING_SIZE, getpagesize()))
                      , m_block_id(0)
@@ -191,6 +193,38 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
 
     return true;
 }
+
+ssize_t 
+blockmap :: read_offset_map(uint64_t bid, vblock& vb)
+{
+    leveldb::ReadOptions ropts;
+    ropts.fill_cache = true;
+    ropts.verify_checksums = true;
+
+    leveldb::Slice rk((char*)&bid, sizeof(bid));
+    std::string rbacking;
+    leveldb::Status st = m_db->Get(ropts, rk, &rbacking);
+
+    if (!st.ok())
+    {
+        return -1;
+    }
+
+    std::auto_ptr<e::buffer> buf(e::buffer::create(rbacking.data(), rbacking.size()));
+    e::unpacker up = buf->unpack_from(0);
+
+    up = up >> vb;
+
+    return 0;
+}
+
+ssize_t 
+blockmap :: update_offset_map(uint64_t bid, vblock& vb, size_t offset, size_t len, size_t disk_offset)
+{
+    ssize_t status = read_offset_map(bid, vb);
+    vb.update(offset, len, disk_offset);
+}
+
 
 //Write a completely new block.
 ssize_t
