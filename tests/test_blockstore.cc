@@ -28,7 +28,7 @@ int main()
         LOG(INFO) << "bid = " << bid;
     }
 
-    for (int i = 1; i < 21; ++i)
+    for (int i = 0; i < 20; ++i)
     {
         uint8_t buf[5];
         ssize_t ret = bm->read(i, buf, sizeof(buf));

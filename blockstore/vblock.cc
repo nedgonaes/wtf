@@ -126,3 +126,15 @@ vblock :: update(size_t offset, size_t len, size_t disk_offset)
     }
 }
 
+size_t
+vblock :: slice :: pack_size()
+{ 
+    return 3*sizeof(size_t);
+}
+
+size_t
+vblock :: pack_size()
+{ 
+    return sizeof(size_t) + m_slice_map.size() * slice::pack_size();
+}
+

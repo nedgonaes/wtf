@@ -47,10 +47,12 @@ class vblock
     public:
         void update(size_t offset, size_t len, size_t disk_offset);
         uint64_t size() { return m_slice_map.size(); }
+        size_t pack_size(); 
 
     public:
         class slice;
         typedef std::map<size_t, e::intrusive_ptr<slice> > slice_map;
+        e::intrusive_ptr<slice> slice_at(size_t offset) { return m_slice_map[offset]; }
 
     private:
         friend class e::intrusive_ptr<vblock>;
@@ -89,6 +91,10 @@ class vblock::slice
         slice();
         slice(size_t offset, size_t length, size_t disk_offset);
         ~slice() throw();
+        static size_t pack_size();
+        size_t offset() { return m_offset; }
+        size_t length() { return m_length; }
+        size_t disk_offset() { return m_disk_offset; }
 
     private:
         void inc() { ++m_ref; }
@@ -119,7 +125,7 @@ class vblock::slice
         size_t m_ref;
         size_t m_offset;
         size_t m_length;
-        uint64_t m_disk_offset;
+        size_t m_disk_offset;
 };
         
 template <typename T>
@@ -236,7 +242,7 @@ operator << (std::ostream& lhs, const e::intrusive_ptr<vblock::slice>& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const e::intrusive_ptr<vblock>& rhs) 
 { 
-    uint64_t size = rhs->m_slice_map.size();
+    size_t size = rhs->m_slice_map.size();
     pa = pa << size; 
 
     for (vblock::slice_map::const_iterator it = rhs->m_slice_map.begin();

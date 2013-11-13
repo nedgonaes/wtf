@@ -232,7 +232,7 @@ blockmap :: write(const e::slice& data,
                  uint64_t& bid)
 {
     ssize_t status = 0;
-    uint64_t offset;
+    size_t offset;
 
     status = m_disk->write(data, offset);
     if (status < 0)
@@ -243,13 +243,21 @@ blockmap :: write(const e::slice& data,
     leveldb::WriteBatch updates;
 
 
+    bid = m_block_id++;
+
+    vblock vb;
+    vb.update(0, data.size(), offset);
+
+    std::auto_ptr<e::buffer> buf(e::buffer::create(vb.pack_size()));
+    e::buffer::packer pa = buf->pack_at(0);
+    pa = pa << vb;
+
     // create the key
     leveldb::Slice v_block_id((char*)&bid, sizeof(bid));
 
-    bid++;
 
     // create the value
-    leveldb::Slice offset_map((char*)&offset, sizeof(offset));
+    leveldb::Slice offset_map((char*)buf->data(), buf->size());
 
     // put the object
     updates.Put(v_block_id, offset_map);
@@ -296,9 +304,14 @@ blockmap :: read(uint64_t bid,
         return -1;
     }
 
-    uint64_t offset;
-    memmove(&offset, rbacking.data(), rbacking.size());
+    e::unpacker up(rbacking.data(), rbacking.size());
+    vblock vb;
+    up = up >> vb;
 
-    return m_disk->read(offset, len, (char*)data);
+    e::intrusive_ptr<vblock::slice> s = vb.slice_at(0);
+
+    size_t readlen = len > s->length() ? s->length() : len;
+
+    return m_disk->read(s->offset(), readlen, (char*)data);
 }
 
