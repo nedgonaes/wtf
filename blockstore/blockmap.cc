@@ -211,9 +211,14 @@ blockmap :: read_offset_map(uint64_t bid, vblock& vb)
     }
 
     std::auto_ptr<e::buffer> buf(e::buffer::create(rbacking.data(), rbacking.size()));
+
+    LOG(INFO) << "bid="<<bid<<": " << buf->hex();
+
     e::unpacker up = buf->unpack_from(0);
 
     up = up >> vb;
+
+    LOG(INFO) << vb;
 
     return 0;
 }
@@ -305,14 +310,25 @@ blockmap :: update(const e::slice& data,
         return status;
     }
 
-    bid = m_block_id++;
-
     vblock vb;
-    read_offset_map(bid, vb);
+    if (read_offset_map(bid, vb) < 0)
+    {
+        return -1;
+    }
+
+    bid = m_block_id++;
 
     vb.update(offset, data.size(), disk_offset);
 
-    return 0;
+
+    if (write_offset_map(bid, vb) < 0)
+    {
+        return -1;
+    }
+    else
+    {
+        return status;
+    }
 }
 
 ssize_t 

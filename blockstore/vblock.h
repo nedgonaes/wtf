@@ -31,6 +31,7 @@
 // e
 #include <e/intrusive_ptr.h>
 #include <e/buffer.h>
+#include <e/endian.h>
 
 // STL
 #include <map>
@@ -213,14 +214,14 @@ operator << (e::buffer::packer pa, const vblock::slice& rhs)
 inline e::unpacker 
 operator >> (e::unpacker up, vblock::slice& rhs) 
 { 
-    up = up >> rhs.m_offset >> rhs.m_length >> rhs.m_disk_offset; 
+    up = up >> rhs.m_offset >> rhs.m_length >> rhs.m_disk_offset;
     return up; 
 } 
 
 inline e::unpacker 
 operator >> (e::unpacker up, e::intrusive_ptr<vblock::slice>& rhs) 
 { 
-    up >> rhs->m_offset >> rhs->m_length >> rhs->m_disk_offset;
+    up = up >> rhs->m_offset >> rhs->m_length >> rhs->m_disk_offset;
     return up; 
 }
 
@@ -242,7 +243,7 @@ operator << (std::ostream& lhs, const e::intrusive_ptr<vblock::slice>& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const e::intrusive_ptr<vblock>& rhs) 
 { 
-    size_t size = rhs->m_slice_map.size();
+    uint64_t size = rhs->m_slice_map.size();
     pa = pa << size; 
 
     for (vblock::slice_map::const_iterator it = rhs->m_slice_map.begin();
@@ -288,11 +289,11 @@ operator >> (e::unpacker up, vblock& rhs)
 inline e::unpacker 
 operator >> (e::unpacker up, e::intrusive_ptr<vblock>& rhs) 
 { 
-    uint64_t size;
+    size_t sz, size;
+    up = up >> sz; 
+    e::unpack64be((char*)&size,&sz);
 
-    up = up >> size; 
-
-    for (uint64_t i = 0; i < size; ++i)
+    for (uint64_t i = 0; i < sz; ++i)
     {
         e::intrusive_ptr<vblock::slice> s(new vblock::slice());
         up = up >> s;

@@ -35,11 +35,39 @@ int main()
 
         if(ret < 0)
         {
-            PLOG(ERROR) << "Write failed.";
+            PLOG(ERROR) << "Read failed.";
+        }
+
+        std::string out((char*)buf,sizeof(buf));
+
+        LOG(INFO) << "bid = " << i << " value = " << out;
+    }
+
+    for (uint64_t i = 0; i < 20; ++i)
+    {
+        ssize_t ret = bm->update(slc, (uint64_t)5, i);
+
+        if(ret < 0)
+        {
+            PLOG(ERROR) << "Update failed.";
+        }
+
+        LOG(INFO) << "bid = " << i;
+    }
+
+    for (int i = 20; i < 40; ++i)
+    {
+        uint8_t buf[10];
+        ssize_t ret = bm->read(i, buf, sizeof(buf));
+
+        if(ret < 0)
+        {
+            PLOG(ERROR) << "Read failed.";
         }
 
         LOG(INFO) << "bid = " << i << " value = " << buf;
     }
+
     return 0;
 }
 
