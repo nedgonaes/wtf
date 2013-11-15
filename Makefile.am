@@ -31,6 +31,7 @@ AM_LDFLAGS = $(PO6_LDFLAGS) $(E_LDFLAGS) $(BUSYBEE_LDFLAGS) $(REPLICANT_FLAGS)
 lib_LTLIBRARIES =
 lib_LTLIBRARIES += libwtf.la
 lib_LTLIBRARIES += libwtfcoordinator.la
+lib_LTLIBRARIES += libfusewtf.la
 
 include_HEADERS = client/wtf.h
 
@@ -69,6 +70,7 @@ noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
 #noinst_PROGRAMS += wtf-hadoop-benchmark
 noinst_PROGRAMS += wtf-shelltest
+noinst_PROGRAMS += wtf-fusetest
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -130,6 +132,15 @@ libwtf_la_SOURCES += client/wtf.cc
 
 libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) -lglog
 
+################################################################################
+################################## fusewtf #####################################
+################################################################################
+
+libfusewtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
+
+libfusewtf_la_SOURCES = tools/fusewtf.cc
+libfusewtf_la_LIBADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 
 wtf_SOURCES = wtf.cc
@@ -143,6 +154,10 @@ wtf_writetest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_shelltest_SOURCES = tools/shelltest.cc
 wtf_shelltest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
+wtf_fusetest_SOURCES = tools/fusetest.c
+wtf_fusetest_LDADD = libfusewtf.la -lfuse
+wtf_fusetest_CPPFLAGS = -D_FILE_OFFSET_BITS=64 -I/home/jianneng/Documents/research/os/install/include
 
 wtf_readtest_SOURCES = tools/readtest.cc
 wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)

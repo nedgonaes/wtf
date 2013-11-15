@@ -47,3 +47,4 @@ wtf-initialize-cluster
 wtf.pc
 stamp-h1
 wtf-shelltest
+wtf-fusetest
