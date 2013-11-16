@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include <semaphore.h>
+
 // WTF
 #include "fusewtf.h"
 
@@ -17,10 +19,13 @@ static const char *hello_str = "Hello World!\n";
 const char* log_name = "logfusetest";
 FILE *logfile;
 
+sem_t lock;
+
 static int fusetest_getattr(const char *path, struct stat *stbuf)
 {
 	int ret = 0;
 
+    sem_wait(&lock);
 	memset(stbuf, 0, sizeof(struct stat));
 	//if (strcmp(path, "/") == 0) {
 	//	stbuf->st_mode = S_IFDIR | 0755;
@@ -44,6 +49,7 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         ret = -ENOENT;
     }
 
+    sem_post(&lock);
     fflush(logfile);
 	return ret;
 }
@@ -57,39 +63,48 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     int ret = 0;
     const char* to_add;
 
+    sem_wait(&lock);
     //fprintf(logfile, "\tREADDIR: exists [%d] [%s]\n", fusewtf_search_exists(path), path);
     if (fusewtf_search_exists(path) != 0)
     {
-        fprintf(logfile, "\tREADDIR: not exists [%d] [%s]\n", fusewtf_search_exists(path), path);
         ret = -ENOENT;
     }
     else
     {
         res = fusewtf_search(path, &to_add);
-        //fprintf(logfile, "\tREADDIR: exists [%d] search [%d] [%s]\n", fusewtf_search_exists(path), res, path);
+        if (res != 0)
+        {
+            fprintf(logfile, "\tREADDIR: ERROR search not 0 while exists is 0\n");
+        }
         while (res == 0)
         {
             filler(buf, to_add, NULL, 0);
-            break;
-            //wtf_loop();
-            //ret = wtf_read();
+            fusewtf_loop();
+            res = fusewtf_read(&to_add);
         }
 
         filler(buf, ".", NULL, 0);
         filler(buf, "..", NULL, 0);
     }
 
+    sem_post(&lock);
     fflush(logfile);
 	return ret;
 }
 
 static int fusetest_open(const char *path, struct fuse_file_info *fi)
 {
+    int ret = 0;
+    sem_wait(&lock);
     fprintf(logfile, "open called [%s]\n", path);
-    if (fusewtf_search_exists(path) != 0) return -ENOENT;
+    if (fusewtf_search_exists(path) != 0)
+    {
+        ret = -ENOENT;
+    }
 
+    sem_post(&lock);
     fflush(logfile);
-	return 0;
+	return ret;
 }
 
 static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
@@ -97,19 +112,26 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 {
 	size_t len;
 	(void) fi;
+    int ret;
 
+    sem_wait(&lock);
     fprintf(logfile, "read called [%s]\n", path);
 	if(fusewtf_search_exists(path) != 0)
-		return -ENOENT;
+    {
+        ret = -ENOENT;
+    }
+    else
+    {
+        len = strlen(hello_str);
+        if (offset < len) {
+            if (offset + size > len)
+                size = len - offset;
+            memcpy(buf, hello_str + offset, size);
+        } else
+            size = 0;
+    }
 
-	len = strlen(hello_str);
-	if (offset < len) {
-		if (offset + size > len)
-			size = len - offset;
-		memcpy(buf, hello_str + offset, size);
-	} else
-		size = 0;
-
+    sem_post(&lock);
     fflush(logfile);
 	return size;
 }
@@ -129,7 +151,12 @@ int main(int argc, char *argv[])
     fprintf(logfile, "\n==== fusetest\n");
     fusewtf_initialize();
 
+    sem_init(&lock, 0, 1);
+
+    //fusewtf_search_exists("/");
 	ret = fuse_main(argc, argv, &fusetest_oper, NULL);
+
+    sem_destroy(&lock);
 
     fclose(logfile);
     fusewtf_destroy();

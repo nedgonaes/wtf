@@ -43,7 +43,7 @@ fusewtf_loop()
 int
 fusewtf_read(const char** output_filename)
 {
-    fprintf(logfusewtf, "fusewtf_read called\n");
+    //fprintf(logfusewtf, "fusewtf_read called\n");
     if (status == HYPERDEX_CLIENT_SEARCHDONE)
     {
         *output_filename = NULL;
@@ -105,9 +105,11 @@ fusewtf_search(const char* value, const char** one_result)
     retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
 
     fusewtf_loop();
+    //fprintf(logfusewtf, "search [%s] status %d\n", value, status);
     if (status == HYPERDEX_CLIENT_SUCCESS)
     {
-        return fusewtf_read(one_result);
+        fusewtf_read(one_result);
+        return 0;
     }
     else
     {
@@ -120,7 +122,16 @@ int
 fusewtf_search_exists(const char* value)
 {
     const char* tmp_result;
-    return fusewtf_search(value, &tmp_result);
+    int ret;
+    ret = fusewtf_search(value, &tmp_result);
+
+    // Clear loop
+    while (status == HYPERDEX_CLIENT_SUCCESS)
+    {
+        fusewtf_loop();
+    }
+    
+    return ret;
 }
 
 
