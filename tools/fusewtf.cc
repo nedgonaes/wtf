@@ -59,22 +59,15 @@ fusewtf_read(const char** output_filename)
     }
     else
     {
-        /*
         for (int i = 0; i < attr_size_got; ++i)
         {
-            if (verbose) cout << "attribute " << i << ": " << attr_got[i].attr << endl;
             if (strcmp(attr_got[i].attr, "path") == 0)
             {
-                return std::string(attr_got[i].value, attr_got[i].value_sz).c_str();
-            }
-            else
-            {
-                return NULL;
+                *output_filename = string(attr_got[i].value, attr_got[i].value_sz).c_str();
+                return 0;
             }
         }
-        */
-        *output_filename = "/dir1";
-        return 0;
+        return -1;
     }
 }
 

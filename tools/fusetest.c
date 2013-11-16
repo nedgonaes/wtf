@@ -55,25 +55,25 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	(void) fi;
     int res = 0;
     int ret = 0;
-    const char** to_add;
+    const char* to_add;
 
+    //fprintf(logfile, "\tREADDIR: exists [%d] [%s]\n", fusewtf_search_exists(path), path);
     if (fusewtf_search_exists(path) != 0)
     {
-        fprintf(logfile, "\tREADDIR: not exists [%s]\n", path);
+        fprintf(logfile, "\tREADDIR: not exists [%d] [%s]\n", fusewtf_search_exists(path), path);
         ret = -ENOENT;
     }
     else
     {
-        fprintf(logfile, "\tREADDIR: exists [%s]\n", path);
-        //res = fusewtf_search(path, to_add);
-        //filler(buf, *to_add, NULL, 0);
-        filler(buf, "dir1", NULL, 0);
-        //while (ret != NULL)
-        //{
-        //    filler(buf, ret, NULL, 0);
-        //    wtf_loop();
-        //    ret = wtf_read();
-        //}
+        res = fusewtf_search(path, &to_add);
+        //fprintf(logfile, "\tREADDIR: exists [%d] search [%d] [%s]\n", fusewtf_search_exists(path), res, path);
+        while (res == 0)
+        {
+            filler(buf, to_add, NULL, 0);
+            break;
+            //wtf_loop();
+            //ret = wtf_read();
+        }
 
         filler(buf, ".", NULL, 0);
         filler(buf, "..", NULL, 0);
