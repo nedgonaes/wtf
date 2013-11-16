@@ -22,13 +22,16 @@ size_t attr_size_got;
 hyperdex_client_returncode status;
 int64_t retval;
 
+const char* log_name = "logfusewtf";
+FILE *logfusewtf;
+
 #ifdef __cplusplus
 extern "C"
 {
 #endif //__cplusplus
 
 void
-print_return()
+fusewtf_loop()
 {
     if (verbose) printf("first retval %ld status %d:", retval, status);
     if (verbose) cout << status << endl;
@@ -37,57 +40,42 @@ print_return()
     if (verbose) cout << status << endl << endl;
 }
 
-void
-wtf_read()
+int
+fusewtf_read(const char** output_filename)
 {
-    if (status == HYPERDEX_CLIENT_SEARCHDONE) return;
+    fprintf(logfusewtf, "fusewtf_read called\n");
+    if (status == HYPERDEX_CLIENT_SEARCHDONE)
+    {
+        *output_filename = NULL;
+        return -1;
+    }
 
     // Reading
-    if (verbose) cout << "attr_size_got [" << attr_size_got << "]" << endl;
     if (attr_got == NULL)
     {
-        cout << "attr_got is NULL" << endl;
+        fprintf(logfusewtf, "attr_got is NULL\n");
+        *output_filename = NULL;
+        return -1;
     }
     else
     {
+        /*
         for (int i = 0; i < attr_size_got; ++i)
         {
             if (verbose) cout << "attribute " << i << ": " << attr_got[i].attr << endl;
             if (strcmp(attr_got[i].attr, "path") == 0)
             {
-                if (verbose) cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                else cout << std::string(attr_got[i].value, attr_got[i].value_sz) << endl;
-                //printf("value [%.5s]\n", attr_got[i].value);
-            }
-            else if (strcmp(attr_got[i].attr, "blockmap") == 0)
-            {
-                if (verbose) cout << "attr [" << attr_got[i].attr << "] value_sz [" << attr_got[i].value_sz << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                uint32_t keylen;
-                uint64_t key;
-                uint32_t vallen;
-                uint64_t value;
-
-                e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
-                while (!up.empty())
-                {
-                    up = up >> keylen >> key >> vallen >> value;
-
-                    //printf("keylen %x key %lx vallen %x value %lx\n", keylen, key, vallen, value);
-                    e::unpack32be((uint8_t *)&keylen, &keylen);
-                    e::unpack64be((uint8_t *)&key, &key);
-                    e::unpack32be((uint8_t *)&vallen, &vallen);
-                    e::unpack64be((uint8_t *)&value, &value);
-                    if (verbose) printf("keylen %x key %lx vallen %x value %lx\n", keylen, key, vallen, value);
-                }
+                return std::string(attr_got[i].value, attr_got[i].value_sz).c_str();
             }
             else
             {
-                cout << "unexpected attribute" << endl;
+                return NULL;
             }
         }
+        */
+        *output_filename = "/dir1";
+        return 0;
     }
-
-    if (verbose) cout << endl;
 }
 
 void
@@ -96,7 +84,7 @@ put(const char* filename)
     if (verbose) cout << ">>>>putting [" << filename << "]" << endl;
 
     retval = h->put_if_not_exist(space, filename, strlen(filename), NULL, 0, &status);
-    print_return();
+    fusewtf_loop();
     if (verbose) cout << endl;
 }
 
@@ -106,93 +94,57 @@ del(const char* filename)
     if (verbose) cout << ">>>>deleting [" << filename << "]" << endl;
 
     retval = h->del(space, filename, strlen(filename), &status);
-    print_return();
-    if (verbose) cout << endl;
-}
-
-void
-search(const char* attr, const char* value, hyperpredicate predicate)
-{
-    if (verbose) cout << ">>>>searching [" << attr << "] for [" << value << "] with [" << predicate << "]" << endl;
-    struct hyperdex_client_attribute_check check;
-    check.attr = attr;
-    check.value = value;
-    check.value_sz = strlen(check.value);
-    check.datatype = HYPERDATATYPE_STRING;
-    check.predicate = predicate;
-
-    status = (hyperdex_client_returncode)NULL;
-    retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
-
-    int counter = 0;
-    while (status != HYPERDEX_CLIENT_SEARCHDONE)
-    {
-        if (verbose) cout << ++counter << endl;
-        print_return();
-        wtf_read();
-    }
+    fusewtf_loop();
     if (verbose) cout << endl;
 }
 
 int
-main(int argc, const char* argv[])
+fusewtf_search(const char* value, const char** one_result)
+{
+    struct hyperdex_client_attribute_check check;
+    check.attr = "path";
+    check.value = value;
+    check.value_sz = strlen(check.value);
+    check.datatype = HYPERDATATYPE_STRING;
+    check.predicate = HYPERPREDICATE_REGEX;
+
+    status = (hyperdex_client_returncode)NULL;
+    retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
+
+    fusewtf_loop();
+    if (status == HYPERDEX_CLIENT_SUCCESS)
+    {
+        return fusewtf_read(one_result);
+    }
+    else
+    {
+        *one_result = NULL;
+        return -1;
+    }
+}
+
+int
+fusewtf_search_exists(const char* value)
+{
+    const char* tmp_result;
+    return fusewtf_search(value, &tmp_result);
+}
+
+
+void
+fusewtf_initialize()
 {
     //hyperdex::connect_opts conn;
     //h = new hyperdex::Client(conn.host(), conn.port());
     h = new hyperdex::Client("127.0.0.1", 1982);
-    
-    if (argc > 1)
-    {
-        if (strcmp(argv[1], "touch") == 0)
-        {
-            if (argc > 3) verbose = true;
-            if (argc > 2)
-            {
-                cout << "touch " << argv[2] << endl;
-                put(argv[2]);
-            }
-            else
-            {
-                cout << "usage: touch <filename>" << endl;
-            }
-        }
-        else if (strcmp(argv[1], "ls") == 0)
-        {
-            if (argc > 3) verbose = true;
-            string query("^");
-            if (argc > 2)
-            {
-                query += string(argv[2]);
-            }
+    logfusewtf = fopen(log_name, "a");
+    fprintf(logfusewtf, "\n==== fusewtf\n");
+}
 
-            cout << "ls " << query << endl;
-            search("path", query.c_str(), HYPERPREDICATE_REGEX);
-        }
-        else if (strcmp(argv[1], "rm") == 0)
-        {
-            if (argc > 3) verbose = true;
-            if (argc > 2)
-            {
-                cout << "rm " << argv[2] << endl;
-                del(argv[2]);
-            }
-            else
-            {
-                cout << "usage: rm <filename>" << endl;
-            }
-        }
-        else
-        {
-            cout << argv[1] << " is not supported" << endl;
-        }
-    }
-    else
-    {
-        cout << "Commands: touch, ls, rm" << endl;
-        cout << "Set up: echo 'space wtf key path attributes map(string, string) blockmap' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
-    }
-
-    return EXIT_SUCCESS;
+void
+fusewtf_destroy()
+{
+    fclose(logfusewtf);
 }
 
 #ifdef __cplusplus

@@ -1,11 +1,5 @@
 /*
-  FUSE: Filesystem in Userspace
-  Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
-
-  This program can be distributed under the terms of the GNU GPL.
-  See the file COPYING.
-
-  gcc -Wall hello.c `pkg-config fuse --cflags --libs` -o hello
+ * Use FUSE to interact with files in WTF
 */
 
 #define FUSE_USE_VERSION 26
@@ -20,59 +14,92 @@
 #include "fusewtf.h"
 
 static const char *hello_str = "Hello World!\n";
-static const char *hello_path = "/hello";
+const char* log_name = "logfusetest";
+FILE *logfile;
 
-static int hello_getattr(const char *path, struct stat *stbuf)
+static int fusetest_getattr(const char *path, struct stat *stbuf)
 {
-	int res = 0;
+	int ret = 0;
 
 	memset(stbuf, 0, sizeof(struct stat));
+	//if (strcmp(path, "/") == 0) {
+	//	stbuf->st_mode = S_IFDIR | 0755;
+	//	stbuf->st_nlink = 2;
+	//} else if (strcmp(path, fusetest_path) == 0) {
+	//	stbuf->st_mode = S_IFREG | 0444;
+	//	stbuf->st_nlink = 1;
+	//	stbuf->st_size = strlen(fusetest_str);
+	//} else
+	//	ret = -ENOENT;
 	if (strcmp(path, "/") == 0) {
+        fprintf(logfile, "GETATTR: root [%s]\n", path);
 		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = 2;
-	} else if (strcmp(path, hello_path) == 0) {
+		stbuf->st_nlink = 1;
+	} else if (fusewtf_search_exists(path) == 0) {
+        fprintf(logfile, "GETATTR: exists [%s]\n", path);
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
-		stbuf->st_size = strlen(hello_str);
-	} else
-		res = -ENOENT;
+    } else {
+        fprintf(logfile, "GETATTR: not exists [%s]\n", path);
+        ret = -ENOENT;
+    }
 
-	return res;
+    fflush(logfile);
+	return ret;
 }
 
-static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			 off_t offset, struct fuse_file_info *fi)
 {
 	(void) offset;
 	(void) fi;
+    int res = 0;
+    int ret = 0;
+    const char** to_add;
 
-	if (strcmp(path, "/") != 0)
-		return -ENOENT;
+    if (fusewtf_search_exists(path) != 0)
+    {
+        fprintf(logfile, "\tREADDIR: not exists [%s]\n", path);
+        ret = -ENOENT;
+    }
+    else
+    {
+        fprintf(logfile, "\tREADDIR: exists [%s]\n", path);
+        //res = fusewtf_search(path, to_add);
+        //filler(buf, *to_add, NULL, 0);
+        filler(buf, "dir1", NULL, 0);
+        //while (ret != NULL)
+        //{
+        //    filler(buf, ret, NULL, 0);
+        //    wtf_loop();
+        //    ret = wtf_read();
+        //}
 
-	filler(buf, ".", NULL, 0);
-	filler(buf, "..", NULL, 0);
-	filler(buf, hello_path + 1, NULL, 0);
+        filler(buf, ".", NULL, 0);
+        filler(buf, "..", NULL, 0);
+    }
 
-	return 0;
+    fflush(logfile);
+	return ret;
 }
 
-static int hello_open(const char *path, struct fuse_file_info *fi)
+static int fusetest_open(const char *path, struct fuse_file_info *fi)
 {
-	if (strcmp(path, hello_path) != 0)
-		return -ENOENT;
+    fprintf(logfile, "open called [%s]\n", path);
+    if (fusewtf_search_exists(path) != 0) return -ENOENT;
 
-	if ((fi->flags & 3) != O_RDONLY)
-		return -EACCES;
-
+    fflush(logfile);
 	return 0;
 }
 
-static int hello_read(const char *path, char *buf, size_t size, off_t offset,
+static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 		      struct fuse_file_info *fi)
 {
 	size_t len;
 	(void) fi;
-	if(strcmp(path, hello_path) != 0)
+
+    fprintf(logfile, "read called [%s]\n", path);
+	if(fusewtf_search_exists(path) != 0)
 		return -ENOENT;
 
 	len = strlen(hello_str);
@@ -83,17 +110,29 @@ static int hello_read(const char *path, char *buf, size_t size, off_t offset,
 	} else
 		size = 0;
 
+    fflush(logfile);
 	return size;
 }
 
-static struct fuse_operations hello_oper = {
-	.getattr	= hello_getattr,
-	.readdir	= hello_readdir,
-	.open		= hello_open,
-	.read		= hello_read,
+static struct fuse_operations fusetest_oper = {
+	.getattr	= fusetest_getattr,
+	.readdir	= fusetest_readdir,
+	.open		= fusetest_open,
+	.read		= fusetest_read,
 };
 
 int main(int argc, char *argv[])
 {
-	return fuse_main(argc, argv, &hello_oper, NULL);
+    int ret;
+    
+    logfile = fopen(log_name, "a");
+    fprintf(logfile, "\n==== fusetest\n");
+    fusewtf_initialize();
+
+	ret = fuse_main(argc, argv, &fusetest_oper, NULL);
+
+    fclose(logfile);
+    fusewtf_destroy();
+
+    return ret;
 }

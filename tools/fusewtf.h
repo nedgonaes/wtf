@@ -9,17 +9,15 @@ extern "C"
 {
 #endif //__cplusplus
 
-void
-print_return();
+void fusewtf_initialize();
+void fusewtf_destroy();
 
-void
-wtf_read();
+int fusewtf_search(const char* value, const char** one_result);
+int fusewtf_search_exists(const char* value);
 
-void
-put(const char* filename);
+void fusewtf_loop();
 
-void
-del(const char* filename);
+int fusewtf_read(const char** output_filename);
 
 #ifdef __cplusplus
 }
