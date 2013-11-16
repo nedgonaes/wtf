@@ -94,9 +94,12 @@ del(const char* filename)
 int
 fusewtf_search(const char* value, const char** one_result)
 {
+    string query("^");
+    query += string(value);
+
     struct hyperdex_client_attribute_check check;
     check.attr = "path";
-    check.value = value;
+    check.value = query.c_str();
     check.value_sz = strlen(check.value);
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = HYPERPREDICATE_REGEX;
@@ -105,7 +108,7 @@ fusewtf_search(const char* value, const char** one_result)
     retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
 
     fusewtf_loop();
-    //fprintf(logfusewtf, "search [%s] status %d\n", value, status);
+    //fprintf(logfusewtf, "search [%s] status %d\n", check.value, status);
     if (status == HYPERDEX_CLIENT_SUCCESS)
     {
         fusewtf_read(one_result);
