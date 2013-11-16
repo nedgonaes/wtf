@@ -27,23 +27,12 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 
     sem_wait(&lock);
 	memset(stbuf, 0, sizeof(struct stat));
-	//if (strcmp(path, "/") == 0) {
-	//	stbuf->st_mode = S_IFDIR | 0755;
-	//	stbuf->st_nlink = 2;
-	//} else if (strcmp(path, fusetest_path) == 0) {
-	//	stbuf->st_mode = S_IFREG | 0444;
-	//	stbuf->st_nlink = 1;
-	//	stbuf->st_size = strlen(fusetest_str);
-	//} else
-	//	ret = -ENOENT;
 	if (strcmp(path, "/") == 0) {
         fprintf(logfile, "GETATTR: root [%s]\n", path);
 		stbuf->st_mode = S_IFDIR | 0755;
-		stbuf->st_nlink = 1;
 	} else if (fusewtf_search_exists(path) == 0) {
         fprintf(logfile, "GETATTR: exists [%s]\n", path);
 		stbuf->st_mode = S_IFREG | 0444;
-		stbuf->st_nlink = 1;
     } else {
         fprintf(logfile, "GETATTR: not exists [%s]\n", path);
         ret = -ENOENT;
@@ -65,7 +54,8 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     sem_wait(&lock);
     //fprintf(logfile, "\tREADDIR: exists [%d] [%s]\n", fusewtf_search_exists(path), path);
-    if (fusewtf_search_exists(path) != 0)
+    //if (fusewtf_search_exists(path) != 0)
+	if (strcmp(path, "/") != 0)
     {
         ret = -ENOENT;
     }
@@ -78,7 +68,7 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         }
         while (res == 0)
         {
-            filler(buf, to_add, NULL, 0);
+            filler(buf, to_add + 1, NULL, 0);
             fusewtf_loop();
             res = fusewtf_read(&to_add);
         }
@@ -139,8 +129,8 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 static struct fuse_operations fusetest_oper = {
 	.getattr	= fusetest_getattr,
 	.readdir	= fusetest_readdir,
-	.open		= fusetest_open,
-	.read		= fusetest_read,
+	//.open		= fusetest_open,
+	//.read		= fusetest_read,
 };
 
 int main(int argc, char *argv[])
