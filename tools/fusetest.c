@@ -27,19 +27,19 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 
     sem_wait(&lock);
 	memset(stbuf, 0, sizeof(struct stat));
-	if (strcmp(path, "/") == 0 || strcmp(path, "/dir3") == 0)
+	if (fusewtf_search_is_dir(path) == 0)
     {
-        fprintf(logfile, "GETATTR: root [%s]\n", path);
+        fprintf(logfile, "GETATTR: dir [%s]\n", path);
 		stbuf->st_mode = S_IFDIR | 0755;
 	}
     else if (fusewtf_search_exists(path) == 0)
     {
-        fprintf(logfile, "GETATTR: exists [%s]\n", path);
+        fprintf(logfile, "GETATTR: file [%s]\n", path);
 		stbuf->st_mode = S_IFREG | 0444;
     }
     else
     {
-        fprintf(logfile, "GETATTR: not exists [%s]\n", path);
+        fprintf(logfile, "GETATTR: invalid [%s]\n", path);
         ret = -ENOENT;
     }
 
@@ -73,7 +73,7 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         res = fusewtf_search(path, &to_add);
         if (res != 0)
         {
-            fprintf(logfile, "\tREADDIR: ERROR dir does not exist\n");
+            fprintf(logfile, "\tREADDIR: ERROR dir [%s] does not exist\n", path);
         }
         while (res == 0)
         {
@@ -153,8 +153,7 @@ int main(int argc, char *argv[])
 
     sem_init(&lock, 0, 1);
 
-    //fusewtf_search_exists("/");
-	ret = fuse_main(argc, argv, &fusetest_oper, NULL);
+    ret = fuse_main(argc, argv, &fusetest_oper, NULL);
 
     sem_destroy(&lock);
 

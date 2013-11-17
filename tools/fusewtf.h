@@ -14,6 +14,7 @@ void fusewtf_destroy();
 
 int fusewtf_search(const char* value, const char** one_result);
 int fusewtf_search_exists(const char* value);
+int fusewtf_search_is_dir(const char* value);
 
 void fusewtf_loop();
 

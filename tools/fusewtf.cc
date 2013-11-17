@@ -52,7 +52,7 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
         *output = input_str.substr(start, next_slash_pos - start).c_str();
     }
 
-    fprintf(logfusewtf, "extracted [%s]\n", *output);
+    //fprintf(logfusewtf, "extracted [%s]\n", *output);
     return 0;
 }
 
@@ -118,23 +118,30 @@ del(const char* filename)
 }
 
 int
-fusewtf_search(const char* value, const char** one_result)
+fusewtf_search_predicate(const char* value, hyperpredicate predicate, const char** one_result)
 {
-    string query("^");
-    query += string(value);
+    string query(value);
+    if (predicate == HYPERPREDICATE_REGEX)
+    {
+        query = string("^") + query;
+    }
+    else if (predicate != HYPERPREDICATE_EQUALS)
+    {
+        return -1;
+    }
 
     struct hyperdex_client_attribute_check check;
     check.attr = "path";
     check.value = query.c_str();
     check.value_sz = strlen(check.value);
     check.datatype = HYPERDATATYPE_STRING;
-    check.predicate = HYPERPREDICATE_REGEX;
+    check.predicate = predicate;
 
     status = (hyperdex_client_returncode)NULL;
     retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
 
     fusewtf_loop();
-    //fprintf(logfusewtf, "search [%s] status %d\n", check.value, status);
+    //fprintf(logfusewtf, "search [%s] predicate %d status %d\n", check.value, predicate, status);
     if (status == HYPERDEX_CLIENT_SUCCESS)
     {
         fusewtf_read(one_result);
@@ -148,11 +155,17 @@ fusewtf_search(const char* value, const char** one_result)
 }
 
 int
-fusewtf_search_exists(const char* value)
+fusewtf_search(const char* value, const char** one_result)
+{
+    return fusewtf_search_predicate(value, HYPERPREDICATE_REGEX, one_result);
+}
+
+int
+fusewtf_search_exists_predicate(const char* value, hyperpredicate predicate)
 {
     const char* tmp_result;
     int ret;
-    ret = fusewtf_search(value, &tmp_result);
+    ret = fusewtf_search_predicate(value, predicate, &tmp_result);
 
     // Clear loop
     while (status == HYPERDEX_CLIENT_SUCCESS)
@@ -163,6 +176,22 @@ fusewtf_search_exists(const char* value)
     return ret;
 }
 
+int
+fusewtf_search_exists(const char* value)
+{
+    return fusewtf_search_exists_predicate(value, HYPERPREDICATE_REGEX);
+}
+
+int
+fusewtf_search_is_dir(const char* value)
+{
+    int reg = fusewtf_search_exists(value);
+    int equ = fusewtf_search_exists_predicate(value, HYPERPREDICATE_EQUALS);
+    int ret = reg == 0 && equ != 0? 0 : -1;
+
+    //fprintf(logfusewtf, "[%s] reg %d equ %d ret %d\n", value, reg, equ, ret);
+    return ret;
+}
 
 void
 fusewtf_initialize()
