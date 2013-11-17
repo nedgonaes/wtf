@@ -140,6 +140,7 @@ libfusewtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 libfusewtf_la_SOURCES = tools/fusewtf.cc
 libfusewtf_la_LIBADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+libfusewtf_la_CPPFLAGS = -std=c++0x
 
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 

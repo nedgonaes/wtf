@@ -67,9 +67,6 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     //}
     //else
     //{
-        //filler(buf, "file0", NULL, 0);
-        //filler(buf, "file1", NULL, 0);
-        //filler(buf, "dir3", NULL, 0);
         res = fusewtf_search(path, &to_add);
         if (res != 0)
         {
@@ -78,7 +75,10 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         while (res == 0)
         {
             fusewtf_extract_name(to_add, path, &to_add_extracted);
-            filler(buf, to_add_extracted, NULL, 0);
+            if (to_add_extracted != NULL)
+            {
+                filler(buf, to_add_extracted, NULL, 0);
+            }
             fusewtf_loop();
             res = fusewtf_read(&to_add);
         }

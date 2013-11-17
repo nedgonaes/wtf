@@ -12,6 +12,8 @@
 #include <hyperdex/client.hpp>
 #include "tools/common.h"
 
+#include <unordered_set>
+
 using namespace std;
 
 hyperdex::Client* h;
@@ -22,8 +24,12 @@ size_t attr_size_got;
 hyperdex_client_returncode status;
 int64_t retval;
 
+// Log
 const char* log_name = "logfusewtf";
 FILE *logfusewtf;
+
+// Set to make sure no duplicate results returned for readdir
+unordered_set<std::string> string_set;
 
 #ifdef __cplusplus
 extern "C"
@@ -34,6 +40,8 @@ int
 fusewtf_extract_name(const char* input, const char* prefix, const char** output)
 {
     string input_str(input);
+    string output_str;
+
     int start = strlen(prefix);
     // If not root, then account for extra slash at end of prefix
     if (start != 1)
@@ -45,14 +53,27 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
     size_t next_slash_pos = input_str.find("/", start);
     if (next_slash_pos == string::npos)
     {
-        *output = input_str.substr(start).c_str();
+        output_str = input_str.substr(start).c_str();
     }
     else
     {
-        *output = input_str.substr(start, next_slash_pos - start).c_str();
+        output_str = input_str.substr(start, next_slash_pos - start).c_str();
     }
 
     //fprintf(logfusewtf, "extracted [%s]\n", *output);
+    
+    if (string_set.find(output_str) == string_set.end())
+    {
+        fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
+        string_set.insert(output_str);
+        *output = output_str.c_str();
+    }
+    else
+    {
+        fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
+        *output = NULL;
+    }
+
     return 0;
 }
 
@@ -89,7 +110,8 @@ fusewtf_read(const char** output_filename)
         {
             if (strcmp(attr_got[i].attr, "path") == 0)
             {
-                *output_filename = string(attr_got[i].value, attr_got[i].value_sz).c_str();
+                string output_filename_str(attr_got[i].value, attr_got[i].value_sz);
+                *output_filename = output_filename_str.c_str();
                 return 0;
             }
         }
@@ -129,6 +151,8 @@ fusewtf_search_predicate(const char* value, hyperpredicate predicate, const char
     {
         return -1;
     }
+
+    string_set.clear();
 
     struct hyperdex_client_attribute_check check;
     check.attr = "path";
