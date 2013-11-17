@@ -27,13 +27,18 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 
     sem_wait(&lock);
 	memset(stbuf, 0, sizeof(struct stat));
-	if (strcmp(path, "/") == 0) {
+	if (strcmp(path, "/") == 0 || strcmp(path, "/dir3") == 0)
+    {
         fprintf(logfile, "GETATTR: root [%s]\n", path);
 		stbuf->st_mode = S_IFDIR | 0755;
-	} else if (fusewtf_search_exists(path) == 0) {
+	}
+    else if (fusewtf_search_exists(path) == 0)
+    {
         fprintf(logfile, "GETATTR: exists [%s]\n", path);
 		stbuf->st_mode = S_IFREG | 0444;
-    } else {
+    }
+    else
+    {
         fprintf(logfile, "GETATTR: not exists [%s]\n", path);
         ret = -ENOENT;
     }
@@ -51,31 +56,36 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     int res = 0;
     int ret = 0;
     const char* to_add;
+    const char* to_add_extracted;
 
     sem_wait(&lock);
     //fprintf(logfile, "\tREADDIR: exists [%d] [%s]\n", fusewtf_search_exists(path), path);
     //if (fusewtf_search_exists(path) != 0)
-	if (strcmp(path, "/") != 0)
-    {
-        ret = -ENOENT;
-    }
-    else
-    {
+	//if (strcmp(path, "/") != 0)
+    //{
+    //    ret = -ENOENT;
+    //}
+    //else
+    //{
+        //filler(buf, "file0", NULL, 0);
+        //filler(buf, "file1", NULL, 0);
+        //filler(buf, "dir3", NULL, 0);
         res = fusewtf_search(path, &to_add);
         if (res != 0)
         {
-            fprintf(logfile, "\tREADDIR: ERROR search not 0 while exists is 0\n");
+            fprintf(logfile, "\tREADDIR: ERROR dir does not exist\n");
         }
         while (res == 0)
         {
-            filler(buf, to_add + 1, NULL, 0);
+            fusewtf_extract_name(to_add, path, &to_add_extracted);
+            filler(buf, to_add_extracted, NULL, 0);
             fusewtf_loop();
             res = fusewtf_read(&to_add);
         }
 
         filler(buf, ".", NULL, 0);
         filler(buf, "..", NULL, 0);
-    }
+    //}
 
     sem_post(&lock);
     fflush(logfile);

@@ -30,6 +30,32 @@ extern "C"
 {
 #endif //__cplusplus
 
+int
+fusewtf_extract_name(const char* input, const char* prefix, const char** output)
+{
+    string input_str(input);
+    int start = strlen(prefix);
+    // If not root, then account for extra slash at end of prefix
+    if (start != 1)
+    {
+        start++;
+    }
+
+    // In case the name extracted is a directory
+    size_t next_slash_pos = input_str.find("/", start);
+    if (next_slash_pos == string::npos)
+    {
+        *output = input_str.substr(start).c_str();
+    }
+    else
+    {
+        *output = input_str.substr(start, next_slash_pos - start).c_str();
+    }
+
+    fprintf(logfusewtf, "extracted [%s]\n", *output);
+    return 0;
+}
+
 void
 fusewtf_loop()
 {

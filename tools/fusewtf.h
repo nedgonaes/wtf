@@ -18,6 +18,7 @@ int fusewtf_search_exists(const char* value);
 void fusewtf_loop();
 
 int fusewtf_read(const char** output_filename);
+int fusewtf_extract_name(const char* input, const char* prefix, const char** output);
 
 #ifdef __cplusplus
 }
