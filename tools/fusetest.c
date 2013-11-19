@@ -1,5 +1,5 @@
 /*
- * Use FUSE to interact with files in WTF
+ * Use FUSE to interact with files in WTF, through HyperDex
 */
 
 #define FUSE_USE_VERSION 26
