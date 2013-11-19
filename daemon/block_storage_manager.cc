@@ -102,7 +102,7 @@ block_storage_manager::read_block(uint64_t sid,
         uint8_t* data, 
         size_t data_sz)
 {
-    return m_blockmap.read(bid, data, data_sz);
+    return m_blockmap.read(bid, data, 0, data_sz);
 }
 
 void

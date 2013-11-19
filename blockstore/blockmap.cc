@@ -9,10 +9,10 @@ blockmap::blockmap() : m_db()
                      , m_backing_size(ROUND_UP(BACKING_SIZE, getpagesize()))
                      , m_block_id(0)
 {
-    LOG(INFO) << "m_backing_size = " << BACKING_SIZE << " + " << getpagesize();
+    //LOG(INFO) << "m_backing_size = " << BACKING_SIZE << " + " << getpagesize();
 }
 
-blockmap::~blockmap() {};
+blockmap::~blockmap() {}
 
 size_t
 get_filesize(const po6::pathname& path)
@@ -20,7 +20,7 @@ get_filesize(const po6::pathname& path)
     struct stat s;
     if (stat(path.get(), &s) == -1)
     {
-        LOG(ERROR) << "could not stat file " << path;
+        PLOG(ERROR) << "could not stat file " << path;
         return -1;
     }
 
@@ -40,7 +40,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
 
     if (!st.ok())
     {
-        LOG(ERROR) << "could not open LevelDB: " << st.ToString();
+        PLOG(ERROR) << "could not open LevelDB: " << st.ToString();
         return false;
     }
 
@@ -64,19 +64,19 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     }
     else if (st.IsCorruption())
     {
-        LOG(ERROR) << "could not restore from LevelDB because of corruption:  "
+        PLOG(ERROR) << "could not restore from LevelDB because of corruption:  "
                    << st.ToString();
         return false;
     }
     else if (st.IsIOError())
     {
-        LOG(ERROR) << "could not restore from LevelDB because of an IO error:  "
+        PLOG(ERROR) << "could not restore from LevelDB because of an IO error:  "
                    << st.ToString();
         return false;
     }
     else
     {
-        LOG(ERROR) << "could not restore from LevelDB because it returned an "
+        PLOG(ERROR) << "could not restore from LevelDB because it returned an "
                    << "unknown error that we don't know how to handle:  "
                    << st.ToString();
         return false;
@@ -90,7 +90,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     {
         if (first_time)
         {
-            LOG(ERROR) << "could not restore from LevelDB because a previous "
+            PLOG(ERROR) << "could not restore from LevelDB because a previous "
                        << "execution crashed and the database was tampered with; "
                        << "you're on your own with this one";
             return false;
@@ -100,26 +100,26 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     {
         if (!first_time)
         {
-            LOG(ERROR) << "could not restore from LevelDB because a previous "
+            PLOG(ERROR) << "could not restore from LevelDB because a previous "
                        << "execution crashed; run the recovery program and try again";
             return false;
         }
     }
     else if (st.IsCorruption())
     {
-        LOG(ERROR) << "could not restore from LevelDB because of corruption:  "
+        PLOG(ERROR) << "could not restore from LevelDB because of corruption:  "
                    << st.ToString();
         return false;
     }
     else if (st.IsIOError())
     {
-        LOG(ERROR) << "could not restore from LevelDB because of an IO error:  "
+        PLOG(ERROR) << "could not restore from LevelDB because of an IO error:  "
                    << st.ToString();
         return false;
     }
     else
     {
-        LOG(ERROR) << "could not restore from LevelDB because it returned an "
+        PLOG(ERROR) << "could not restore from LevelDB because it returned an "
                    << "unknown error that we don't know how to handle:  "
                    << st.ToString();
         return false;
@@ -138,7 +138,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
 
         if (ftruncate(m_fd.get(), m_backing_size) < 0)
         {
-            LOG(ERROR) << "could not extend backing file to size " << m_backing_size;
+            PLOG(ERROR) << "could not extend backing file to size " << m_backing_size;
             return false;
         }
 
@@ -146,11 +146,11 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
 
         if (backing == MAP_FAILED)
         {
-            LOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << backing_path << " failed.";
+            PLOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << backing_path << " failed.";
             return false;
         }
 
-        LOG(INFO) << "mmaping region " << (void*)backing << "->" << (void*)(backing + m_backing_size);
+        //LOG(INFO) << "mmaping region " << (void*)backing << "->" << (void*)(backing + m_backing_size);
         m_disk = new disk(backing, m_backing_size);
 
         return true;
@@ -162,7 +162,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     up = up >> backing_offset >> m_backing_size;
     if (up.error())
     {
-        LOG(ERROR) << "could not restore from LevelDB because a previous "
+        PLOG(ERROR) << "could not restore from LevelDB because a previous "
             << "execution saved invalid state.";
         return false;
     }
@@ -171,13 +171,13 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
     m_fd = open((char*)data.data(), O_RDWR, 0666);
     if (m_fd.get() < 0)
     {
-        LOG(ERROR) << "could not open backing file " << data.data();
+        PLOG(ERROR) << "could not open backing file " << data.data();
         return false;
     }
 
     if (ftruncate(m_fd.get(), m_backing_size) < 0)
     {
-        LOG(ERROR) << "could not extend backing file to size " << m_backing_size;
+        PLOG(ERROR) << "could not extend backing file to size " << m_backing_size;
         return false;
     }
 
@@ -185,7 +185,7 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
 
     if (backing == MAP_FAILED)
     {
-        LOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << backing_path << " failed.";
+        PLOG(ERROR) << "mmap of " << m_backing_size << " bytes to file " << backing_path << " failed.";
         return false;
     }
 
@@ -212,13 +212,13 @@ blockmap :: read_offset_map(uint64_t bid, vblock& vb)
 
     std::auto_ptr<e::buffer> buf(e::buffer::create(rbacking.data(), rbacking.size()));
 
-    LOG(INFO) << "bid="<<bid<<": " << buf->hex();
+    //LOG(INFO) << "bid="<<bid<<": " << buf->hex();
 
     e::unpacker up = buf->unpack_from(0);
 
     up = up >> vb;
 
-    LOG(INFO) << vb;
+    //LOG(INFO) << vb;
 
     return 0;
 }
@@ -334,6 +334,7 @@ blockmap :: update(const e::slice& data,
 ssize_t 
 blockmap :: read(uint64_t bid,
                  uint8_t* data, 
+                 size_t offset,
                  size_t len)
 {   
     vblock vb;
@@ -343,12 +344,68 @@ blockmap :: read(uint64_t bid,
         return -1;
     }
 
-    e::intrusive_ptr<vblock::slice> s = vb.slice_at(0);
+    vblock::slice_map::const_iterator it;
+    size_t status = vb.get_slices(offset, len, it);
 
-    size_t readlen = len > s->length() ? s->length() : len;
+    if (status < 0)
+    {
+        return -1;
+    }
 
-    //XXX: This only works for a single unmodified block consisting of only
-    //     one slice so far.
-    return m_disk->read(s->offset(), readlen, (char*)data);
+    size_t rem = len;
+    size_t disk_offset;
+    size_t disk_len;
+    bool first = true;
+
+    do
+    {
+        e::intrusive_ptr<vblock::slice> s = it->second;
+
+        if (s->offset() > offset + rem - 1)
+        {
+            // no more data in the block to read. bail out early.
+            break;
+        }
+
+        if (first)
+        {
+            // The first one might contain some extra stuff to the left.
+            disk_offset = s->disk_offset() + (offset - s->offset());
+            disk_len = s->length() - (offset - s->offset());
+            first = false;
+        }
+        else if (s->offset() > offset)
+        {
+            // missing slices are allowed, but result is undefined
+            // regions.
+            offset = s->offset();
+            disk_offset = s->disk_offset();
+            disk_len = s->length();
+        }
+        else
+        {
+            //we need to consume the whole slice.
+            disk_offset = s->disk_offset();
+            disk_len = s->length();
+        }
+
+        // This will truncate the last slice right where we need it.
+        disk_len = disk_len > rem ? rem : disk_len;
+
+        status = m_disk->read(disk_offset, disk_len, (char*)data);
+        if (status < 0)
+        {
+            return -1;
+        }
+
+        rem -= status;
+        offset += status;
+        data += status; //advance the buffer.
+        ++it;
+
+    }while (rem > 0);
+
+    return len - rem;
+
 }
 

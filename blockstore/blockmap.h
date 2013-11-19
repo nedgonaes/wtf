@@ -51,6 +51,7 @@ namespace wtf
                         uint64_t& bid);
             ssize_t read(uint64_t bid,
                         uint8_t* data, 
+                        size_t data_offset,
                         size_t data_sz);
         private:
             ssize_t read_offset_map(uint64_t bid, vblock& vb);

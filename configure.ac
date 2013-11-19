@@ -98,6 +98,10 @@ AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug],
               [enable_debug=${enableval}], [enable_debug=no])
 AM_CONDITIONAL([ENABLE_DEBUG], [test x"${enable_debug}" = xyes])
 
+AC_ARG_ENABLE([gtest], [AS_HELP_STRING([--enable-gtest],
+              [enable gtest @<:@default: no@:>@])],
+              [enable_gtest=${enableval}], [enable_gtest=no])
+AM_CONDITIONAL([ENABLE_GTEST], [test x"${enable_gtest}" = xyes])
 
 AC_CHECK_FUNCS([clock_gettime mach_absolute_time])
 

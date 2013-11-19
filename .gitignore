@@ -42,6 +42,7 @@ wtf-sync-benchmark
 wtf-hadoop-benchmark
 wtf-cli
 wtf-writetest
+wtf-test-blockstore
 wtf-readtest
 wtf-coordinator
 wtf-daemon

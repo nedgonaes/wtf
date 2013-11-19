@@ -184,8 +184,10 @@ wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
 wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
 
+if ENABLE_GTEST
 wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
-wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog
+wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
+endif
 
 
 pkgconfigdir = $(libdir)/pkgconfig

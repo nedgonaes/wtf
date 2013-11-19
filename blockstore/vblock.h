@@ -53,7 +53,7 @@ class vblock
     public:
         class slice;
         typedef std::map<size_t, e::intrusive_ptr<slice> > slice_map;
-        e::intrusive_ptr<slice> slice_at(size_t offset) { return m_slice_map[offset]; }
+        void slice_at(size_t offset, e::intrusive_ptr<slice>& slc) { slc = m_slice_map[offset]; }
 
     private:
         friend class e::intrusive_ptr<vblock>;
@@ -70,6 +70,8 @@ class vblock
         friend e::buffer::packer 
             operator << (e::buffer::packer pa, const e::intrusive_ptr<vblock>& rhs);
 
+    public:
+        ssize_t get_slices(size_t offset, size_t len, slice_map::const_iterator& slices);
     private:
         vblock(const vblock&);
         void update(slice& s);
