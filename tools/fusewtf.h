@@ -21,6 +21,8 @@ void fusewtf_loop();
 int fusewtf_read(const char** output_filename);
 int fusewtf_extract_name(const char* input, const char* prefix, const char** output);
 
+void fusewtf_del(const char* filename);
+
 #ifdef __cplusplus
 }
 #endif //__cplusplus

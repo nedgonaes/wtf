@@ -90,7 +90,6 @@ fusewtf_loop()
 int
 fusewtf_read(const char** output_filename)
 {
-    //fprintf(logfusewtf, "fusewtf_read called\n");
     if (status == HYPERDEX_CLIENT_SEARCHDONE)
     {
         *output_filename = NULL;
@@ -112,6 +111,7 @@ fusewtf_read(const char** output_filename)
             {
                 string output_filename_str(attr_got[i].value, attr_got[i].value_sz);
                 *output_filename = output_filename_str.c_str();
+                //fprintf(logfusewtf, "filename [%s]\n", *output_filename);
                 return 0;
             }
         }
@@ -130,7 +130,7 @@ put(const char* filename)
 }
 
 void
-del(const char* filename)
+fusewtf_del(const char* filename)
 {
     if (verbose) cout << ">>>>deleting [" << filename << "]" << endl;
 

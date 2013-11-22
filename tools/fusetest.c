@@ -135,11 +135,18 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 	return size;
 }
 
+static int fusetest_unlink(const char *path)
+{
+    fusewtf_del(path);
+    return 0;
+}
+
 static struct fuse_operations fusetest_oper = {
 	.getattr	= fusetest_getattr,
-	.readdir	= fusetest_readdir,
 	.open		= fusetest_open,
 	.read		= fusetest_read,
+	.readdir	= fusetest_readdir,
+	.unlink     = fusetest_unlink,
 };
 
 int main(int argc, char *argv[])
