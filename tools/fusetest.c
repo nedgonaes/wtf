@@ -1,6 +1,6 @@
 /*
  * Use FUSE to interact with files in WTF, through HyperDex
-*/
+ */
 
 #define FUSE_USE_VERSION 26
 
@@ -34,20 +34,20 @@ static int fusetest_utimens(const char *path, const struct timespec tv[2])
 
 static int fusetest_getattr(const char *path, struct stat *stbuf)
 {
-	int ret = 0;
+    int ret = 0;
 
     sem_wait(&lock);
-	memset(stbuf, 0, sizeof(struct stat));
-	if (fusewtf_search_is_dir(path) == 0)
+    memset(stbuf, 0, sizeof(struct stat));
+    if (fusewtf_search_is_dir(path) == 0)
     {
         fprintf(logfile, "GETATTR: dir [%s]\n", path);
-		stbuf->st_mode = S_IFDIR | 0755;
-	}
+        stbuf->st_mode = S_IFDIR | 0755;
+    }
     else if (fusewtf_search_exists(path) == 0)
     {
         fprintf(logfile, "GETATTR: file [%s]\n", path);
-		stbuf->st_mode = S_IFREG | 0444;
-		stbuf->st_size = strlen(hello_str);
+        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_size = strlen(hello_str);
     }
     else
     {
@@ -57,14 +57,14 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 
     sem_post(&lock);
     fflush(logfile);
-	return ret;
+    return ret;
 }
 
 static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
-			 off_t offset, struct fuse_file_info *fi)
+        off_t offset, struct fuse_file_info *fi)
 {
-	(void) offset;
-	(void) fi;
+    (void) offset;
+    (void) fi;
     int res = 0;
     int ret = 0;
     const char* to_add;
@@ -73,35 +73,35 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     sem_wait(&lock);
     //fprintf(logfile, "\tREADDIR: exists [%d] [%s]\n", fusewtf_search_exists(path), path);
     //if (fusewtf_search_exists(path) != 0)
-	//if (strcmp(path, "/") != 0)
+    //if (strcmp(path, "/") != 0)
     //{
     //    ret = -ENOENT;
     //}
     //else
     //{
-        res = fusewtf_search(path, &to_add);
-        if (res != 0)
+    res = fusewtf_search(path, &to_add);
+    if (res != 0)
+    {
+        fprintf(logfile, "\tREADDIR: ERROR dir [%s] does not exist\n", path);
+    }
+    while (res == 0)
+    {
+        fusewtf_extract_name(to_add, path, &to_add_extracted);
+        if (to_add_extracted != NULL)
         {
-            fprintf(logfile, "\tREADDIR: ERROR dir [%s] does not exist\n", path);
+            filler(buf, to_add_extracted, NULL, 0);
         }
-        while (res == 0)
-        {
-            fusewtf_extract_name(to_add, path, &to_add_extracted);
-            if (to_add_extracted != NULL)
-            {
-                filler(buf, to_add_extracted, NULL, 0);
-            }
-            fusewtf_loop();
-            res = fusewtf_read(&to_add);
-        }
+        fusewtf_loop();
+        res = fusewtf_read(&to_add);
+    }
 
-        filler(buf, ".", NULL, 0);
-        filler(buf, "..", NULL, 0);
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
     //}
 
     sem_post(&lock);
     fflush(logfile);
-	return ret;
+    return ret;
 }
 
 static int fusetest_open(const char *path, struct fuse_file_info *fi)
@@ -115,18 +115,18 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
 
     sem_post(&lock);
     fflush(logfile);
-	return ret;
+    return ret;
 }
 
 static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
-		      struct fuse_file_info *fi)
+        struct fuse_file_info *fi)
 {
-	size_t len;
-	(void) fi;
+    size_t len;
+    (void) fi;
     int ret;
 
     sem_wait(&lock);
-	if(fusewtf_search_exists(path) != 0)
+    if(fusewtf_search_exists(path) != 0)
     {
         ret = -ENOENT;
     }
@@ -143,7 +143,7 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 
     sem_post(&lock);
     fflush(logfile);
-	return size;
+    return size;
 }
 
 static int fusetest_unlink(const char *path)
@@ -154,18 +154,18 @@ static int fusetest_unlink(const char *path)
 
 static struct fuse_operations fusetest_oper = {
     .create     = fusetest_create,
-	.getattr	= fusetest_getattr,
-	.open		= fusetest_open,
-	.read		= fusetest_read,
-	.readdir	= fusetest_readdir,
-	.unlink     = fusetest_unlink,
+    .getattr	= fusetest_getattr,
+    .open		= fusetest_open,
+    .read		= fusetest_read,
+    .readdir	= fusetest_readdir,
+    .unlink     = fusetest_unlink,
     .utimens    = fusetest_utimens,
 };
 
 int main(int argc, char *argv[])
 {
     int ret;
-    
+
     logfile = fopen(log_name, "a");
     fprintf(logfile, "\n==== fusetest\n");
     fusewtf_initialize();
