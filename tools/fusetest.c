@@ -21,6 +21,17 @@ FILE *logfile;
 
 sem_t lock;
 
+static int fusetest_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    fusewtf_put(path);
+    return 0;
+}
+
+static int fusetest_utimens(const char *path, const struct timespec tv[2])
+{
+    return 0;
+}
+
 static int fusetest_getattr(const char *path, struct stat *stbuf)
 {
 	int ret = 0;
@@ -142,11 +153,13 @@ static int fusetest_unlink(const char *path)
 }
 
 static struct fuse_operations fusetest_oper = {
+    .create     = fusetest_create,
 	.getattr	= fusetest_getattr,
 	.open		= fusetest_open,
 	.read		= fusetest_read,
 	.readdir	= fusetest_readdir,
 	.unlink     = fusetest_unlink,
+    .utimens    = fusetest_utimens,
 };
 
 int main(int argc, char *argv[])

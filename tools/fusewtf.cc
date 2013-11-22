@@ -120,7 +120,7 @@ fusewtf_read(const char** output_filename)
 }
 
 void
-put(const char* filename)
+fusewtf_put(const char* filename)
 {
     if (verbose) cout << ">>>>putting [" << filename << "]" << endl;
 
