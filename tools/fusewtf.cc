@@ -64,13 +64,13 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
     
     if (string_set.find(output_str) == string_set.end())
     {
-        fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
+        //fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
         string_set.insert(output_str);
         *output = output_str.c_str();
     }
     else
     {
-        fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
+        //fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
         *output = NULL;
     }
 

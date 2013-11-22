@@ -36,6 +36,7 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
     {
         fprintf(logfile, "GETATTR: file [%s]\n", path);
 		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_size = strlen(hello_str);
     }
     else
     {
@@ -96,7 +97,6 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
 {
     int ret = 0;
     sem_wait(&lock);
-    fprintf(logfile, "open called [%s]\n", path);
     if (fusewtf_search_exists(path) != 0)
     {
         ret = -ENOENT;
@@ -115,7 +115,6 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
     int ret;
 
     sem_wait(&lock);
-    fprintf(logfile, "read called [%s]\n", path);
 	if(fusewtf_search_exists(path) != 0)
     {
         ret = -ENOENT;
@@ -139,8 +138,8 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 static struct fuse_operations fusetest_oper = {
 	.getattr	= fusetest_getattr,
 	.readdir	= fusetest_readdir,
-	//.open		= fusetest_open,
-	//.read		= fusetest_read,
+	.open		= fusetest_open,
+	.read		= fusetest_read,
 };
 
 int main(int argc, char *argv[])
