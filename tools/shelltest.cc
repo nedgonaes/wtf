@@ -176,6 +176,21 @@ main(int argc, const char* argv[])
                 cout << "usage: rm <filename>" << endl;
             }
         }
+        else if (strcmp(argv[1], "rmall") == 0)
+        {
+            verbose = true;
+
+            struct hyperdex_client_attribute_check check;
+            check.attr = "path";
+            check.value = "*";
+            check.value_sz = 0;
+            check.datatype = HYPERDATATYPE_STRING;
+            check.predicate = HYPERPREDICATE_REGEX;
+
+            status = (hyperdex_client_returncode)NULL;
+            retval = h->group_del(space, &check, 1, &status);
+            print_return();
+        }
         else
         {
             cout << argv[1] << " is not supported" << endl;
