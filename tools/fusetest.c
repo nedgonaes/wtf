@@ -38,7 +38,7 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 
     sem_wait(&lock);
     memset(stbuf, 0, sizeof(struct stat));
-    if (fusewtf_search_is_dir(path) == 0)
+    if (fusewtf_search_is_dir(path) == 0 || strcmp(path, "/") == 0)
     {
         fprintf(logfile, "GETATTR: dir [%s]\n", path);
         stbuf->st_mode = S_IFDIR | 0755;
