@@ -43,11 +43,18 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         fprintf(logfile, "GETATTR: dir [%s]\n", path);
         stbuf->st_mode = S_IFDIR | 0755;
     }
-    else if (fusewtf_search_exists(path) == 0)
+    else if (fusewtf_get(path) == 0)
     {
         fprintf(logfile, "GETATTR: file [%s]\n", path);
         stbuf->st_mode = S_IFREG | 0444;
-        stbuf->st_size = strlen(hello_str);
+
+        int filelen;
+        fusewtf_read_len(&filelen);
+        if (filelen < 0)
+        {
+            fprintf(logfile, "GETATTR ERROR: file [%s] has negative length\n", path);
+        }
+        stbuf->st_size = filelen;
     }
     else
     {
@@ -55,6 +62,7 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         ret = -ENOENT;
     }
 
+    fusewtf_flush_search();
     sem_post(&lock);
     fflush(logfile);
     return ret;
@@ -99,6 +107,7 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, "..", NULL, 0);
     //}
 
+    fusewtf_flush_search();
     sem_post(&lock);
     fflush(logfile);
     return ret;
@@ -113,6 +122,7 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
         ret = -ENOENT;
     }
 
+    fusewtf_flush_search();
     sem_post(&lock);
     fflush(logfile);
     return ret;
@@ -141,6 +151,7 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
             size = 0;
     }
 
+    fusewtf_flush_search();
     sem_post(&lock);
     fflush(logfile);
     return size;
@@ -148,7 +159,11 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 
 static int fusetest_unlink(const char *path)
 {
+    sem_wait(&lock);
     fusewtf_del(path);
+
+    fusewtf_flush_search();
+    sem_post(&lock);
     return 0;
 }
 

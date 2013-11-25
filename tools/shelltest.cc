@@ -12,11 +12,15 @@
 #include <hyperdex/client.hpp>
 #include "tools/common.h"
 
+// WTF 
+#include "client/file.h"
+#include "client/wtf.h"
+
 using namespace std;
 
 hyperdex::Client* h;
 const char* space = "wtf";
-bool verbose = false;
+bool verbose = true;
 const struct hyperdex_client_attribute* attr_got;
 size_t attr_size_got;
 hyperdex_client_returncode status;
@@ -60,19 +64,18 @@ read()
                 uint32_t keylen;
                 uint64_t key;
                 uint32_t vallen;
-                uint64_t value;
 
                 e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
                 while (!up.empty())
                 {
-                    up = up >> keylen >> key >> vallen >> value;
+                    up = up >> keylen >> key >> vallen;
 
-                    //printf("keylen %x key %lx vallen %x value %lx\n", keylen, key, vallen, value);
                     e::unpack32be((uint8_t *)&keylen, &keylen);
                     e::unpack64be((uint8_t *)&key, &key);
                     e::unpack32be((uint8_t *)&vallen, &vallen);
-                    e::unpack64be((uint8_t *)&value, &value);
-                    if (verbose) printf("keylen %x key %lx vallen %x value %lx\n", keylen, key, vallen, value);
+                    if (verbose) printf("keylen %x key %lx vallen %x\n", keylen, key, vallen);
+                    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                    up = up >> b;
                 }
             }
             else

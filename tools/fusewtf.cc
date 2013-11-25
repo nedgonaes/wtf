@@ -12,6 +12,10 @@
 #include <hyperdex/client.hpp>
 #include "tools/common.h"
 
+// WTF 
+#include "client/file.h"
+#include "client/wtf.h"
+
 #include <unordered_set>
 
 using namespace std;
@@ -87,6 +91,64 @@ fusewtf_loop()
     if (verbose) cout << status << endl << endl;
 }
 
+void
+fusewtf_flush_search()
+{
+    // Clear loop
+    while (status == HYPERDEX_CLIENT_SUCCESS)
+    {
+        fusewtf_loop();
+    }
+}
+
+int
+fusewtf_read_len(int* output_filelen)
+{
+    if (status == HYPERDEX_CLIENT_SEARCHDONE)
+    {
+        *output_filelen = -1;
+        return -1;
+    }
+
+    // Reading
+    if (attr_got == NULL)
+    {
+        fprintf(logfusewtf, "attr_got is NULL\n");
+        *output_filelen = -1;
+        return -1;
+    }
+    else
+    {
+        for (int i = 0; i < attr_size_got; ++i)
+        {
+            if (strcmp(attr_got[i].attr, "blockmap") == 0)
+            {
+                uint32_t keylen;
+                uint64_t key;
+                uint32_t vallen;
+
+                *output_filelen = 0;
+
+                e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
+                while (!up.empty())
+                {
+                    up = up >> keylen >> key >> vallen;
+
+                    e::unpack32be((uint8_t *)&keylen, &keylen);
+                    e::unpack64be((uint8_t *)&key, &key);
+                    e::unpack32be((uint8_t *)&vallen, &vallen);
+                    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                    up = up >> b;
+
+                    cout << "BLOCK LENGTH " << b->length() << endl;
+                    *output_filelen += b->length();
+                }
+            }
+        }
+        return -1;
+    }
+}
+
 int
 fusewtf_read(const char** output_filename)
 {
@@ -137,6 +199,65 @@ fusewtf_del(const char* filename)
     retval = h->del(space, filename, strlen(filename), &status);
     fusewtf_loop();
     if (verbose) cout << endl;
+}
+
+int
+fusewtf_get(const char* path)
+{
+    struct hyperdex_client_attribute_check check;
+    check.attr = "path";
+    check.value = path;
+    check.value_sz = strlen(check.value);
+    check.datatype = HYPERDATATYPE_STRING;
+    check.predicate = HYPERPREDICATE_EQUALS;
+
+    status = (hyperdex_client_returncode)NULL;
+    retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
+    //retval = h->get(space, path, strlen(path), &status, &attr_got, &attr_size_got);
+    fusewtf_loop();
+    cout << status << " " << attr_got << " " << attr_size_got << " " << path << endl;
+    if (status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
+    {
+        /*
+        for (int i = 0; i < attr_size_got; ++i)
+        {
+            cout << "attribute " << i << ": " << attr_got[i].attr << endl;
+            if (strcmp(attr_got[i].attr, "path") == 0)
+            {
+                //cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
+                //printf("value [%.5s]\n", attr_got[i].value);
+            }
+            else if (strcmp(attr_got[i].attr, "blockmap") == 0)
+            {
+                uint32_t keylen;
+                uint64_t key;
+                uint32_t vallen;
+
+                e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
+                while (!up.empty())
+                {
+                    up = up >> keylen >> key >> vallen;
+
+                    e::unpack32be((uint8_t *)&keylen, &keylen);
+                    e::unpack64be((uint8_t *)&key, &key);
+                    e::unpack32be((uint8_t *)&vallen, &vallen);
+                    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                    up = up >> b;
+                    cout << "BLOCK LENGTH " << b->length() << endl;
+                }
+            }
+            else
+            {
+                cout << "unexpected attribute" << endl;
+            }
+        }
+        */
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 int
@@ -191,11 +312,7 @@ fusewtf_search_exists_predicate(const char* value, hyperpredicate predicate)
     int ret;
     ret = fusewtf_search_predicate(value, predicate, &tmp_result);
 
-    // Clear loop
-    while (status == HYPERDEX_CLIENT_SUCCESS)
-    {
-        fusewtf_loop();
-    }
+    fusewtf_flush_search();
     
     return ret;
 }
