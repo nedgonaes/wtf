@@ -744,16 +744,13 @@ wtf_client :: read(int64_t fd, char* data,
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
-        std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
-        std::cout << "bid " << bid << std::endl; 
+        std::cout << "bid " << bid << " f->offset() " << f->offset() << " CHUNKSIZE " << CHUNKSIZE << std::endl;
         uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
         len = MIN(len, rem); 
         uint64_t version = f->get_block_version(bid);
         uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
 
-        std::cout << "data_sz = " << data_sz << std::endl;
-        std::cout << "Len = " << len << std::endl;
-        std::cout << "Rem = " << rem << std::endl;
+        std::cout << "data_sz " << data_sz << " len " << len << " rem " << rem << std::endl;
 
         wtf::block_id block = f->lookup_block(bid);
         wtf::wtf_node send_to = *m_config->node_from_token(block.server());
@@ -1067,7 +1064,7 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
 
                 while (!up.empty())
                 {
-                    std::cout << "up as slice hex [" << up.as_slice().hex() << "]" << std::endl;
+                    //std::cout << "up as slice hex [" << up.as_slice().hex() << "]" << std::endl;
                     uint32_t idlen;
                     uint64_t id;
                     uint32_t valuelen;

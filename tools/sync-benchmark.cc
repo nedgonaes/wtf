@@ -97,12 +97,12 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
-        std::string f = std::string("/file0");
-        //std::string f = std::string("/file1");
+        //std::string f = std::string("/file0");
+        std::string f = std::string("/file1");
 
-        std::string v = "1111122222111112"; 
-        //std::string v = "2222211111222221"; 
-        //v = v + string("0123456789012345");
+        //std::string v = "1111122222111112"; 
+        std::string v = "2222211111222221"; 
+        v = v + string("0123456789012345");
 
         wtf_client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
         wtf_returncode status = WTF_GARBAGE;
@@ -137,7 +137,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
         fd = cl.open(f.data()); // apparently optional?
         cout << "reading" << endl;
-        char* item = new char[v.size() + 1];
+        char item[v.size() + 1];
         reqid = cl.read(fd, item, v.size() + 1, &status);
         cout << "reqid " << reqid << " status " << status << endl;
         reqid = cl.flush(fd, &status);
