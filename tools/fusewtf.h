@@ -21,6 +21,8 @@ int fusewtf_search_exists(const char* value);
 int fusewtf_search_is_dir(const char* value);
 
 void fusewtf_open(const char* path);
+int fusewtf_flush(const char* path);
+int fusewtf_release(const char* path);
 
 int fusewtf_read_len(uint32_t* output_filelen);
 int fusewtf_read_filename(const char** output_filename);

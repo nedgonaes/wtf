@@ -122,6 +122,27 @@ fusewtf_open(const char* path)
 }
 
 int
+fusewtf_flush(const char* path)
+{
+    int64_t fd;
+    fd = file_map[path];
+    w_retval = w->flush(fd, &w_status);
+    cout << "\t\tflush " << fd << " return " << w_retval << endl;
+    return 0;
+}
+
+int
+fusewtf_release(const char* path)
+{
+    int64_t fd;
+    fd = file_map[path];
+    w_retval = w->close(fd, &w_status);
+    file_map.erase(path);
+    cout << "\t\trelease " << fd << " return " << w_retval << endl;
+    return 0;
+}
+
+int
 fusewtf_read_len(uint32_t* output_filelen)
 {
     if (h_status == HYPERDEX_CLIENT_SEARCHDONE)
@@ -225,7 +246,8 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
 
     cout << "read content [" << path << "] size [" << size << "] offset [" << offset << "] read_size [" << read_size << "]" << endl;
     w_retval = w->read(fd, buffer, read_size, &w_status);
-    w_retval = w->flush(fd, &w_status);
+    fusewtf_flush(path);
+    //w_retval = w->flush(fd, &w_status);
 
     if (file_size <= offset + size)
     {

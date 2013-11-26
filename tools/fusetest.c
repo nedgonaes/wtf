@@ -132,6 +132,30 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
     return ret;
 }
 
+
+static int fusetest_flush(const char *path, struct fuse_file_info *fi)
+{
+    int ret = 0;
+    sem_wait(&lock);
+    printf("\t\tFLUSH CALLED [%s]\n", path);
+    ret = fusewtf_flush(path);
+
+    sem_post(&lock);
+    return ret;
+}
+
+static int fusetest_release(const char *path, struct fuse_file_info *fi)
+{
+    int ret = 0;
+    sem_wait(&lock);
+    printf("\t\tRELEASE CALLED [%s]\n", path);
+    ret = fusewtf_release(path);
+
+    sem_post(&lock);
+    return ret;
+}
+
+
 static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
         struct fuse_file_info *fi)
 {
@@ -169,10 +193,12 @@ static int fusetest_unlink(const char *path)
 
 static struct fuse_operations fusetest_oper = {
     .create     = fusetest_create,
+    .flush      = fusetest_flush,
     .getattr	= fusetest_getattr,
     .open		= fusetest_open,
     .read		= fusetest_read,
     .readdir	= fusetest_readdir,
+    .release    = fusetest_release,
     .unlink     = fusetest_unlink,
     .utimens    = fusetest_utimens,
 };
