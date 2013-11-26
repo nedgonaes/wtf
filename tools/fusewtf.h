@@ -24,9 +24,10 @@ void fusewtf_open(const char* path);
 int fusewtf_flush(const char* path);
 int fusewtf_release(const char* path);
 
-int fusewtf_read_len(uint32_t* output_filelen);
+int fusewtf_read_filesize(uint32_t* output_filesize);
 int fusewtf_read_filename(const char** output_filename);
 size_t fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset);
+size_t fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset);
 int fusewtf_extract_name(const char* input, const char* prefix, const char** output);
 
 void fusewtf_put(const char* filename);

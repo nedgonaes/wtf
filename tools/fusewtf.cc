@@ -23,6 +23,9 @@
 
 using namespace std;
 
+#define BLOCKSIZE 16
+#define NUM_REPLICATIONS 2
+
 hyperdex::Client* h;
 wtf_client* w;
 const char* space = "wtf";
@@ -143,11 +146,11 @@ fusewtf_release(const char* path)
 }
 
 int
-fusewtf_read_len(uint32_t* output_filelen)
+fusewtf_read_filesize(uint32_t* output_filesize)
 {
     if (h_status == HYPERDEX_CLIENT_SEARCHDONE)
     {
-        *output_filelen = -1;
+        *output_filesize = -1;
         return -1;
     }
 
@@ -155,7 +158,7 @@ fusewtf_read_len(uint32_t* output_filelen)
     if (attr_got == NULL)
     {
         fprintf(logfusewtf, "attr_got is NULL\n");
-        *output_filelen = -1;
+        *output_filesize = -1;
         return -1;
     }
     else
@@ -168,7 +171,7 @@ fusewtf_read_len(uint32_t* output_filelen)
                 uint64_t key;
                 uint32_t vallen;
 
-                *output_filelen = 0;
+                *output_filesize = 0;
 
                 e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
                 while (!up.empty())
@@ -182,7 +185,7 @@ fusewtf_read_len(uint32_t* output_filelen)
                     up = up >> b;
 
                     cout << "BLOCK LENGTH " << b->length() << endl;
-                    *output_filelen += b->length();
+                    *output_filesize += b->length();
                 }
             }
         }
@@ -233,7 +236,7 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
     fd = file_map[path];
 
     fusewtf_get(path);
-    fusewtf_read_len(&file_size);
+    fusewtf_read_filesize(&file_size);
 
     if (offset >= file_size)
     {
@@ -257,6 +260,45 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
     cout << "w_retval " << w_retval << " w_status " << w_status << " [" << buffer << "]" << endl;
 
     return read_size;
+}
+
+size_t
+fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
+{
+    int64_t fd;
+    uint32_t cur_filesize;
+    uint32_t new_filesize;
+    char* cur_content;
+    char* new_content;
+
+    fd = file_map[path];
+
+    // Get file size
+    fusewtf_get(path);
+    fusewtf_read_filesize(&cur_filesize);
+
+    cur_content = new char[cur_filesize];
+
+    // Read all current content
+    // TODO inefficient, but WTF doesn't currently have partial write
+    fusewtf_read_content(path, cur_content, cur_filesize, 0);
+
+    //memcpy(cur_content + offset, buffer, size);
+    cout << "\tWRITING [" << path << "] size [" << size << "] offset [" << offset << "] buffer [" << buffer << "]" << endl;
+    cout << "\tCUR CONTENT [" << cur_content << "]" << endl;
+
+    // Calculate new file size
+    //if ()
+    //{
+    //    new_filesize = cur_filesize;
+    //}
+    //else
+    //{
+    //    new_filesize = ROUNDUP(, BLOCKSIZE);
+    //}
+    
+    delete[] cur_content;
+    return -1;
 }
 
 void

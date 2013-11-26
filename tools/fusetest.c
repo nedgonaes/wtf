@@ -48,13 +48,13 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         fprintf(logfile, "GETATTR: file [%s]\n", path);
         stbuf->st_mode = S_IFREG | 0444;
 
-        uint32_t filelen;
-        fusewtf_read_len(&filelen);
-        if (filelen < 0)
+        uint32_t filesize;
+        fusewtf_read_filesize(&filesize);
+        if (filesize < 0)
         {
             fprintf(logfile, "GETATTR ERROR: file [%s] has negative length\n", path);
         }
-        stbuf->st_size = filelen;
+        stbuf->st_size = filesize;
     }
     else
     {
@@ -181,6 +181,16 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
     return read_size;
 }
 
+static int fusetest_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+    sem_wait(&lock);
+    fusewtf_write(path, buf, size, offset);
+
+    fusewtf_flush_loop();
+    sem_post(&lock);
+    return size;
+}
+
 static int fusetest_unlink(const char *path)
 {
     sem_wait(&lock);
@@ -201,6 +211,7 @@ static struct fuse_operations fusetest_oper = {
     .release    = fusetest_release,
     .unlink     = fusetest_unlink,
     .utimens    = fusetest_utimens,
+    .write      = fusetest_write,
 };
 
 int main(int argc, char *argv[])
