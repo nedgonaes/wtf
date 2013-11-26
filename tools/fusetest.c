@@ -48,7 +48,7 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         fprintf(logfile, "GETATTR: file [%s]\n", path);
         stbuf->st_mode = S_IFREG | 0444;
 
-        int filelen;
+        uint32_t filelen;
         fusewtf_read_len(&filelen);
         if (filelen < 0)
         {
@@ -62,7 +62,7 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         ret = -ENOENT;
     }
 
-    fusewtf_flush_search();
+    fusewtf_flush_loop();
     sem_post(&lock);
     fflush(logfile);
     return ret;
@@ -100,14 +100,14 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             filler(buf, to_add_extracted, NULL, 0);
         }
         fusewtf_loop();
-        res = fusewtf_read(&to_add);
+        res = fusewtf_read_filename(&to_add);
     }
 
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
     //}
 
-    fusewtf_flush_search();
+    fusewtf_flush_loop();
     sem_post(&lock);
     fflush(logfile);
     return ret;
@@ -121,8 +121,12 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
     {
         ret = -ENOENT;
     }
+    else
+    {
+        fusewtf_open(path);
+    }
 
-    fusewtf_flush_search();
+    fusewtf_flush_loop();
     sem_post(&lock);
     fflush(logfile);
     return ret;
@@ -134,27 +138,23 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
     size_t len;
     (void) fi;
     int ret;
+    size_t read_size;
 
     sem_wait(&lock);
+    printf("read [%s], size %zu, offset %zu\n", path, size, offset);
     if(fusewtf_search_exists(path) != 0)
     {
         ret = -ENOENT;
     }
     else
     {
-        len = strlen(hello_str);
-        if (offset < len) {
-            if (offset + size > len)
-                size = len - offset;
-            memcpy(buf, hello_str + offset, size);
-        } else
-            size = 0;
+        read_size = fusewtf_read_content(path, buf, size, offset);
     }
 
-    fusewtf_flush_search();
+    fusewtf_flush_loop();
     sem_post(&lock);
     fflush(logfile);
-    return size;
+    return read_size;
 }
 
 static int fusetest_unlink(const char *path)
@@ -162,7 +162,7 @@ static int fusetest_unlink(const char *path)
     sem_wait(&lock);
     fusewtf_del(path);
 
-    fusewtf_flush_search();
+    fusewtf_flush_loop();
     sem_post(&lock);
     return 0;
 }

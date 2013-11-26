@@ -16,17 +16,24 @@
 #include "client/file.h"
 #include "client/wtf.h"
 
+#include "fusewtf.h"
+
 #include <unordered_set>
+#include <unordered_map>
 
 using namespace std;
 
 hyperdex::Client* h;
+wtf_client* w;
 const char* space = "wtf";
 bool verbose = false;
 const struct hyperdex_client_attribute* attr_got;
 size_t attr_size_got;
-hyperdex_client_returncode status;
-int64_t retval;
+
+int64_t h_retval;
+hyperdex_client_returncode h_status;
+int64_t w_retval;
+wtf_returncode w_status;
 
 // Log
 const char* log_name = "logfusewtf";
@@ -34,6 +41,9 @@ FILE *logfusewtf;
 
 // Set to make sure no duplicate results returned for readdir
 unordered_set<std::string> string_set;
+
+// Map to keep track of open files
+unordered_map<std::string,std::int64_t> file_map;
 
 #ifdef __cplusplus
 extern "C"
@@ -84,27 +94,37 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
 void
 fusewtf_loop()
 {
-    if (verbose) printf("first retval %ld status %d:", retval, status);
-    if (verbose) cout << status << endl;
-    retval = h->loop(-1, &status);
-    if (verbose) printf("final retval %ld status %d:", retval, status);
-    if (verbose) cout << status << endl << endl;
+    if (verbose) printf("first h_retval %ld h_status %d:", h_retval, h_status);
+    if (verbose) cout << h_status << endl;
+    h_retval = h->loop(-1, &h_status);
+    if (verbose) printf("final h_retval %ld h_status %d:", h_retval, h_status);
+    if (verbose) cout << h_status << endl << endl;
 }
 
 void
-fusewtf_flush_search()
+fusewtf_flush_loop()
 {
     // Clear loop
-    while (status == HYPERDEX_CLIENT_SUCCESS)
+    while (h_status != HYPERDEX_CLIENT_NONEPENDING)
     {
         fusewtf_loop();
     }
 }
 
-int
-fusewtf_read_len(int* output_filelen)
+void
+fusewtf_open(const char* path)
 {
-    if (status == HYPERDEX_CLIENT_SEARCHDONE)
+    int64_t fd;
+    
+    fd = w->open(path);
+    cout << "opened path [" << path << "] fd " << fd << endl;
+    file_map[path] = fd;
+}
+
+int
+fusewtf_read_len(uint32_t* output_filelen)
+{
+    if (h_status == HYPERDEX_CLIENT_SEARCHDONE)
     {
         *output_filelen = -1;
         return -1;
@@ -150,9 +170,9 @@ fusewtf_read_len(int* output_filelen)
 }
 
 int
-fusewtf_read(const char** output_filename)
+fusewtf_read_filename(const char** output_filename)
 {
-    if (status == HYPERDEX_CLIENT_SEARCHDONE)
+    if (h_status == HYPERDEX_CLIENT_SEARCHDONE)
     {
         *output_filename = NULL;
         return -1;
@@ -181,24 +201,54 @@ fusewtf_read(const char** output_filename)
     }
 }
 
+size_t
+fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
+{
+    int64_t fd;
+    uint32_t file_size;
+    uint32_t read_size;
+    const char* line_break = "\n";
+
+    fd = file_map[path];
+
+    fusewtf_get(path);
+    fusewtf_read_len(&file_size);
+
+    if (offset >= file_size)
+    {
+        return 0;
+    }
+
+    w->lseek(fd, offset);
+    read_size = file_size - offset;
+    read_size = size < read_size ? size : read_size;
+
+    cout << "read content [" << path << "] size [" << size << "] offset [" << offset << "] read_size [" << read_size << "]" << endl;
+    w_retval = w->read(fd, buffer, read_size, &w_status);
+    w_retval = w->flush(fd, &w_status);
+
+    if (file_size <= offset + size)
+    {
+        cout << "replace end character with link break" << endl;
+        memcpy(buffer - offset + file_size - 1, line_break, strlen(line_break));
+    }
+    cout << "w_retval " << w_retval << " w_status " << w_status << " [" << buffer << "]" << endl;
+
+    return read_size;
+}
+
 void
 fusewtf_put(const char* filename)
 {
-    if (verbose) cout << ">>>>putting [" << filename << "]" << endl;
-
-    retval = h->put_if_not_exist(space, filename, strlen(filename), NULL, 0, &status);
+    h_retval = h->put_if_not_exist(space, filename, strlen(filename), NULL, 0, &h_status);
     fusewtf_loop();
-    if (verbose) cout << endl;
 }
 
 void
 fusewtf_del(const char* filename)
 {
-    if (verbose) cout << ">>>>deleting [" << filename << "]" << endl;
-
-    retval = h->del(space, filename, strlen(filename), &status);
+    h_retval = h->del(space, filename, strlen(filename), &h_status);
     fusewtf_loop();
-    if (verbose) cout << endl;
 }
 
 int
@@ -211,12 +261,12 @@ fusewtf_get(const char* path)
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = HYPERPREDICATE_EQUALS;
 
-    status = (hyperdex_client_returncode)NULL;
-    retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
-    //retval = h->get(space, path, strlen(path), &status, &attr_got, &attr_size_got);
+    h_status = (hyperdex_client_returncode)NULL;
+    h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
+    //h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
     fusewtf_loop();
-    cout << status << " " << attr_got << " " << attr_size_got << " " << path << endl;
-    if (status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
+    cout << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
+    if (h_status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
     {
         /*
         for (int i = 0; i < attr_size_got; ++i)
@@ -282,14 +332,14 @@ fusewtf_search_predicate(const char* value, hyperpredicate predicate, const char
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = predicate;
 
-    status = (hyperdex_client_returncode)NULL;
-    retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
+    h_status = (hyperdex_client_returncode)NULL;
+    h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
 
     fusewtf_loop();
-    //fprintf(logfusewtf, "search [%s] predicate %d status %d\n", check.value, predicate, status);
-    if (status == HYPERDEX_CLIENT_SUCCESS)
+    //fprintf(logfusewtf, "search [%s] predicate %d h_status %d\n", check.value, predicate, h_status);
+    if (h_status == HYPERDEX_CLIENT_SUCCESS)
     {
-        fusewtf_read(one_result);
+        fusewtf_read_filename(one_result);
         return 0;
     }
     else
@@ -312,7 +362,7 @@ fusewtf_search_exists_predicate(const char* value, hyperpredicate predicate)
     int ret;
     ret = fusewtf_search_predicate(value, predicate, &tmp_result);
 
-    fusewtf_flush_search();
+    fusewtf_flush_loop();
     
     return ret;
 }
@@ -340,6 +390,7 @@ fusewtf_initialize()
     //hyperdex::connect_opts conn;
     //h = new hyperdex::Client(conn.host(), conn.port());
     h = new hyperdex::Client("127.0.0.1", 1982);
+    w = new wtf_client("127.0.0.1", 1981, "127.0.0.1", 1982);
     logfusewtf = fopen(log_name, "a");
     fprintf(logfusewtf, "\n==== fusewtf\n");
 }
