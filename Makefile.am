@@ -72,6 +72,7 @@ noinst_PROGRAMS =
 noinst_PROGRAMS += wtf-cli
 noinst_PROGRAMS += wtf-writetest 
 noinst_PROGRAMS += wtf-readtest
+noinst_PROGRAMS += wtf-readwritetest
 noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
 noinst_PROGRAMS += wtf-test-blockstore
@@ -175,6 +176,10 @@ endif
 wtf_sync_benchmark_SOURCES = tools/sync-benchmark.cc
 wtf_sync_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
 wtf_sync_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
+
+wtf_readwritetest_SOURCES = tools/readwritetest.cc
+wtf_readwritetest_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
+wtf_readwritetest_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
 
 wtf_async_benchmark_SOURCES = tools/async-benchmark.cc
 wtf_async_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)

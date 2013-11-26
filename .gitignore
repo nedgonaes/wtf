@@ -44,6 +44,7 @@ wtf-cli
 wtf-writetest
 wtf-test-blockstore
 wtf-readtest
+wtf-readwritetest
 wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster

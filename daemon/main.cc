@@ -45,8 +45,8 @@
 #include "daemon/daemon.h"
 
 static bool _daemonize = false;
-static const char* _data = "wtf-data/daemon/data";
-static const char* _metadata = "wtf-data/daemon/data/metadata";
+static const char* _data = "wtf-data/wtf-daemon/data";
+static const char* _metadata = "wtf-data/wtf-daemon/data/metadata";
 static const char* _listen_host = "auto";
 static unsigned long _listen_port = 2013;
 static po6::net::ipaddr _listen_ip;
@@ -111,6 +111,8 @@ main(int argc, const char* argv[])
                 _daemonize = false;
                 break;
             case 'D':
+                break;
+            case 'M':
                 break;
             case 'l':
                 try

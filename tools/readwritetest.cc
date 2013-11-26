@@ -106,7 +106,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             int64_t fd = cl.open(f.data());
 
             tll->start(&ts, 1);
-            int64_t reqid = cl.write(fd, v.data(), v.size() + 1, 1, &status);
+            int64_t reqid = cl.write(fd, v.data(), v.size(), 1, &status);
 
             if (reqid < 0)
             {
@@ -117,6 +117,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             wtf_returncode rc = WTF_GARBAGE;
 
             reqid = cl.flush(fd, &rc);
+            cl.close(fd, &rc);
+
             tll->finish(&ts);
 
             if (reqid < 0)
@@ -124,6 +126,43 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 std::cerr << "wtf_loop encountered " << rc << std::endl;
                 return; 
             }
+
+            //std::string d(v.size(), '0');
+            char* dd = new char[v.size()];
+            std::cout << "output pointer = " << (void*)dd << std::endl;
+            fd = cl.open(f.data());
+            reqid = cl.read(fd, dd, v.size(), &status);
+
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_client->read encountered " << rc << std::endl;
+                return; 
+            }
+
+            reqid = cl.flush(fd, &rc);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_loop encountered " << rc << std::endl;
+                return; 
+            }
+
+            std::string d(dd, v.size());
+
+            if (v.compare(d) != 0)
+            {
+                std::cerr << "Strings don't match" << std::endl;
+                e::slice slc1(v.data(), v.size());
+                e::slice slc2(d.data(), d.size());
+                std::cerr << slc1.hex() << std::endl;
+                std::cerr << " != " << std::endl;
+                std::cerr  << slc2.hex() << std::endl;
+                abort();
+            }
+
+            cl.close(fd, &rc);
+            
         }
     }
     catch (po6::error& e)

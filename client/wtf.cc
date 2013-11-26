@@ -740,16 +740,16 @@ wtf_client :: read(int64_t fd, char* data,
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
-        ////std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
-        ////std::cout << "bid " << bid << std::endl; 
+        std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
+        std::cout << "bid " << bid << std::endl; 
         uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
         len = MIN(len, rem); 
         uint64_t version = f->get_block_version(bid);
         uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
 
-        ////std::cout << "data_sz = " << data_sz << std::endl;
-        ////std::cout << "Len = " << len << std::endl;
-        ////std::cout << "Rem = " << rem << std::endl;
+        std::cout << "data_sz = " << data_sz << std::endl;
+        std::cout << "Len = " << len << std::endl;
+        std::cout << "Rem = " << rem << std::endl;
 
         wtf::block_id block = f->lookup_block(bid);
         wtf::wtf_node send_to = *m_config->node_from_token(block.server());
@@ -805,14 +805,14 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
     int64_t rid = -1;
     if(m_fds.find(fd) == m_fds.end())
     {
-        //std::cout << "bad fd" << std::endl;
+        std::cout << "bad fd" << std::endl;
     }
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
     if(f->commands_begin() == f->commands_end())
     {
-        //std::cout << "no commands" << std::endl;
+        std::cout << "no commands" << std::endl;
     }
 
     for (command_map::const_iterator it = f->commands_begin();
@@ -821,15 +821,15 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         e::intrusive_ptr<command> cmd = it->second;
         uint64_t id = it->first;
 
-        //std::cout << "Flushing " << cmd->nonce() << std::endl;
-        //std::cout << "STATUS: " << cmd->status() << std::endl;
-        //std::cout << "id: " << id << std::endl;
+        std::cout << "Flushing " << cmd->nonce() << std::endl;
+        std::cout << "STATUS: " << cmd->status() << std::endl;
+        std::cout << "id: " << id << std::endl;
 
         if (cmd->status() != WTF_SUCCESS)
         {
             *rc = WTF_GARBAGE;
 
-            //std::cout << "Looping" << std::endl;
+            std::cout << "Looping" << std::endl;
             rid = loop(it->first, -1, rc);
 
             if (rid < 0 || *rc != WTF_SUCCESS)
