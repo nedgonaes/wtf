@@ -207,7 +207,7 @@ wtf :: operator >> (e::unpacker lhs, configuration& rhs)
     lhs = lhs >> rhs.m_cluster;
     lhs = lhs >> rhs.m_version;
     lhs = lhs >> members_sz;
-    std::cout << "MEMBERS IN CONFIG: " << members_sz << std::endl;
+    //std::cout << "MEMBERS IN CONFIG: " << members_sz << std::endl;
     
     rhs.m_members.resize(members_sz);
 
