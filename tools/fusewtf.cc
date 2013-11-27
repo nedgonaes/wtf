@@ -115,10 +115,18 @@ fusewtf_flush_loop()
 }
 
 void
+fusewtf_create(const char* path)
+{
+    cout << "\t\t\t\t\t\tcreate " << path << endl;
+    fusewtf_open(path);
+}
+
+void
 fusewtf_open(const char* path)
 {
     int64_t fd;
     
+    cout << "\t\t\t\t\t\tw open " << path << endl;
     fd = w->open(path);
     cout << "opened path [" << path << "] fd " << fd << endl;
     file_map[path] = fd;
@@ -129,8 +137,8 @@ fusewtf_flush(const char* path)
 {
     int64_t fd;
     fd = file_map[path];
+    cout << "\t\t\t\t\t\tw flush " << path << endl;
     w_retval = w->flush(fd, &w_status);
-    cout << "\t\tflush " << fd << " return " << w_retval << endl;
     return 0;
 }
 
@@ -139,10 +147,18 @@ fusewtf_release(const char* path)
 {
     int64_t fd;
     fd = file_map[path];
+    cout << "\t\t\t\t\t\tw close " << path << endl;
     w_retval = w->close(fd, &w_status);
     file_map.erase(path);
-    cout << "\t\trelease " << fd << " return " << w_retval << endl;
     return 0;
+}
+
+void
+fusewtf_del(const char* path)
+{
+    cout << "\t\t\t\t\t\tdel " << path << endl;
+    h_retval = h->del(space, path, strlen(path), &h_status);
+    fusewtf_loop();
 }
 
 int
@@ -184,12 +200,13 @@ fusewtf_read_filesize(uint32_t* output_filesize)
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
                     up = up >> b;
 
-                    cout << "BLOCK LENGTH " << b->length() << endl;
+                    //cout << "BLOCK LENGTH " << b->length() << endl;
                     *output_filesize += b->length();
                 }
             }
         }
-        return -1;
+        cout << "output_filesize " << *output_filesize << endl;
+        return 0;
     }
 }
 
@@ -247,15 +264,15 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
     read_size = file_size - offset;
     read_size = size < read_size ? size : read_size;
 
-    cout << "read content [" << path << "] size [" << size << "] offset [" << offset << "] read_size [" << read_size << "]" << endl;
+    cout << "\t\t\t\t\t\tw read content [" << path << "] size [" << size << "] offset [" << offset << "] read_size [" << read_size << "]" << endl;
     w_retval = w->read(fd, buffer, read_size, &w_status);
     fusewtf_flush(path);
     //w_retval = w->flush(fd, &w_status);
 
     if (file_size <= offset + size)
     {
-        cout << "replace end character with link break" << endl;
-        memcpy(buffer - offset + file_size - 1, line_break, strlen(line_break));
+        //cout << "replace end character with link break" << endl;
+        //memcpy(buffer - offset + file_size - 1, line_break, strlen(line_break));
     }
     cout << "w_retval " << w_retval << " w_status " << w_status << " [" << buffer << "]" << endl;
 
@@ -301,20 +318,6 @@ fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
     return -1;
 }
 
-void
-fusewtf_put(const char* filename)
-{
-    h_retval = h->put_if_not_exist(space, filename, strlen(filename), NULL, 0, &h_status);
-    fusewtf_loop();
-}
-
-void
-fusewtf_del(const char* filename)
-{
-    h_retval = h->del(space, filename, strlen(filename), &h_status);
-    fusewtf_loop();
-}
-
 int
 fusewtf_get(const char* path)
 {
@@ -325,7 +328,10 @@ fusewtf_get(const char* path)
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = HYPERPREDICATE_EQUALS;
 
+    fusewtf_flush_loop();
+
     h_status = (hyperdex_client_returncode)NULL;
+    //cout << "\t\t\t\t\t\tsorted search " << path << endl;
     h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
     //h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
     fusewtf_loop();
@@ -396,7 +402,10 @@ fusewtf_search_predicate(const char* value, hyperpredicate predicate, const char
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = predicate;
 
+    fusewtf_flush_loop();
+
     h_status = (hyperdex_client_returncode)NULL;
+    //cout << "\t\t\t\t\t\tsorted search " << query << endl;
     h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
 
     fusewtf_loop();
