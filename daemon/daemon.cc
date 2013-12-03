@@ -584,7 +584,7 @@ daemon :: process_update(const wtf::connection& conn,
     up = up >> sid >> bid >> offset;
 
     e::slice data = up.as_slice();
-    //LOG(INFO) << "UPDATE: " << data.hex();
+    LOG(INFO) << "UPDATE: " << data.hex();
 
     if (sid != m_us.token)
     {

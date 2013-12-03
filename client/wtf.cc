@@ -656,24 +656,6 @@ wtf_client :: write(int64_t fd,
         if ((bl > 0 && block_off > 0) || (len < bl))
         {
             //Overwrite a partial block.
-
-            /*XXX: send a special instruction to servers that already have the
-              block so that we can copy it and append new
-              data rather than copy the whole block over the network. */ 
-
-            ////std::cout << "ERROR (not implemented): You tried "
-                //<< "over-writing a partial block." << std::endl;
-            if (block_off > 0)
-            {
-                ////std::cout << "Block offset is " << block_off << std::endl;
-            }    
-            else
-            {
-                ////std::cout << "Block length " << len << " does not match "
-                   // << "existing block length " << bl << std::endl;
-            }
-            abort();
-
             typedef std::vector<wtf::block_id> block_map;
             block_map::iterator it = f->lookup_block_begin(bid);
 
@@ -844,6 +826,8 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
         switch (cmd->msgtype())
         {
+            std::cout << "Handling " << cmd->msgtype() << std::endl;
+            case WTFNET_UPDATE:
             case WTFNET_PUT:
                 handle_put(cmd, f); //XXX: rename
                 break;

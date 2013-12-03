@@ -37,6 +37,7 @@ kill_cluster()
     echo "KILLING CLUSTER...\n"
     ${PSSH} -h ${CLUSTER_HOSTS} -i pkill -9 hyper
     ${PSSH} -h ${CLUSTER_HOSTS} -i pkill -9 replicant
+    ${PSSH} -h ${CLUSTER_HOSTS} -i pkill -9 wtf 
 }
 
 clean_cluster()
@@ -64,8 +65,8 @@ reset_cluster()
     ssh ${WC} "${WTF} coordinator -D ${WTF_COORDINATOR_DATA_DIR} -l ${WC} -p ${WTF_PORT} -d"
     sleep 5
     echo "STARTING WTF DAEMONS...\n"
-    echo "${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data -c ${WC} -P ${WTF_PORT} -t 1 -d"
     ${PSSH} -h ${WTF_DAEMONS} -i "${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -d"
+    #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
     sleep 5
 }
 

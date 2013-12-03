@@ -95,11 +95,11 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
-        std::string v = val();
 
         wtf_client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
+            std::string v = val();
             wtf_returncode status = WTF_GARBAGE;
             std::string f = file();
             std::cout << "File: " << f << std::endl;
@@ -162,7 +162,71 @@ worker_thread( numbers::throughput_latency_logger* tll,
             }
 
             cl.close(fd, &rc);
-            
+
+            std::string v2 = v;
+            v2.replace(0,3,"XXX");
+            fd = cl.open(f.data());
+
+            tll->start(&ts, 1);
+            reqid = cl.write(fd, "XXX", 3, 1, &status);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_client->write encountered" << status << std::endl;
+                return;
+            }
+
+            rc = WTF_GARBAGE;
+
+            reqid = cl.flush(fd, &rc);
+            cl.close(fd, &rc);
+
+            tll->finish(&ts);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_loop encountered " << rc << std::endl;
+                return; 
+            }
+
+            fd = cl.open(f.data());
+
+            char* dd2 = new char[v.size()];
+            reqid = cl.read(fd, dd2, v2.size(), &status);
+
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_client->read encountered " << rc << std::endl;
+                return; 
+            }
+
+            reqid = cl.flush(fd, &rc);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_loop encountered " << rc << std::endl;
+                return; 
+            }
+
+            std::string d2(dd2, v2.size());
+
+            if (v2.compare(d2) != 0)
+            {
+                std::cerr << "Strings don't match" << std::endl;
+                e::slice slc1(v2.data(), v2.size());
+                e::slice slc2(d2.data(), d2.size());
+                std::cerr << slc1.hex() << std::endl;
+                std::cerr << " != " << std::endl;
+                std::cerr  << slc2.hex() << std::endl;
+                abort();
+            }
+
+            cl.close(fd, &rc);
+            delete [] dd;
+            delete [] dd2;
+
+           
         }
     }
     catch (po6::error& e)

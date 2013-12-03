@@ -310,6 +310,8 @@ blockmap :: update(const e::slice& data,
         return status;
     }
 
+    LOG(INFO) << "disk_offset: " << disk_offset;
+
     vblock vb;
     if (read_offset_map(bid, vb) < 0)
     {
@@ -391,6 +393,9 @@ blockmap :: read(uint64_t bid,
 
         // This will truncate the last slice right where we need it.
         disk_len = disk_len > rem ? rem : disk_len;
+
+        LOG(INFO) << "disk_offset: " << disk_offset;
+        LOG(INFO) << "disk_len: " << disk_len;
 
         status = m_disk->read(disk_offset, disk_len, (char*)data);
         if (status < 0)
