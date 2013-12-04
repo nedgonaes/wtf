@@ -131,7 +131,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             char* dd = new char[v.size()];
             std::cout << "output pointer = " << (void*)dd << std::endl;
             fd = cl.open(f.data());
-            reqid = cl.read(fd, dd, v.size(), &status);
+            uint32_t sz = v.size();
+            reqid = cl.read(fd, dd, &sz, &status);
 
 
             if (reqid < 0)
@@ -148,7 +149,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
 
-            std::string d(dd, v.size());
+            std::string d(dd, sz);
 
             if (v.compare(d) != 0)
             {
@@ -192,7 +193,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             fd = cl.open(f.data());
 
             char* dd2 = new char[v.size()];
-            reqid = cl.read(fd, dd2, v2.size(), &status);
+            uint32_t sz2 = v2.size();
+            reqid = cl.read(fd, dd2, &sz2, &status);
 
 
             if (reqid < 0)
@@ -209,7 +211,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
 
-            std::string d2(dd2, v2.size());
+            std::string d2(dd2, sz2);
 
             if (v2.compare(d2) != 0)
             {

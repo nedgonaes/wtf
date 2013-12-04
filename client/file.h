@@ -46,6 +46,7 @@
 
 class wtf_client::file
 {
+
     public:
         file(const char* path);
         ~file() throw ();
@@ -69,6 +70,7 @@ class wtf_client::file
         uint64_t get_block_length(uint64_t bid);
         uint64_t pack_size();
         uint64_t size() { return m_block_map.size(); }
+        uint64_t length();
         wtf::block_id lookup_block(uint64_t index) { return m_block_map[index]->get_first_location(); }
         std::vector<wtf::block_id>::iterator lookup_block_begin(uint64_t index) { return m_block_map[index]->blocks_begin(); }
         std::vector<wtf::block_id>::iterator lookup_block_end(uint64_t index) { return m_block_map[index]->blocks_end(); }
@@ -89,8 +91,8 @@ class wtf_client::file
         void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
 
     private:
-        file& operator = (const file&);
         typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
+        file& operator = (const file&);
 
     private:
         size_t m_ref;

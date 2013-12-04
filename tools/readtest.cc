@@ -141,7 +141,7 @@ main(int argc, const char* argv[])
 
             wtf::wtf_network_msgtype msgtype = wtf::WTFNET_NOP;
             
-            size_t item_sz;
+            uint32_t item_sz;
             std::string path;
 
             std::stringstream ss(s);
@@ -158,7 +158,7 @@ main(int argc, const char* argv[])
 
             std::cout << "FD is " << fd << std::endl;
 
-            rid = r.read(fd, item, item_sz, &re);
+            rid = r.read(fd, item, &item_sz, &re);
 
             if (rid < 0)
             {

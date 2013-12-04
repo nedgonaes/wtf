@@ -614,6 +614,18 @@ wtf_client :: open(const char* path)
 }
 
 void
+wtf_client :: begin_tx()
+{
+    //XXX: Call hyperdex stuff.
+}
+
+int64_t
+wtf_client :: end_tx()
+{
+    //XXX: flush?
+}
+
+void
 wtf_client :: lseek(int64_t fd, uint64_t offset)
 {
     m_fds[fd]->set_offset(offset);
@@ -703,12 +715,11 @@ wtf_client :: write(int64_t fd,
 
 int64_t
 wtf_client :: read(int64_t fd, char* data,
-                   uint32_t data_sz,
+                   uint32_t* data_sz,
                    wtf_returncode* status)
 {
     int64_t rid = 0;
     int64_t lid = 0;
-    uint32_t rem = data_sz;
 
     if (m_fds.find(fd) == m_fds.end())
     {
@@ -718,6 +729,9 @@ wtf_client :: read(int64_t fd, char* data,
     e::intrusive_ptr<file> f = m_fds[fd];
 
     update_file_cache(f->path().get(), f);
+
+    uint32_t rem = MIN(*data_sz, f->length() - f->offset());
+    uint32_t sz = 0;
 
     while(rem > 0)
     {
@@ -729,7 +743,7 @@ wtf_client :: read(int64_t fd, char* data,
         uint64_t version = f->get_block_version(bid);
         uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
 
-        std::cout << "data_sz = " << data_sz << std::endl;
+        std::cout << "data_sz = " << *data_sz << std::endl;
         std::cout << "Len = " << len << std::endl;
         std::cout << "Rem = " << rem << std::endl;
 
@@ -752,10 +766,12 @@ wtf_client :: read(int64_t fd, char* data,
         }
 
         rem -= len;
+        sz += len;
         data += len;
         f->set_offset(f->offset() + len);
     }
 
+    *data_sz = sz;
     return rid;
 
 
@@ -828,8 +844,10 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         {
             std::cout << "Handling " << cmd->msgtype() << std::endl;
             case WTFNET_UPDATE:
+                handle_update(cmd, f); 
+                break;
             case WTFNET_PUT:
-                handle_put(cmd, f); //XXX: rename
+                handle_put(cmd, f); 
                 break;
             case WTFNET_GET:
                 handle_get(cmd, f);
@@ -987,6 +1005,37 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     map->erase(it);
     m_complete.insert(std::make_pair(c->nonce(), c));
     return 0;
+}
+
+void
+wtf_client :: handle_update(e::intrusive_ptr<command>& cmd,
+                         e::intrusive_ptr<file>& f)
+{
+    uint64_t sid; 
+    uint64_t bid;
+    uint64_t block_index = cmd->block();
+    uint64_t len = cmd->offset() + cmd->length();
+
+    if ((block_index + 1) * CHUNKSIZE >= f->length())
+    {
+        len = MAX(len, f->length() - block_index*CHUNKSIZE);
+    }
+
+    std::auto_ptr<e::buffer> msg(e::buffer::create(cmd->output(), cmd->output_sz()));
+    e::unpacker up = msg->unpack_from(0);
+    up = up >> sid >> bid;
+
+    if (up.error())
+    {
+        m_last_error_host = cmd->sent_to().address;
+        //XXX: implement proper return value
+        return;
+    }
+
+    //std::cout << "sid: " << sid << "bid: " << bid << std::endl;
+    std::cout << "UPDATE: bid=" << block_index << " len=" << len << std::endl;
+
+    f->update_blocks(block_index, len, cmd->version(), sid, bid);
 }
 
 void

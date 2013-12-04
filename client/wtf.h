@@ -32,6 +32,7 @@
 #define CHUNKSIZE (512)
 #define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 // STL
 #include <map>
@@ -108,6 +109,8 @@ class wtf_client
         int64_t open(const char* path);
 
         void lseek(int64_t fd, uint64_t offset);
+        void begin_tx();
+        int64_t end_tx();
         int64_t write(int64_t fd,
                       const char* data,
                       uint32_t data_sz,
@@ -115,7 +118,7 @@ class wtf_client
                       wtf_returncode* status);
         int64_t read(int64_t fd,
                      char* data,
-                     uint32_t data_sz,
+                     uint32_t *data_sz,
                      wtf_returncode* status);
         int64_t close(int64_t fd, wtf_returncode* status);
         int64_t flush(int64_t fd,
@@ -172,6 +175,8 @@ class wtf_client
                                         std::auto_ptr<e::buffer> msg,
                                         e::unpacker up,
                                         wtf_returncode* status);
+        void handle_update(e::intrusive_ptr<command>& cmd, 
+                        e::intrusive_ptr<file>& f);
         void handle_put(e::intrusive_ptr<command>& cmd, 
                         e::intrusive_ptr<file>& f);
         void handle_get(e::intrusive_ptr<command>& cmd, 
