@@ -190,7 +190,7 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 
 static int fusetest_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    printf("\t\t\t\twrite [%s]\n", path);
+    printf("\t\t\t\twrite [%s] size [%zu] offset [%zu]\n", path, size, offset);
     sem_wait(&lock);
     fusewtf_write(path, buf, size, offset);
 
@@ -266,7 +266,7 @@ static int fusetest_chown(const char *path, uid_t owner, gid_t group)
 
 static int fusetest_truncate(const char *path, off_t length)
 {
-    printf("\t\t\t\ttruncate [%s]\n", path);
+    printf("\t\t\t\ttruncate [%s] length [%zu]\n", path, length);
     return 0;
 }
 
