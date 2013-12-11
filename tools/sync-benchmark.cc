@@ -103,7 +103,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             wtf_returncode status = WTF_GARBAGE;
             std::string f = file();
             std::cout << "File: " << f << std::endl;
-            int64_t fd = cl.open(f.data());
+            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             tll->start(&ts, 1);
             int64_t reqid = cl.write(fd, v.data(), v.size() + 1, 1, &status);

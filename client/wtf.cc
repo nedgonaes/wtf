@@ -601,14 +601,51 @@ wtf_client :: inner_loop(wtf_returncode* status)
 }
 
 int64_t
-wtf_client :: open(const char* path)
+wtf_client :: open(const char* path, int flags)
+{
+    wtf_returncode status;
+    MAINTAIN_COORD_CONNECTION(&status);
+
+    if (flags & (O_APPEND | O_ASYNC | O_CLOEXEC))
+    {
+        return -1;
+    }
+
+    if (flags & O_CREAT)
+    {
+        //Should use other open with mode_t arg
+        return -1;
+    }
+
+    e::intrusive_ptr<file> f = new file(path);
+    m_fds[m_fileno] = f; 
+    
+    update_file_cache(path, f, false);
+    f->flags = flags;
+
+    return m_fileno++;
+}
+
+int64_t
+wtf_client :: open(const char* path, int flags, mode_t mode)
 {
     wtf_returncode status;
     MAINTAIN_COORD_CONNECTION(&status);
     e::intrusive_ptr<file> f = new file(path);
     m_fds[m_fileno] = f; 
     
-    update_file_cache(path, f);
+    f->flags = flags;
+    f->mode = mode;
+
+    if (flags & O_CREAT)
+    {
+        update_file_cache(path, f, true);
+    }
+    else
+    {
+        update_file_cache(path, f, false);
+    }
+
 
     return m_fileno++;
 }
@@ -728,7 +765,7 @@ wtf_client :: read(int64_t fd, char* data,
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
-    update_file_cache(f->path().get(), f);
+    update_file_cache(f->path().get(), f, false);
 
     uint32_t rem = MIN(*data_sz, f->length() - f->offset());
     uint32_t sz = 0;
@@ -1063,7 +1100,7 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 }
 
 int64_t
-wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
+wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create)
 {
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
@@ -1082,6 +1119,11 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
+        if (!create)
+        {
+            return -1;
+        }
+
         /* The file does not exist or was deleted, truncate it. */
         f->set_offset(0);
         f->truncate();
@@ -1110,10 +1152,93 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f)
 
                 break;
             }
+            else if (strcmp(attrs[i].attr, "directory") == 0)
+            {
+                uint64_t is_dir;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> is_dir;
+
+                if (is_dir == 0)
+                {
+                    f->is_directory = false;
+                }
+                else
+                {
+                    f->is_directory = true;
+                }
+            }
+            else if (strcmp(attrs[i].attr, "mode") == 0)
+            {
+                uint64_t mode;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> mode;
+
+                f->mode = mode;
+            }
         }
     }
     
     return ret;
+}
+
+int64_t
+wtf_client :: chmod(const char* path, mode_t mode)
+{
+    hyperdex_client_returncode status;
+    int64_t ret = -1;
+    uint64_t val = mode;
+    struct hyperdex_client_attribute attr;
+    attr.attr = "mode";
+    attr.value = (const char*)&val;
+    attr.value_sz = sizeof(val);
+    attr.datatype = HYPERDATATYPE_INT64;
+
+ 
+    ret = m_hyperdex_client.put("wtf", path, strlen(path), &attr, 1, &status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+
+    if (res != HYPERDEX_CLIENT_SUCCESS)
+    {
+        return -1;
+    }
+    else
+    {
+        return 0;
+    }
+
+}
+
+int64_t
+wtf_client :: mkdir(const char* path, mode_t mode)
+{
+    hyperdex_client_returncode status;
+    int64_t ret = -1;
+    struct hyperdex_client_attribute attr[2];
+    uint64_t val1 = 1;
+    attr[0].attr = "directory";
+    attr[0].value = (const char*)&val1;
+    attr[0].value_sz = sizeof(val1);
+    attr[0].datatype = HYPERDATATYPE_INT64;
+
+    uint64_t val2 = mode;
+    attr[1].attr = "mode";
+    attr[1].value = (const char*)&val2;
+    attr[1].value_sz = sizeof(val2);
+    attr[1].datatype = HYPERDATATYPE_INT64;
+
+ 
+    ret = m_hyperdex_client.put_if_not_exist("wtf", path, strlen(path), attr, 2, &status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    if (res != HYPERDEX_CLIENT_SUCCESS)
+    {
+        return -1;
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 int64_t

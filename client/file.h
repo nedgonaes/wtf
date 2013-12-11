@@ -104,6 +104,11 @@ class wtf_client::file
         uint64_t m_offset;
 
     public:
+        bool is_directory;
+        int flags;
+        uint64_t mode;
+
+    public:
         block_map::const_iterator blocks_begin() { return m_block_map.begin(); }
         block_map::const_iterator blocks_end() { return m_block_map.end(); }
 };

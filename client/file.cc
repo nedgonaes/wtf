@@ -43,6 +43,8 @@ wtf_client :: file :: file(const char* path)
     , m_fd(0)
     , m_block_map()
     , m_offset(0)
+    , is_directory(false)
+    , flags(0)
 {
 }
 

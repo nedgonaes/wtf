@@ -146,7 +146,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             {
                 std::string f = file();
                 std::string v = val();
-                int64_t fd = cl.open(f.data());
+                int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
                 outstanding* o = new outstanding(tll);
 
                 tll->start(&o->ts, 1);
