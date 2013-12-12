@@ -299,41 +299,18 @@ fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
     // Read all current content
     fusewtf_read_content(path, cur_content, cur_filesize, 0);
 
-    //memcpy(cur_content + offset, buffer, size);
     cout << "\tWRITING [" << path << "] size [" << size << "] offset [" << offset << "] buffer [" << buffer << "]" << endl;
     cout << "\tCUR CONTENT [" << cur_content << "]" << endl;
 
-    if (offset == 0)
-    {
-        w->lseek(fd, offset);
-        // Calculate new file size
-        //if (size <= cur_filesize)
-        //{
-        //    new_filesize = cur_filesize;
-        //}
-        //else
-        //{
-        //    new_filesize = ROUNDUP(size, BLOCKSIZE);
-        //}
+    w->lseek(fd, offset);
 
-        //new_content = new char[new_filesize];
-        //memset(new_content, 0, new_filesize);
-        //memcpy(new_content, buffer, size);
+    cout << "\t\t\t\t\t\tw write [" << buffer << "] size [" << size << "]" << endl;
+    w_retval = w->write(fd, buffer, size, NUM_REPLICATIONS, &w_status);
+    cout << "w_retval " << w_retval << " w_status " << w_status << endl;
+    w_retval = w->flush(fd, &w_status);
+    cout << "w_retval " << w_retval << " w_status " << w_status << endl;
+    //delete[] new_content;
 
-        //cout << "\t\t\t\t\t\tw write [" << new_content << "] size [" << new_filesize + 1 << "]" << endl;
-        //w_retval = w->write(fd, new_content, new_filesize + 1, NUM_REPLICATIONS, &w_status);
-        cout << "\t\t\t\t\t\tw write [" << cur_content << "] size [" << cur_filesize << "]" << endl;
-        w_retval = w->write(fd, cur_content, cur_filesize, NUM_REPLICATIONS, &w_status);
-        cout << "w_retval " << w_retval << " w_status " << w_status << endl;
-        w_retval = w->flush(fd, &w_status);
-        cout << "w_retval " << w_retval << " w_status " << w_status << endl;
-        //delete[] new_content;
-    }
-    else
-    {
-        cout << "\tWRITE OFFSET NOT ZERO: " << offset << endl;
-    }
-    
     delete[] cur_content;
     return -1;
 }
