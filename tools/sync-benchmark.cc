@@ -45,12 +45,14 @@
 #include "common/network_msgtype.h"
 #include "client/wtf.h"
 
+using namespace std;
+
 static long _done = 0;
-static long _number = 1000;
+static long _number = 1;
 static long _threads = 1;
 static long _backup = 0;
-static long _connect_port = 1982;
-static long _hyper_port = 1981;
+static long _connect_port = 1981;
+static long _hyper_port = 1982;
 static long _concurrent = 50;
 static const char* _output = "wtf-sync-benchmark.log";
 static const char* _dir = ".";
@@ -95,9 +97,17 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
-        std::string v = val();
+        //std::string f = std::string("/file0");
+        std::string f = std::string("/file1");
+
+        //std::string v = "1111122222111112"; 
+        std::string v = "2222211111222221"; 
+        v = v + string("0123456789012345");
 
         wtf_client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
+        wtf_returncode status = WTF_GARBAGE;
+        int64_t fd;
+        int64_t reqid;
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
             wtf_returncode status = WTF_GARBAGE;
@@ -106,7 +116,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             tll->start(&ts, 1);
-            int64_t reqid = cl.write(fd, v.data(), v.size() + 1, 1, &status);
+            std::cout << "writing to " << fd << " vdata [" << v.data() << "] vsize [" << v.size() << "]" << std::endl;
+            reqid = cl.write(fd, v.data(), v.size(), 2, &status);
 
             if (reqid < 0)
             {
@@ -125,6 +136,22 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
         }
+        std::cout << "after while loop" << std::endl;
+
+        fd = cl.open(f.data()); // apparently optional?
+        cout << "reading" << endl;
+        char* item = new char[v.size()];
+        uint32_t sz = v.size();
+        reqid = cl.read(fd, item, &sz, &status);
+        cout << "read reqid " << reqid << " status " << status << endl;
+        reqid = cl.flush(fd, &status);
+        cout << "flush reqid " << reqid << " status " << status << endl;
+        reqid = cl.flush(fd, &status);
+        cout << "flush reqid " << reqid << " status " << status << endl;
+        reqid = cl.close(fd, &status);
+        cout << "close reqid " << reqid << " status " << status << endl;
+        std::cout << "returned [" << std::string(item, v.size()) << "]" << std::endl;
+
     }
     catch (po6::error& e)
     {
