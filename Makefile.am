@@ -36,6 +36,7 @@ lib_LTLIBRARIES =
 lib_LTLIBRARIES += libwtfblockstore.la
 lib_LTLIBRARIES += libwtf.la
 lib_LTLIBRARIES += libwtfcoordinator.la
+lib_LTLIBRARIES += libfusewtf.la
 
 include_HEADERS = client/wtf.h
 
@@ -64,6 +65,7 @@ noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
+noinst_HEADERS += tools/fusewtf.h
 
 bin_PROGRAMS =
 bin_PROGRAMS += wtf
@@ -75,10 +77,12 @@ noinst_PROGRAMS += wtf-readtest
 noinst_PROGRAMS += wtf-readwritetest
 noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
-noinst_PROGRAMS += wtf-test-blockstore
+#noinst_PROGRAMS += wtf-test-blockstore
 if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
 endif
+noinst_PROGRAMS += wtf-shelltest
+noinst_PROGRAMS += wtf-fusetest
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -150,6 +154,16 @@ libwtf_la_SOURCES += client/wtf.cc
 
 libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) -lglog
 
+################################################################################
+################################## fusewtf #####################################
+################################################################################
+
+libfusewtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
+
+libfusewtf_la_SOURCES = tools/fusewtf.cc
+libfusewtf_la_LIBADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+libfusewtf_la_CPPFLAGS = -std=c++0x
+
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 
 wtf_SOURCES = wtf.cc
@@ -160,6 +174,13 @@ wtf_cli_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_writetest_SOURCES = tools/writetest.cc
 wtf_writetest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
+wtf_shelltest_SOURCES = tools/shelltest.cc
+wtf_shelltest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
+wtf_fusetest_SOURCES = tools/fusetest.c
+wtf_fusetest_LDADD = libfusewtf.la libwtf.la -lfuse 
+wtf_fusetest_CPPFLAGS = -D_FILE_OFFSET_BITS=64
 
 wtf_readtest_SOURCES = tools/readtest.cc
 wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
@@ -189,10 +210,10 @@ wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
 wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
 
-if ENABLE_GTEST
-wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
-wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
-endif
+#if ENABLE_GTEST
+#wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
+#wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
+#endif
 
 
 pkgconfigdir = $(libdir)/pkgconfig
