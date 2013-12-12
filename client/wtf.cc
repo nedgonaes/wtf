@@ -121,6 +121,7 @@ wtf_client :: wtf_client(const char* host, in_port_t port,
     , m_last_error_line(__LINE__)
     , m_last_error_host()
     , m_hyperdex_client(hyper_host, hyper_port)
+    , m_cwd("/")
 {
 }
 
@@ -1184,6 +1185,165 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
 }
 
 int64_t
+wtf_client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
+{
+    char* start = abspath;
+    char* end = abspath + abspath_sz - 2;
+    int rel_len = strnlen(rel, PATH_MAX);
+    if (rel[rel_len] != '\0')
+    {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+        
+    if (*rel != '/')
+    {
+        getcwd(abspath, abspath_sz);
+        abspath+=strlen(abspath);
+        if (abspath[-1] != '/')
+        {
+            *abspath++ = '/';
+        }
+    }
+    else
+    {
+        *abspath++ = '/';
+    }
+
+    //Invariant: abspath contains an abspatholute path
+    
+    while(rel[0] != '\0')
+    {
+        switch(rel[0])
+        {
+
+            case '/':
+                ++rel;
+                continue;
+            case '.':
+                if (rel[1] == '.' && (rel[2] == '/' || rel[2] == '\0'))
+                {
+                    rel += 2;
+
+                    if (start == abspath - 1)
+                    { 
+                        //don't go back past the root directory.
+                        continue;
+                    }
+
+                    while ((--abspath)[-1] != '/')
+                    {
+                        //move back one in abspath.
+                    }
+
+                    continue;
+                }
+
+                if (rel[1] == '/' || rel[1] == '\0')
+                {
+                    ++rel;
+                    continue;
+                }
+
+            default:
+                while (*rel != '/' && *rel != '\0')
+                {
+                    *abspath++ = *rel++;
+                    if (abspath == end)
+                    {
+                        errno = ENAMETOOLONG;
+                        return -1;
+                    }
+                }
+                *abspath++ = '/';
+        }
+    }
+
+    if (abspath[-1] == '/' && abspath != start + 1)
+    {
+        --abspath;
+    }
+    *abspath = '\0';
+    return 0;
+}
+
+
+int64_t
+wtf_client :: getcwd(char* c, size_t len)
+{
+    if (len < m_cwd.size() + 1)
+    {
+        errno = ERANGE;
+        return -1;
+    }
+
+    memcpy(c, m_cwd.data(), m_cwd.size());
+    c[m_cwd.size()] = '\0';
+
+    return 0;
+}
+
+int64_t
+wtf_client :: chdir(char* path)
+{
+    char *abspath = new char[PATH_MAX]; 
+    if (canon_path(path, abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
+    const struct hyperdex_client_attribute* attrs;
+    size_t attrs_sz;
+    int64_t ret = 0;
+    hyperdex_client_returncode status;
+
+    ret = m_hyperdex_client.get("wtf", abspath, strlen(abspath), &status, &attrs, &attrs_sz);
+    if (ret == -1)
+    {
+        return -1;
+    }
+
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+
+    if (res == HYPERDEX_CLIENT_NOTFOUND)
+    {
+        errno = ENOENT;
+        return -1;
+    }
+    else
+    {
+        for (size_t i = 0; i < attrs_sz; ++i)
+        {
+            if (strcmp(attrs[i].attr, "directory") == 0)
+            {
+                uint64_t is_dir;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> is_dir;
+
+                if (is_dir == 0)
+                {
+                    errno = ENOTDIR;
+                    return -1;
+                }
+            }
+            else if (strcmp(attrs[i].attr, "mode") == 0)
+            {
+                uint64_t mode;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> mode;
+                //XXX: implement owner, group, etc and deny if no
+                //     read permissions.
+            }
+        }
+    }
+    
+    m_cwd = abspath;
+    return 0;
+}
+
+int64_t
 wtf_client :: chmod(const char* path, mode_t mode)
 {
     hyperdex_client_returncode status;
@@ -1233,6 +1393,7 @@ wtf_client :: mkdir(const char* path, mode_t mode)
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
+        std::cerr << "mkdir returned " << res << std::endl;
         return -1;
     }
     else

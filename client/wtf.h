@@ -106,6 +106,10 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
+
+        int64_t canon_path(char* rel, char* abspath, size_t abspath_sz);
+        int64_t getcwd(char* c, size_t len);
+        int64_t chdir(char* path);
         int64_t open(const char* path, int flags);
         int64_t open(const char* path, int flags, mode_t mode);
 
@@ -213,6 +217,7 @@ class wtf_client
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
         hyperdex::Client m_hyperdex_client;
+        std::string m_cwd;
 };
 
 std::ostream&

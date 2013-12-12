@@ -228,6 +228,15 @@ worker_thread( numbers::throughput_latency_logger* tll,
             delete [] dd;
             delete [] dd2;
 
+            if (cl.mkdir("/foo", 777) < 0)
+            {
+                std::cerr << "Can't mkdir foo" << std::endl;
+            }
+
+            if (cl.mkdir("/foo", 777) == 0)
+            {
+                std::cerr << "Allows mkdir twice." << std::endl;
+            }
            
         }
     }
