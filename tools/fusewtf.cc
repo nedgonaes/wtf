@@ -128,7 +128,9 @@ int
 fusewtf_create(const char* path, mode_t mode)
 {
     cout << "\t\t\t\t\t\tcreate " << path << endl;
-    return fusewtf_open(path, O_CREAT, mode);
+    fusewtf_open(path, O_CREAT, mode);
+    fusewtf_flush(path);
+    return 0;
 }
 
 int

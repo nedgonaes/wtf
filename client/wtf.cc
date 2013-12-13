@@ -1192,6 +1192,11 @@ wtf_client :: truncate(int fd, off_t length)
     size_t sz;
     e::intrusive_ptr<file> f = m_fds[fd];
 
+    if (length == f->length())
+    {
+        return 0;
+    }
+
     if (length > f->length())
     {
         sz = length - f->length();
