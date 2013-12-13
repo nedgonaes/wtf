@@ -237,9 +237,14 @@ static int fusetest_symlink(const char *old_path, const char *new_path)
     return 0;
 }
 
-static int fusetest_rmdir(const char *pathname)
+static int fusetest_rmdir(const char *path)
 {
-    printf("\t\t\t\trmdir [%s]\n", pathname);
+    printf("\t\t\t\trmdir [%s]\n", path);
+    sem_wait(&lock);
+    fusewtf_del(path);
+
+    fusewtf_flush_loop();
+    sem_post(&lock);
     return 0;
 }
 
