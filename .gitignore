@@ -53,3 +53,5 @@ stamp-h1
 _logs
 wtf-fusetest
 wtf-shelltest
+wtf-mkfs
+logfusetest
