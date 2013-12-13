@@ -471,28 +471,37 @@ fusewtf_is_dir()
             //cout << "directory sz " << attr_got[i].value_sz << " [" << string(attr_got[i].value, attr_got[i].value_sz) << "]" << endl;
             e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
             up = up >> is_dir;
+            e::unpack64be((uint8_t *)&is_dir, &is_dir);
         }
     }
 
-    //cout << "[" << path << "] is_dir: " << is_dir << endl;
+    cout << "[" << path << "] is_dir: " << is_dir << endl;
     return is_dir == 0 ? 0 : 1;
 }
 
 mode_t
 fusewtf_get_mode()
 {
+    uint64_t mode;
+    string path;
     for (int i = 0; i < attr_size_got; ++i)
     {
-        if (strcmp(attr_got[i].attr, "mode") == 0)
+        if (strcmp(attr_got[i].attr, "path") == 0)
         {
-            uint64_t mode;
+            path = string(attr_got[i].value, attr_got[i].value_sz);
+        }
+        else if (strcmp(attr_got[i].attr, "mode") == 0)
+        {
+            //cout << "mode sz " << attr_got[i].value_sz << " [" << string(attr_got[i].value, attr_got[i].value_sz) << "]" << endl;
 
             e::unpacker up(attr_got[i].value, attr_got[i].value_sz);
             up = up >> mode;
-
-            return mode;
+            e::unpack64be((uint8_t *)&mode, &mode);
         }
     }
+
+    cout << "[" << path << "] mode: " << mode << endl;
+    return mode;
 }
 
 void
