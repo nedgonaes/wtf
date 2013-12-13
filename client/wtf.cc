@@ -638,6 +638,7 @@ wtf_client :: open(const char* path, int flags, mode_t mode)
     
     f->flags = flags;
     f->mode = mode;
+    std::cout << "OPEN MODE: " << mode << std::endl;
 
     if (flags & O_CREAT)
     {
@@ -1176,6 +1177,7 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
                 up = up >> mode;
 
                 f->mode = mode;
+                std::cout << mode << std::endl;
             }
         }
     }
@@ -1436,6 +1438,36 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     //XXX; get rid of magic string.
     const char* name = "blockmap";
 
+
+    uint64_t mode = f->mode;
+    uint64_t directory = f->is_directory;
+    struct hyperdex_client_attribute attr[2];
+
+    attr[0].attr = "mode";
+    attr[0].value = (const char*)&mode;
+    attr[0].value_sz = sizeof(mode);
+    attr[0].datatype = HYPERDATATYPE_INT64;
+
+    attr[1].attr = "directory";
+    attr[1].value = (const char*)&directory;
+    attr[1].value_sz = sizeof(directory);
+    attr[1].datatype = HYPERDATATYPE_INT64;
+
+ 
+ 
+    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+
+    if (res != HYPERDEX_CLIENT_SUCCESS)
+    {
+        return -1;
+    }
+    else
+    {
+        return 0;
+    }
+
+
     /*
      * construct a hyperdex attribute list for all dirty blocks
      */
@@ -1473,7 +1505,7 @@ retry:
      * Wait for hyperdex to reply
      */
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    res = hyperdex_wait_for_result(ret, status);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
