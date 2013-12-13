@@ -52,12 +52,12 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
         if (fusewtf_is_dir() != 0)
         {
             fprintf(logfile, "GETATTR: dir [%s]\n", path);
-            stbuf->st_mode = S_IFDIR | 0777;
+            stbuf->st_mode = S_IFDIR | fusewtf_get_mode();
         }
         else
         {
             fprintf(logfile, "GETATTR: file [%s]\n", path);
-            stbuf->st_mode = S_IFREG | 0777;
+            stbuf->st_mode = S_IFREG | fusewtf_get_mode();
 
             uint32_t filesize;
             fusewtf_read_filesize(&filesize);

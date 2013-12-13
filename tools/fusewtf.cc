@@ -476,6 +476,23 @@ fusewtf_is_dir()
     return is_dir == 0 ? 0 : 1;
 }
 
+mode_t
+fusewtf_get_mode()
+{
+    for (int i = 0; i < attr_size_got; ++i)
+    {
+        if (strcmp(attr_got[i].attr, "mode") == 0)
+        {
+            uint64_t mode;
+
+            e::unpacker up(attr_got[i].value, attr_got[i].value_sz);
+            up = up >> mode;
+
+            return mode;
+        }
+    }
+}
+
 void
 fusewtf_initialize()
 {
