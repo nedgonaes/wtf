@@ -18,7 +18,7 @@ void fusewtf_flush_loop();
 int fusewtf_get(const char* path);
 int fusewtf_search(const char* value, const char** one_result);
 int fusewtf_search_exists(const char* value);
-int fusewtf_search_is_dir(const char* value);
+int fusewtf_is_dir();
 
 int fusewtf_create(const char* path, mode_t mode);
 int fusewtf_open(const char* path, int flags, mode_t mode);

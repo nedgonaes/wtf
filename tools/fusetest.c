@@ -39,38 +39,34 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 {
     int ret = 0;
 
-    //printf("\t\t\t\tgetattr [%s]\n", path);
     sem_wait(&lock);
     memset(stbuf, 0, sizeof(struct stat));
-    if (fusewtf_search_is_dir(path) == 0 || strcmp(path, ROOT) == 0)
+    fusewtf_flush_loop();
+    if (fusewtf_get(path) == -1)
     {
-        //printf("GETATTR: dir [%s]\n", path);
-        //fflush(stdout);
-        fprintf(logfile, "GETATTR: dir [%s]\n", path);
-        stbuf->st_mode = S_IFDIR | 0777;
-    }
-    else if (fusewtf_get(path) == 0)
-    {
-        //printf("GETATTR: file [%s]\n", path);
-        //fflush(stdout);
-        fprintf(logfile, "GETATTR: file [%s]\n", path);
-        stbuf->st_mode = S_IFREG | 0777;
-
-        uint32_t filesize;
-        //printf("find size [%s]\n", path);
-        fusewtf_read_filesize(&filesize);
-        if (filesize < 0)
-        {
-            fprintf(logfile, "GETATTR ERROR: file [%s] has negative length\n", path);
-        }
-        stbuf->st_size = filesize;
+        fprintf(logfile, "GETATTR: invalid [%s]\n", path);
+        ret = -ENOENT;
     }
     else
     {
-        //printf("GETATTR: invalid [%s]\n", path);
-        //fflush(stdout);
-        fprintf(logfile, "GETATTR: invalid [%s]\n", path);
-        ret = -ENOENT;
+        if (fusewtf_is_dir() != 0)
+        {
+            fprintf(logfile, "GETATTR: dir [%s]\n", path);
+            stbuf->st_mode = S_IFDIR | 0777;
+        }
+        else
+        {
+            fprintf(logfile, "GETATTR: file [%s]\n", path);
+            stbuf->st_mode = S_IFREG | 0777;
+
+            uint32_t filesize;
+            fusewtf_read_filesize(&filesize);
+            if (filesize < 0)
+            {
+                fprintf(logfile, "GETATTR ERROR: file [%s] has negative length\n", path);
+            }
+            stbuf->st_size = filesize;
+        }
     }
 
     fusewtf_flush_loop();
@@ -89,10 +85,10 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     const char* to_add;
     const char* to_add_extracted;
 
-    //printf("\t\t\t\treaddir [%s]\n", path);
     sem_wait(&lock);
     res = fusewtf_search(path, &to_add);
 
+    fprintf(logfile, "\tREADDIR: [%s]\n", path);
     if (res != 0 && strcmp(path, ROOT) != 0)
     {
         fprintf(logfile, "\tREADDIR: ERROR dir [%s] does not exist\n", path);
@@ -101,7 +97,8 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     while (res == 0)
     {
         fusewtf_extract_name(to_add, path, &to_add_extracted);
-        if (to_add_extracted != NULL)
+        //printf("to_add [%s] extracted [%s]\n", to_add, to_add_extracted);
+        if (to_add_extracted != NULL && *to_add_extracted != '\0')
         {
             filler(buf, to_add_extracted, NULL, 0);
         }

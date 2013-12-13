@@ -292,20 +292,12 @@ size_t
 fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
 {
     int64_t fd;
-    uint32_t cur_filesize;
-    uint32_t new_filesize;
 
     fd = file_map[path];
 
-    // Get file size
-    fusewtf_get(path);
-    fusewtf_read_filesize(&cur_filesize);
-
     cout << "\tWRITING [" << path << "] size [" << size << "] offset [" << offset << "] buffer [" << buffer << "]" << endl;
-
-    w->lseek(fd, offset);
-
     cout << "\t\t\t\t\t\tw write [" << buffer << "] size [" << size << "]" << endl;
+    w->lseek(fd, offset);
     w_retval = w->write(fd, buffer, size, NUM_REPLICATIONS, &w_status);
     cout << "w_retval " << w_retval << " w_status " << w_status << endl;
     w_retval = w->flush(fd, &w_status);
@@ -342,17 +334,16 @@ fusewtf_get(const char* path)
     h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
     //h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
     fusewtf_loop();
-    cout << "get: " << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
+    //cout << "get: " << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
     if (h_status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
     {
         /*
         for (int i = 0; i < attr_size_got; ++i)
         {
-            cout << "attribute " << i << ": " << attr_got[i].attr << endl;
+            cout << "attribute " << i << ": " << attr_got[i].attr << " sz " << attr_got[i].value_sz << endl;
             if (strcmp(attr_got[i].attr, "path") == 0)
             {
-                //cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                //printf("value [%.5s]\n", attr_got[i].value);
+                cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
             }
             else if (strcmp(attr_got[i].attr, "blockmap") == 0)
             {
@@ -454,14 +445,27 @@ fusewtf_search_exists(const char* value)
 }
 
 int
-fusewtf_search_is_dir(const char* value)
+fusewtf_is_dir()
 {
-    int reg = fusewtf_search_exists(value);
-    int equ = fusewtf_search_exists_predicate(value, HYPERPREDICATE_EQUALS);
-    int ret = reg == 0 && equ != 0? 0 : -1;
+    uint64_t is_dir;
+    string path;
 
-    //fprintf(logfusewtf, "[%s] reg %d equ %d ret %d\n", value, reg, equ, ret);
-    return ret;
+    for (int i = 0; i < attr_size_got; ++i)
+    {
+        if (strcmp(attr_got[i].attr, "path") == 0)
+        {
+            path = string(attr_got[i].value, attr_got[i].value_sz);
+        }
+        else if (strcmp(attr_got[i].attr, "directory") == 0)
+        {
+            //cout << "directory sz " << attr_got[i].value_sz << " [" << string(attr_got[i].value, attr_got[i].value_sz) << "]" << endl;
+            e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
+            up = up >> is_dir;
+        }
+    }
+
+    //cout << "[" << path << "] is_dir: " << is_dir << endl;
+    return is_dir == 0 ? 0 : 1;
 }
 
 void
