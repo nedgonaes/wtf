@@ -201,8 +201,8 @@ main(int argc, const char* argv[])
     }
     else
     {
-        cout << "Commands: touch, ls, rm" << endl;
-        cout << "Set up: echo 'space wtf key path attributes map(string, string) blockmap' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
+        cout << "Commands: touch, ls, rm, rmall" << endl;
+        cout << "Set up: echo 'space wtf key path attributes map(string, string) blockmap, int directory, int mode' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
     }
 
     return EXIT_SUCCESS;

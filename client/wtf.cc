@@ -849,7 +849,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
     if(f->commands_begin() == f->commands_end())
     {
-        std::cout << "no commands" << std::endl;
+        //std::cout << "no commands" << std::endl;
     }
 
     for (command_map::const_iterator it = f->commands_begin();
@@ -858,15 +858,15 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         e::intrusive_ptr<command> cmd = it->second;
         uint64_t id = it->first;
 
-        std::cout << "Flushing " << cmd->nonce() << std::endl;
-        std::cout << "STATUS: " << cmd->status() << std::endl;
-        std::cout << "id: " << id << std::endl;
+        //std::cout << "Flushing " << cmd->nonce() << std::endl;
+        //std::cout << "STATUS: " << cmd->status() << std::endl;
+        //std::cout << "id: " << id << std::endl;
 
         if (cmd->status() != WTF_SUCCESS)
         {
             *rc = WTF_GARBAGE;
 
-            std::cout << "Looping" << std::endl;
+            //std::cout << "Looping" << std::endl;
             rid = loop(it->first, -1, rc);
 
             if (rid < 0 || *rc != WTF_SUCCESS)

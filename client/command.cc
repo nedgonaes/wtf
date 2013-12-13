@@ -159,7 +159,7 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
 {
     char* base = reinterpret_cast<char*>(backing.get());
     const char* data = reinterpret_cast<const char*>(resp.data());
-    std::cout << "received " << resp.hex() << std::endl;
+    //std::cout << "received " << resp.hex() << std::endl;
     assert(data >= base);
     assert(data - base < UINT16_MAX);
     uint16_t diff = data - base;
@@ -167,7 +167,7 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
     e::pack16le(diff, base + diff - 2);
     m_output_sz = MIN(m_output_sz, resp.size());
     memmove(m_output, data, m_output_sz);
-    std::cout << "m_output = " << (void*)m_output << std::endl;
+    //std::cout << "m_output = " << (void*)m_output << std::endl;
     backing.release();
     m_status = status;
 }
