@@ -1472,10 +1472,6 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     {
         return -1;
     }
-    else
-    {
-        return 0;
-    }
 
 
     /*
