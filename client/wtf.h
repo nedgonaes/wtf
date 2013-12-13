@@ -106,11 +106,18 @@ class wtf_client
         uint64_t last_error_line() const { return m_last_error_line; }
 
     public:
-        int64_t open(const char* path);
+
+        int64_t canon_path(char* rel, char* abspath, size_t abspath_sz);
+        int64_t getcwd(char* c, size_t len);
+        int64_t chdir(char* path);
+        int64_t open(const char* path, int flags);
+        int64_t open(const char* path, int flags, mode_t mode);
 
         void lseek(int64_t fd, uint64_t offset);
         void begin_tx();
         int64_t end_tx();
+        int64_t mkdir(const char* path, mode_t mode); 
+        int64_t chmod(const char* path, mode_t mode); 
         int64_t write(int64_t fd,
                       const char* data,
                       uint32_t data_sz,
@@ -187,7 +194,7 @@ class wtf_client
 
         //communicate with hyperdex
         int64_t update_hyperdex(e::intrusive_ptr<file>& f);
-        int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f);
+        int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
 
     private:
@@ -210,6 +217,7 @@ class wtf_client
         uint64_t m_last_error_line;
         po6::net::location m_last_error_host;
         hyperdex::Client m_hyperdex_client;
+        std::string m_cwd;
 };
 
 std::ostream&

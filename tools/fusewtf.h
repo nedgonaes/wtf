@@ -20,8 +20,10 @@ int fusewtf_search(const char* value, const char** one_result);
 int fusewtf_search_exists(const char* value);
 int fusewtf_search_is_dir(const char* value);
 
-void fusewtf_create(const char* path);
-void fusewtf_open(const char* path);
+int fusewtf_create(const char* path, mode_t mode);
+int fusewtf_open(const char* path, int flags, mode_t mode);
+int fusewtf_mkdir(const char* path, mode_t mode); 
+int fusewtf_chmod(const char* path, mode_t mode); 
 int fusewtf_flush(const char* path);
 int fusewtf_release(const char* path);
 void fusewtf_del(const char* path);

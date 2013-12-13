@@ -65,6 +65,7 @@ noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
+noinst_HEADERS += tools/fusewtf.h
 
 bin_PROGRAMS =
 bin_PROGRAMS += wtf

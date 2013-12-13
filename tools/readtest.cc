@@ -154,7 +154,7 @@ main(int argc, const char* argv[])
             ss >> item_sz;
             char* item = new char[item_sz];
 
-            int64_t fd = r.open(path.c_str());
+            int64_t fd = r.open(path.c_str(), O_CREAT | O_RDWR, 777);
 
             std::cout << "FD is " << fd << std::endl;
 

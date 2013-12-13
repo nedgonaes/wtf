@@ -103,7 +103,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             wtf_returncode status = WTF_GARBAGE;
             std::string f = file();
             std::cout << "File: " << f << std::endl;
-            int64_t fd = cl.open(f.data());
+            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             tll->start(&ts, 1);
             int64_t reqid = cl.write(fd, v.data(), v.size(), 1, &status);
@@ -130,7 +130,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             //std::string d(v.size(), '0');
             char* dd = new char[v.size()];
             std::cout << "output pointer = " << (void*)dd << std::endl;
-            fd = cl.open(f.data());
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
             uint32_t sz = v.size();
             reqid = cl.read(fd, dd, &sz, &status);
 
@@ -166,7 +166,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             std::string v2 = v;
             v2.replace(0,3,"XXX");
-            fd = cl.open(f.data());
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             tll->start(&ts, 1);
             reqid = cl.write(fd, "XXX", 3, 1, &status);
@@ -190,7 +190,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
 
-            fd = cl.open(f.data());
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             char* dd2 = new char[v.size()];
             uint32_t sz2 = v2.size();
@@ -228,6 +228,15 @@ worker_thread( numbers::throughput_latency_logger* tll,
             delete [] dd;
             delete [] dd2;
 
+            if (cl.mkdir("/foo", 777) < 0)
+            {
+                std::cerr << "Can't mkdir foo" << std::endl;
+            }
+
+            if (cl.mkdir("/foo", 777) == 0)
+            {
+                std::cerr << "Allows mkdir twice." << std::endl;
+            }
            
         }
     }

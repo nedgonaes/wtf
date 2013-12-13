@@ -24,7 +24,8 @@ sem_t lock;
 static int fusetest_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     printf("\t\t\t\tcreate [%s]\n", path);
-    fusewtf_create(path);
+    fflush(stdout);
+    fi->fh = fusewtf_create(path, mode);
     return 0;
 }
 
@@ -43,13 +44,17 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
     if (fusewtf_search_is_dir(path) == 0 || strcmp(path, ROOT) == 0)
     {
+        printf("GETATTR: dir [%s]\n", path);
+        fflush(stdout);
         fprintf(logfile, "GETATTR: dir [%s]\n", path);
-        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_mode = S_IFDIR | 0777;
     }
     else if (fusewtf_get(path) == 0)
     {
+        printf("GETATTR: file [%s]\n", path);
+        fflush(stdout);
         fprintf(logfile, "GETATTR: file [%s]\n", path);
-        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0777;
 
         uint32_t filesize;
         printf("find size [%s]\n", path);
@@ -62,6 +67,8 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
     }
     else
     {
+        printf("GETATTR: invalid [%s]\n", path);
+        fflush(stdout);
         fprintf(logfile, "GETATTR: invalid [%s]\n", path);
         ret = -ENOENT;
     }
@@ -84,19 +91,13 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     //printf("\t\t\t\treaddir [%s]\n", path);
     sem_wait(&lock);
-    //fprintf(logfile, "\tREADDIR: exists [%d] [%s]\n", fusewtf_search_exists(path), path);
-    //if (fusewtf_search_exists(path) != 0)
-    //if (strcmp(path, ROOT) != 0)
-    //{
-    //    ret = -ENOENT;
-    //}
-    //else
-    //{
     res = fusewtf_search(path, &to_add);
+
     if (res != 0 && strcmp(path, ROOT) != 0)
     {
         fprintf(logfile, "\tREADDIR: ERROR dir [%s] does not exist\n", path);
     }
+
     while (res == 0)
     {
         fusewtf_extract_name(to_add, path, &to_add_extracted);
@@ -110,7 +111,6 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    //}
 
     fusewtf_flush_loop();
     sem_post(&lock);
@@ -122,14 +122,12 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
 {
     int ret = 0;
     printf("\t\t\t\topen [%s]\n", path);
+    fflush(stdout);
     sem_wait(&lock);
-    if (fusewtf_search_exists(path) != 0)
+    fi->fh = fusewtf_open(path, fi->flags, 0);
+    if (fi->fh < 0)
     {
         ret = -ENOENT;
-    }
-    else
-    {
-        fusewtf_open(path);
     }
 
     fusewtf_flush_loop();
@@ -191,6 +189,7 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
 static int fusetest_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     printf("\t\t\t\twrite [%s] size [%zu] offset [%zu]\n", path, size, offset);
+    fflush(stdout);
     sem_wait(&lock);
     fusewtf_write(path, buf, size, offset);
 
@@ -225,11 +224,13 @@ static int fusetest_readlink(const char *path, char *buf, size_t bufsiz)
 static int fusetest_mknod(const char *pathname, mode_t mode, dev_t dev)
 {
     printf("\t\t\t\tmknod [%s]\n", pathname);
+    fflush(stdout);
     return 0;
 }
 
 static int fusetest_mkdir(const char *pathname, mode_t mode)
 {
+    return fusewtf_mkdir(pathname, mode);
     printf("\t\t\t\tmkdir [%s]\n", pathname);
     return 0;
 }

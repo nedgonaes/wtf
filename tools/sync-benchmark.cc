@@ -110,8 +110,10 @@ worker_thread( numbers::throughput_latency_logger* tll,
         int64_t reqid;
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
+            wtf_returncode status = WTF_GARBAGE;
+            std::string f = file();
             std::cout << "File: " << f << std::endl;
-            fd = cl.open(f.data());
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             tll->start(&ts, 1);
             std::cout << "writing to " << fd << " vdata [" << v.data() << "] vsize [" << v.size() << "]" << std::endl;
@@ -136,18 +138,19 @@ worker_thread( numbers::throughput_latency_logger* tll,
         }
         std::cout << "after while loop" << std::endl;
 
-        //fd = cl.open(f.data()); // apparently optional?
-        //cout << "reading" << endl;
-        //char* item = new char[v.size()];
-        //reqid = cl.read(fd, item, v.size(), &status);
-        //cout << "read reqid " << reqid << " status " << status << endl;
-        //reqid = cl.flush(fd, &status);
-        //cout << "flush reqid " << reqid << " status " << status << endl;
-        //reqid = cl.flush(fd, &status);
-        //cout << "flush reqid " << reqid << " status " << status << endl;
-        //reqid = cl.close(fd, &status);
-        //cout << "close reqid " << reqid << " status " << status << endl;
-        //std::cout << "returned [" << std::string(item, v.size()) << "]" << std::endl;
+        fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777); // apparently optional?
+        cout << "reading" << endl;
+        char* item = new char[v.size()];
+        uint32_t sz = v.size();
+        reqid = cl.read(fd, item, &sz, &status);
+        cout << "read reqid " << reqid << " status " << status << endl;
+        reqid = cl.flush(fd, &status);
+        cout << "flush reqid " << reqid << " status " << status << endl;
+        reqid = cl.flush(fd, &status);
+        cout << "flush reqid " << reqid << " status " << status << endl;
+        reqid = cl.close(fd, &status);
+        cout << "close reqid " << reqid << " status " << status << endl;
+        std::cout << "returned [" << std::string(item, v.size()) << "]" << std::endl;
 
     }
     catch (po6::error& e)
