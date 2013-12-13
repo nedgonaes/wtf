@@ -1446,11 +1446,38 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     //XXX; get rid of magic string.
     const char* name = "blockmap";
 
+    uint64_t mode = f->mode;
+    uint64_t directory = f->is_directory;
+    struct hyperdex_client_attribute attr[2];
+
+    attr[0].attr = "mode";
+    attr[0].value = (const char*)&mode;
+    attr[0].value_sz = sizeof(mode);
+    attr[0].datatype = HYPERDATATYPE_INT64;
+
+    attr[1].attr = "directory";
+    attr[1].value = (const char*)&directory;
+    attr[1].value_sz = sizeof(directory);
+    attr[1].datatype = HYPERDATATYPE_INT64;
+
+    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+
+    if (res != HYPERDEX_CLIENT_SUCCESS)
+    {
+        return -1;
+    }
+    else
+    {
+        return 0;
+    }
+
+
     /*
      * construct a hyperdex attribute list for all dirty blocks
      */
     for (block_map::const_iterator it = f->blocks_begin();
-         it != f->blocks_end(); ++it)
+            it != f->blocks_end(); ++it)
     {
         if (it->second->dirty())
         {
@@ -1470,7 +1497,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
             ++i;
         }
     }
-    
+
     //XXX; get rid of magic string.
     //XXX; atomic map add?
     /*
@@ -1483,7 +1510,7 @@ retry:
      * Wait for hyperdex to reply
      */
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    res = hyperdex_wait_for_result(ret, status);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
@@ -1506,10 +1533,10 @@ retry:
     }
 
     for (std::vector<struct hyperdex_client_map_attribute>::iterator it = attrs.begin();
-         it != attrs.end(); ++it)
+            it != attrs.end(); ++it)
     {
-       free(const_cast<char*>(it->value));
-       free(const_cast<char*>(it->map_key));
+        free(const_cast<char*>(it->value));
+        free(const_cast<char*>(it->map_key));
     }
 
 
