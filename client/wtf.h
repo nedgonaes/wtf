@@ -136,6 +136,7 @@ class wtf_client
                      wtf_returncode* status);
         int64_t loop(int timeout, wtf_returncode* status);
         int64_t loop(int64_t id, int timeout, wtf_returncode* status);
+        int64_t truncate(int fd, off_t length);
 
     friend class wtf::tool_wrapper;
 

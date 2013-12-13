@@ -88,6 +88,7 @@ wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
 wtfexec_PROGRAMS += wtf-daemon 
 wtfexec_PROGRAMS += wtf-initialize-cluster
+wtfexec_PROGRAMS += wtf-mkfs
 
 ################################################################################
 ################################## Blockstore ##################################
@@ -209,6 +210,11 @@ wtf_async_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnum
 wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
 wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
+
+wtf_mkfs_SOURCES = tools/mkfs.cc
+wtf_mkfs_CPPFLAGS = $(CPPFLAGS) 
+wtf_mkfs_LDADD = $(HYPERCLIENT_LIBS) -lpopt
+
 
 #if ENABLE_GTEST
 #wtf_test_blockstore_SOURCES = tests/test_blockstore.cc

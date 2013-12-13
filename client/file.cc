@@ -171,6 +171,23 @@ wtf_client :: file :: pack_size()
 }
 
 void
+wtf_client :: file :: truncate(off_t length)
+{
+    uint64_t block_index = length/CHUNKSIZE;
+    uint64_t sz = m_block_map.size();
+
+    if (sz > block_index + 1)
+    {
+        for (int i = block_index + 1; i < sz; ++i)
+        {
+            m_block_map.erase(i);
+        }
+    }
+
+    m_block_map[block_index]->resize(length - block_index*CHUNKSIZE);
+}
+
+void
 wtf_client :: file :: truncate()
 {
     uint64_t block_index = m_offset/CHUNKSIZE;

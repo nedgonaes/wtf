@@ -75,6 +75,7 @@ class wtf_client::file
         std::vector<wtf::block_id>::iterator lookup_block_begin(uint64_t index) { return m_block_map[index]->blocks_begin(); }
         std::vector<wtf::block_id>::iterator lookup_block_end(uint64_t index) { return m_block_map[index]->blocks_end(); }
         void truncate();
+        void truncate(off_t length);
 
     private:
         friend class e::intrusive_ptr<file>;
