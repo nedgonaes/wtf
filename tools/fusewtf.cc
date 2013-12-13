@@ -60,40 +60,48 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
     string input_str(input);
     string output_str;
 
-    int start = strlen(prefix);
-
-    // If not root, then account for extra slash at end of prefix
-    if (start != 1)
+    if (strcmp(input, prefix) == 0)
     {
-        start++;
-    }
-
-    // In case the name extracted is a directory
-    size_t next_slash_pos = input_str.find("/", start);
-    if (next_slash_pos == string::npos)
-    {
-        output_str = input_str.substr(start).c_str();
-    }
-    else
-    {
-        output_str = input_str.substr(start, next_slash_pos - start).c_str();
-    }
-
-    //fprintf(logfusewtf, "extracted [%s]\n", *output);
-    
-    if (string_set.find(output_str) == string_set.end())
-    {
-        //fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
-        string_set.insert(output_str);
-        *output = output_str.c_str();
-    }
-    else
-    {
-        //fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
         *output = NULL;
+        return 0;
     }
+    else
+    {
+        int start = strlen(prefix);
 
-    return 0;
+        // If not root, then account for extra slash at end of prefix
+        if (start != 1)
+        {
+            start++;
+        }
+
+        // In case the name extracted is a directory
+        size_t next_slash_pos = input_str.find("/", start);
+        if (next_slash_pos == string::npos)
+        {
+            output_str = input_str.substr(start).c_str();
+        }
+        else
+        {
+            output_str = input_str.substr(start, next_slash_pos - start).c_str();
+        }
+
+        //fprintf(logfusewtf, "extracted [%s]\n", *output);
+
+        if (string_set.find(output_str) == string_set.end())
+        {
+            //fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
+            string_set.insert(output_str);
+            *output = output_str.c_str();
+        }
+        else
+        {
+            //fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
+            *output = NULL;
+        }
+
+        return 0;
+    }
 }
 
 void

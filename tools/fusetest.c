@@ -88,7 +88,7 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     sem_wait(&lock);
     res = fusewtf_search(path, &to_add);
 
-    fprintf(logfile, "\tREADDIR: [%s]\n", path);
+    //fprintf(logfile, "\tREADDIR: [%s]\n", path);
     if (res != 0 && strcmp(path, ROOT) != 0)
     {
         fprintf(logfile, "\tREADDIR: ERROR dir [%s] does not exist\n", path);
@@ -227,9 +227,8 @@ static int fusetest_mknod(const char *pathname, mode_t mode, dev_t dev)
 
 static int fusetest_mkdir(const char *pathname, mode_t mode)
 {
-    return fusewtf_mkdir(pathname, mode);
     printf("\t\t\t\tmkdir [%s]\n", pathname);
-    return 0;
+    return fusewtf_mkdir(pathname, mode);
 }
 
 static int fusetest_symlink(const char *old_path, const char *new_path)
