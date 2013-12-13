@@ -44,20 +44,20 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
     if (fusewtf_search_is_dir(path) == 0 || strcmp(path, ROOT) == 0)
     {
-        printf("GETATTR: dir [%s]\n", path);
-        fflush(stdout);
+        //printf("GETATTR: dir [%s]\n", path);
+        //fflush(stdout);
         fprintf(logfile, "GETATTR: dir [%s]\n", path);
         stbuf->st_mode = S_IFDIR | 0777;
     }
     else if (fusewtf_get(path) == 0)
     {
-        printf("GETATTR: file [%s]\n", path);
-        fflush(stdout);
+        //printf("GETATTR: file [%s]\n", path);
+        //fflush(stdout);
         fprintf(logfile, "GETATTR: file [%s]\n", path);
         stbuf->st_mode = S_IFREG | 0777;
 
         uint32_t filesize;
-        printf("find size [%s]\n", path);
+        //printf("find size [%s]\n", path);
         fusewtf_read_filesize(&filesize);
         if (filesize < 0)
         {
@@ -67,8 +67,8 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
     }
     else
     {
-        printf("GETATTR: invalid [%s]\n", path);
-        fflush(stdout);
+        //printf("GETATTR: invalid [%s]\n", path);
+        //fflush(stdout);
         fprintf(logfile, "GETATTR: invalid [%s]\n", path);
         ret = -ENOENT;
     }
