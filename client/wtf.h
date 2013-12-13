@@ -29,7 +29,7 @@
 #ifndef wtf_h_
 #define wtf_h_
 
-#define CHUNKSIZE (16)
+#define CHUNKSIZE (512)
 #define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))

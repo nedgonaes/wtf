@@ -1189,20 +1189,27 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
 int64_t
 wtf_client :: truncate(int fd, off_t length)
 {
-    size_t sz = length - m_fds[fd]->length();
-    if (sz > 0)
+    size_t sz;
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    if (length > f->length())
     {
+        sz = length - f->length();
+        //cout << "expanding to sz " << sz << endl;
         wtf_returncode status;
         char* data = new char[sz];
         memset(data, 0, sz);
-        write(fd, data, sz, 3,
-                    &status);
+        write(fd, data, sz, 3, &status);
         flush(fd, &status);
     }
     else
     {
-        m_fds[fd]->truncate(length); 
+        //cout << "truncating" << endl;
+        f->truncate(length); 
     }
+
+    update_hyperdex(f);
+    cout << "updated" << endl;
 
     return 0;
 }

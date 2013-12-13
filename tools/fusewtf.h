@@ -31,6 +31,7 @@ void fusewtf_del(const char* path);
 int fusewtf_read_filesize(uint32_t* output_filesize);
 int fusewtf_read_filename(const char** output_filename);
 size_t fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset);
+int fusewtf_truncate(const char* path, off_t length);
 size_t fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset);
 int fusewtf_extract_name(const char* input, const char* prefix, const char** output);
 

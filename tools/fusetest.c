@@ -268,7 +268,7 @@ static int fusetest_chown(const char *path, uid_t owner, gid_t group)
 static int fusetest_truncate(const char *path, off_t length)
 {
     printf("\t\t\t\ttruncate [%s] length [%zu]\n", path, length);
-    return 0;
+    return fusewtf_truncate(path, length);
 }
 
 static int fusetest_fsync(const char *path, int isdatasync, struct fuse_file_info *fi)

@@ -283,7 +283,7 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
         //cout << "replace end character with EOF" << endl;
         //buffer[file_size - offset] = EOF;
     }
-    cout << "w_retval " << w_retval << " w_status " << w_status << " [" << buffer << "]" << endl;
+    //cout << "w_retval " << w_retval << " w_status " << w_status << " [" << string(buffer, size) << "]" << endl;
 
     return read_size;
 }
@@ -312,6 +312,17 @@ fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
     cout << "w_retval " << w_retval << " w_status " << w_status << endl;
 
     return -1;
+}
+
+int
+fusewtf_truncate(const char* path, off_t length)
+{
+    int64_t fd;
+
+    fd = file_map[path];
+
+    cout << "\t\t\t\t\t\tw truncate [" << path << "] fd [" << fd << "] length [" << length << "]" << endl;
+    return w->truncate(fd, length);
 }
 
 int
