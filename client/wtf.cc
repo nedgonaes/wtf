@@ -839,6 +839,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
     if(m_fds.find(fd) == m_fds.end())
     {
         std::cout << "bad fd" << std::endl;
+        return -1;
     }
 
     e::intrusive_ptr<file> f = m_fds[fd];

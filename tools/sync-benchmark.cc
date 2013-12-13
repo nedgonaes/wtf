@@ -138,7 +138,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
         }
         std::cout << "after while loop" << std::endl;
 
-        fd = cl.open(f.data()); // apparently optional?
+        fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777); // apparently optional?
         cout << "reading" << endl;
         char* item = new char[v.size()];
         uint32_t sz = v.size();

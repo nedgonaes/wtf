@@ -61,6 +61,7 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
     string output_str;
 
     int start = strlen(prefix);
+
     // If not root, then account for extra slash at end of prefix
     if (start != 1)
     {
@@ -115,22 +116,30 @@ fusewtf_flush_loop()
     }
 }
 
-void
-fusewtf_create(const char* path)
+int
+fusewtf_create(const char* path, mode_t mode)
 {
     cout << "\t\t\t\t\t\tcreate " << path << endl;
-    fusewtf_open(path);
+    return fusewtf_open(path, O_CREAT, mode);
 }
 
-void
-fusewtf_open(const char* path)
+int
+fusewtf_open(const char* path, int flags, mode_t mode)
 {
     int64_t fd;
     
     cout << "\t\t\t\t\t\tw open " << path << endl;
-    fd = w->open(path);
-    cout << "opened path [" << path << "] fd " << fd << endl;
-    file_map[path] = fd;
+    fd = w->open(path, flags, mode);
+    if (fd > 0)
+    {
+        cout << "opened path [" << path << "] fd " << fd << endl;
+        file_map[path] = fd;
+        return fd;
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 int
@@ -469,6 +478,11 @@ void
 fusewtf_destroy()
 {
     fclose(logfusewtf);
+}
+
+int fusewtf_mkdir(const char* path, mode_t mode)
+{
+    return w->mkdir(path, mode);
 }
 
 #ifdef __cplusplus
