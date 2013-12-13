@@ -10,6 +10,8 @@
 *.pdf
 *.aux
 *.ent
+*.png
+*.gnuplot
 # specific files
 aclocal.m4
 autom4te.cache/
@@ -40,7 +42,9 @@ wtf-sync-benchmark
 wtf-hadoop-benchmark
 wtf-cli
 wtf-writetest
+wtf-test-blockstore
 wtf-readtest
+wtf-readwritetest
 wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster
@@ -48,3 +52,4 @@ wtf.pc
 stamp-h1
 wtf-shelltest
 wtf-fusetest
+_logs

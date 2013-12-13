@@ -89,7 +89,7 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
             m_output_sz = sizeof(uint64_t)*2;
             break;
         case wtf::WTFNET_UPDATE:
-            pa = pa << m_sent_to.token << remote_bid << m_length;
+            pa = pa << m_sent_to.token << remote_bid << m_offset;
             pa = pa.copy(e::slice(data, length));
             m_output = new char[sizeof(uint64_t)*2];
             m_output_sz = sizeof(uint64_t)*2;
@@ -159,6 +159,7 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
 {
     char* base = reinterpret_cast<char*>(backing.get());
     const char* data = reinterpret_cast<const char*>(resp.data());
+    std::cout << "received " << resp.hex() << std::endl;
     assert(data >= base);
     assert(data - base < UINT16_MAX);
     uint16_t diff = data - base;
@@ -166,6 +167,7 @@ wtf_client :: command :: succeed(std::auto_ptr<e::buffer> backing,
     e::pack16le(diff, base + diff - 2);
     m_output_sz = MIN(m_output_sz, resp.size());
     memmove(m_output, data, m_output_sz);
+    std::cout << "m_output = " << (void*)m_output << std::endl;
     backing.release();
     m_status = status;
 }

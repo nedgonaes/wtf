@@ -45,14 +45,12 @@
 #include "common/network_msgtype.h"
 #include "client/wtf.h"
 
-using namespace std;
-
 static long _done = 0;
-static long _number = 1;
+static long _number = 1000;
 static long _threads = 1;
 static long _backup = 0;
-static long _connect_port = 1981;
-static long _hyper_port = 1982;
+static long _connect_port = 1982;
+static long _hyper_port = 1981;
 static long _concurrent = 50;
 static const char* _output = "wtf-sync-benchmark.log";
 static const char* _dir = ".";
@@ -97,25 +95,18 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
     try
     {
-        //std::string f = std::string("/file0");
-        std::string f = std::string("/file1");
-
-        //std::string v = "1111122222111112"; 
-        std::string v = "2222211111222221"; 
-        v = v + string("0123456789012345");
 
         wtf_client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
-        wtf_returncode status = WTF_GARBAGE;
-        int64_t fd;
-        int64_t reqid;
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
+            std::string v = val();
+            wtf_returncode status = WTF_GARBAGE;
+            std::string f = file();
             std::cout << "File: " << f << std::endl;
-            fd = cl.open(f.data());
+            int64_t fd = cl.open(f.data());
 
             tll->start(&ts, 1);
-            std::cout << "writing to " << fd << " vdata [" << v.data() << "] vsize [" << v.size() << "]" << std::endl;
-            reqid = cl.write(fd, v.data(), v.size(), 2, &status);
+            int64_t reqid = cl.write(fd, v.data(), v.size(), 1, &status);
 
             if (reqid < 0)
             {
@@ -126,6 +117,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             wtf_returncode rc = WTF_GARBAGE;
 
             reqid = cl.flush(fd, &rc);
+            cl.close(fd, &rc);
+
             tll->finish(&ts);
 
             if (reqid < 0)
@@ -133,22 +126,110 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 std::cerr << "wtf_loop encountered " << rc << std::endl;
                 return; 
             }
+
+            //std::string d(v.size(), '0');
+            char* dd = new char[v.size()];
+            std::cout << "output pointer = " << (void*)dd << std::endl;
+            fd = cl.open(f.data());
+            uint32_t sz = v.size();
+            reqid = cl.read(fd, dd, &sz, &status);
+
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_client->read encountered " << rc << std::endl;
+                return; 
+            }
+
+            reqid = cl.flush(fd, &rc);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_loop encountered " << rc << std::endl;
+                return; 
+            }
+
+            std::string d(dd, sz);
+
+            if (v.compare(d) != 0)
+            {
+                std::cerr << "Strings don't match" << std::endl;
+                e::slice slc1(v.data(), v.size());
+                e::slice slc2(d.data(), d.size());
+                std::cerr << slc1.hex() << std::endl;
+                std::cerr << " != " << std::endl;
+                std::cerr  << slc2.hex() << std::endl;
+                abort();
+            }
+
+            cl.close(fd, &rc);
+
+            std::string v2 = v;
+            v2.replace(0,3,"XXX");
+            fd = cl.open(f.data());
+
+            tll->start(&ts, 1);
+            reqid = cl.write(fd, "XXX", 3, 1, &status);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_client->write encountered" << status << std::endl;
+                return;
+            }
+
+            rc = WTF_GARBAGE;
+
+            reqid = cl.flush(fd, &rc);
+            cl.close(fd, &rc);
+
+            tll->finish(&ts);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_loop encountered " << rc << std::endl;
+                return; 
+            }
+
+            fd = cl.open(f.data());
+
+            char* dd2 = new char[v.size()];
+            uint32_t sz2 = v2.size();
+            reqid = cl.read(fd, dd2, &sz2, &status);
+
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_client->read encountered " << rc << std::endl;
+                return; 
+            }
+
+            reqid = cl.flush(fd, &rc);
+
+            if (reqid < 0)
+            {
+                std::cerr << "wtf_loop encountered " << rc << std::endl;
+                return; 
+            }
+
+            std::string d2(dd2, sz2);
+
+            if (v2.compare(d2) != 0)
+            {
+                std::cerr << "Strings don't match" << std::endl;
+                e::slice slc1(v2.data(), v2.size());
+                e::slice slc2(d2.data(), d2.size());
+                std::cerr << slc1.hex() << std::endl;
+                std::cerr << " != " << std::endl;
+                std::cerr  << slc2.hex() << std::endl;
+                abort();
+            }
+
+            cl.close(fd, &rc);
+            delete [] dd;
+            delete [] dd2;
+
+           
         }
-        std::cout << "after while loop" << std::endl;
-
-        //fd = cl.open(f.data()); // apparently optional?
-        //cout << "reading" << endl;
-        //char* item = new char[v.size()];
-        //reqid = cl.read(fd, item, v.size(), &status);
-        //cout << "read reqid " << reqid << " status " << status << endl;
-        //reqid = cl.flush(fd, &status);
-        //cout << "flush reqid " << reqid << " status " << status << endl;
-        //reqid = cl.flush(fd, &status);
-        //cout << "flush reqid " << reqid << " status " << status << endl;
-        //reqid = cl.close(fd, &status);
-        //cout << "close reqid " << reqid << " status " << status << endl;
-        //std::cout << "returned [" << std::string(item, v.size()) << "]" << std::endl;
-
     }
     catch (po6::error& e)
     {

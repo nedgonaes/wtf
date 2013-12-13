@@ -25,87 +25,44 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-// Google Log
-#include <glog/logging.h>
-#include <glog/raw_logging.h>
+#include "disk.h"
 
-//linux
-#include <sys/fcntl.h>
-#include <sys/uio.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <sys/types.h>
-#include <unistd.h>
+using wtf::disk;
 
-//C++
-#include <sstream>
-
-// WTF
-#include "daemon/block_storage_manager.h"
-
-using wtf::block_storage_manager;
-
-    block_storage_manager::block_storage_manager()
-    : m_prefix()
-    , m_last_block_num()
-    , m_blockmap()
+disk::disk(char* log, size_t log_len)
+    : m_log(log)
+    , m_log_len(log_len)
+    , m_log_offset(0)
 {
 }
 
-block_storage_manager::~block_storage_manager()
+disk::~disk()
 {
 }
 
-    void
-block_storage_manager::shutdown()
+ssize_t
+disk::write(const e::slice& data,
+            size_t& offset)
 {
-}
+    char* buffer = m_log + m_log_offset;
 
-    void
-block_storage_manager::setup(uint64_t sid,
-        const po6::pathname path,
-        const po6::pathname backing_path)
-{
-
-    m_prefix = sid;
-    m_last_block_num = 0;
-
-    if (!m_blockmap.setup(path, backing_path))
+    if (m_log_offset + data.size() > m_log_len)
     {
-        abort();
+        return -1;
     }
+
+    memmove(buffer, data.data(), data.size());
+    offset = m_log_offset;
+    m_log_offset += data.size();
+    return data.size();
 }
 
-    ssize_t
-block_storage_manager::write_block(const e::slice& data,
-        uint64_t& sid,
-        uint64_t& bid)
+ssize_t 
+disk::read(size_t offset,
+           size_t len,
+           char* data)
 {
-    return m_blockmap.write(data,bid);
-}
-
-ssize_t
-block_storage_manager::update_block(const e::slice& data,
-        uint64_t offset,
-        uint64_t& sid,
-        uint64_t& bid)
-{
-
-    return m_blockmap.update(data,offset,bid);
-
-}
-
-
-ssize_t
-block_storage_manager::read_block(uint64_t sid,
-        uint64_t bid,
-        uint8_t* data, 
-        size_t data_sz)
-{
-    return m_blockmap.read(bid, data, 0, data_sz);
-}
-
-void
-block_storage_manager::stat()
-{
+    char* buffer = m_log + offset;
+    memmove(data, buffer, len);
+    return len;
 }

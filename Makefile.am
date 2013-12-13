@@ -28,7 +28,12 @@ ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 AM_CXXFLAGS = $(WANAL_CXXFLAGS) $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(LRT_CFLAGS)
 AM_LDFLAGS = $(PO6_LDFLAGS) $(E_LDFLAGS) $(BUSYBEE_LDFLAGS) $(REPLICANT_FLAGS)
 
+if ENABLE_DEBUG
+    AM_CXXFLAGS += -ggdb -O0
+endif
+
 lib_LTLIBRARIES =
+lib_LTLIBRARIES += libwtfblockstore.la
 lib_LTLIBRARIES += libwtf.la
 lib_LTLIBRARIES += libwtfcoordinator.la
 lib_LTLIBRARIES += libfusewtf.la
@@ -58,6 +63,8 @@ noinst_HEADERS += daemon/block_storage_manager.h
 noinst_HEADERS += daemon/connection.h
 noinst_HEADERS += daemon/coordinator_link.h
 noinst_HEADERS += daemon/daemon.h
+noinst_HEADERS += blockstore/blockmap.h
+noinst_HEADERS += blockstore/disk.h
 
 bin_PROGRAMS =
 bin_PROGRAMS += wtf
@@ -66,9 +73,13 @@ noinst_PROGRAMS =
 noinst_PROGRAMS += wtf-cli
 noinst_PROGRAMS += wtf-writetest 
 noinst_PROGRAMS += wtf-readtest
+noinst_PROGRAMS += wtf-readwritetest
 noinst_PROGRAMS += wtf-sync-benchmark
 noinst_PROGRAMS += wtf-async-benchmark
-#noinst_PROGRAMS += wtf-hadoop-benchmark
+#noinst_PROGRAMS += wtf-test-blockstore
+if ENABLE_HDFS_BENCHMARKS
+noinst_PROGRAMS += wtf-hadoop-benchmark
+endif
 noinst_PROGRAMS += wtf-shelltest
 noinst_PROGRAMS += wtf-fusetest
 
@@ -76,6 +87,16 @@ wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
 wtfexec_PROGRAMS += wtf-daemon 
 wtfexec_PROGRAMS += wtf-initialize-cluster
+
+################################################################################
+################################## Blockstore ##################################
+################################################################################
+libwtfblockstore_la_SOURCES = 
+libwtfblockstore_la_SOURCES += blockstore/vblock.cc
+libwtfblockstore_la_SOURCES += blockstore/disk.cc
+libwtfblockstore_la_SOURCES += blockstore/blockmap.cc
+
+libwtfblockstore_la_LIBADD = $(E_LIBS) $(HYPERLEVELDB_LIBS) -lglog -ldl
 
 ################################################################################
 ################################## Daemon ######################################
@@ -95,7 +116,7 @@ wtf_daemon_SOURCES += daemon/daemon.cc
 wtf_daemon_SOURCES += daemon/main.cc
 
 wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
-                   $(HYPERLEVELDB_LIBS) -lglog -ldl -lpthread
+                   $(HYPERLEVELDB_LIBS) libwtfblockstore.la -lglog -ldl -lpthread
 
 ################################################################################
 ################################## Coordinator #################################
@@ -157,7 +178,7 @@ wtf_shelltest_SOURCES = tools/shelltest.cc
 wtf_shelltest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_fusetest_SOURCES = tools/fusetest.c
-wtf_fusetest_LDADD = libfusewtf.la -lfuse
+wtf_fusetest_LDADD = libfusewtf.la -lfuse libwtf.la
 wtf_fusetest_CPPFLAGS = -D_FILE_OFFSET_BITS=64 -I/home/jianneng/Documents/research/os/install/include
 
 wtf_readtest_SOURCES = tools/readtest.cc
@@ -166,13 +187,19 @@ wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 wtf_coordinator_SOURCES = tools/coordinator.cc
 wtf_coordinator_LDADD = libwtf.la $(E_LIBS) $(BUSYBEE_LIBS) -lpopt
 
-#wtf_hadoop_benchmark_SOURCES = tools/hadoop-benchmark.cc
-#wtf_hadoop_benchmark_CPPFLAGS = -I${HADOOP_HOME}/src/c++/libhdfs -I${JAVA_HOME}/include -I${abs_top_srcdir}/client $(CPPFLAGS)
-#wtf_hadoop_benchmark_LDADD =  -lpopt -lnumbers -larmnod -L${HADOOP_HOME}/build/c++/Linux-amd64-64/lib -L${JAVA_HOME}/jre/lib/amd64/server -lhdfs -ljvm
+if ENABLE_HDFS_BENCHMARKS
+wtf_hadoop_benchmark_SOURCES = tools/hadoop-benchmark.cc
+wtf_hadoop_benchmark_CPPFLAGS = -I${HADOOP_HOME}/src/c++/libhdfs -I${JAVA_HOME}/include -I${abs_top_srcdir}/client $(CPPFLAGS)
+wtf_hadoop_benchmark_LDADD =  -lpopt -lnumbers -larmnod -L${HADOOP_HOME}/build/c++/Linux-amd64-64/lib -L${JAVA_HOME}/jre/lib/amd64/server -lhdfs -ljvm
+endif
 
 wtf_sync_benchmark_SOURCES = tools/sync-benchmark.cc
 wtf_sync_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
 wtf_sync_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
+
+wtf_readwritetest_SOURCES = tools/readwritetest.cc
+wtf_readwritetest_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
+wtf_readwritetest_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
 
 wtf_async_benchmark_SOURCES = tools/async-benchmark.cc
 wtf_async_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
@@ -181,6 +208,12 @@ wtf_async_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnum
 wtf_initialize_cluster_SOURCES = tools/initialize-cluster.cc
 wtf_initialize_cluster_CPPFLAGS = -DWTF_COORD_LIB=\""$(libdir)/libwtfcoordinator\"" $(CPPFLAGS)
 wtf_initialize_cluster_LDADD = libwtf.la -lpopt
+
+#if ENABLE_GTEST
+#wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
+#wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
+#endif
+
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = wtf.pc

@@ -25,87 +25,33 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#ifndef wtf_disk_h_
+#define wtf_disk_h_
+
 // Google Log
 #include <glog/logging.h>
 #include <glog/raw_logging.h>
 
-//linux
-#include <sys/fcntl.h>
-#include <sys/uio.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <sys/types.h>
-#include <unistd.h>
-
-//C++
-#include <sstream>
-
-// WTF
-#include "daemon/block_storage_manager.h"
-
-using wtf::block_storage_manager;
-
-    block_storage_manager::block_storage_manager()
-    : m_prefix()
-    , m_last_block_num()
-    , m_blockmap()
+#include <e/slice.h>
+namespace wtf
 {
-}
-
-block_storage_manager::~block_storage_manager()
-{
-}
-
-    void
-block_storage_manager::shutdown()
-{
-}
-
-    void
-block_storage_manager::setup(uint64_t sid,
-        const po6::pathname path,
-        const po6::pathname backing_path)
-{
-
-    m_prefix = sid;
-    m_last_block_num = 0;
-
-    if (!m_blockmap.setup(path, backing_path))
+    class disk 
     {
-        abort();
-    }
+        public:
+            disk(char* log, size_t log_len);
+            ~disk();
+
+        public:
+            ssize_t write(const e::slice& data,
+                          size_t& offset);
+            ssize_t read(size_t offset,
+                         size_t len,
+                         char* data);
+        private:
+            char* m_log;
+            size_t m_log_len;
+            size_t m_log_offset;
+    };
 }
 
-    ssize_t
-block_storage_manager::write_block(const e::slice& data,
-        uint64_t& sid,
-        uint64_t& bid)
-{
-    return m_blockmap.write(data,bid);
-}
-
-ssize_t
-block_storage_manager::update_block(const e::slice& data,
-        uint64_t offset,
-        uint64_t& sid,
-        uint64_t& bid)
-{
-
-    return m_blockmap.update(data,offset,bid);
-
-}
-
-
-ssize_t
-block_storage_manager::read_block(uint64_t sid,
-        uint64_t bid,
-        uint8_t* data, 
-        size_t data_sz)
-{
-    return m_blockmap.read(bid, data, 0, data_sz);
-}
-
-void
-block_storage_manager::stat()
-{
-}
+#endif // wtf_disk_h_

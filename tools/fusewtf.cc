@@ -265,7 +265,7 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
     read_size = size < read_size ? size : read_size;
 
     cout << "\t\t\t\t\t\tw read content [" << path << "] size [" << size << "] offset [" << offset << "] read_size [" << read_size << "]" << endl;
-    w_retval = w->read(fd, buffer, read_size, &w_status);
+    w_retval = w->read(fd, buffer, &read_size, &w_status);
     fusewtf_flush(path);
     //w_retval = w->flush(fd, &w_status);
 

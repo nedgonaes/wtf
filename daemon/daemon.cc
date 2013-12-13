@@ -154,6 +154,7 @@ install_signal_handler(int signum, void (*f)(int))
 int
 daemon :: run(bool daemonize,
               po6::pathname data,
+              po6::pathname backing_path,
               bool set_bind_to,
               po6::net::location bind_to,
               bool set_coordinator,
@@ -215,7 +216,7 @@ daemon :: run(bool daemonize,
         google::SetLogSymlink(google::WARNING, "");
         google::SetLogSymlink(google::ERROR, "");
         google::SetLogSymlink(google::FATAL, "");
-        google::SetLogDestination(google::INFO, "wtf-data/daemon/wtf-daemon-");
+        google::SetLogDestination(google::INFO, "wtf-daemon-");
 
         if (::daemon(1, 0) < 0)
         {
@@ -246,7 +247,7 @@ daemon :: run(bool daemonize,
     m_busybee->set_ignore_signals();
 
     LOG(INFO) << "token " << m_us.token;
-    m_blockman.setup(m_us.token, data);
+    m_blockman.setup(m_us.token, data, backing_path);
 
     if (!m_coord.register_id(server_id(m_us.token), m_us.address))
     {
@@ -478,9 +479,10 @@ daemon :: process_put(const wtf::connection& conn,
     uint64_t bid;
     ssize_t ret = 0;
 
+    sid = m_us.token;
     e::slice data = up.as_slice();
 
-    //LOG(INFO) << "PUT: " << data.hex();
+    LOG(INFO) << "PUT: " << data.hex();
 
     ret = m_blockman.write_block(data, sid, bid); 
 
@@ -494,6 +496,8 @@ daemon :: process_put(const wtf::connection& conn,
     }
 
     LOG(INFO) << "Returning " << rc << " to client.";
+    LOG(INFO) << "sid = " << sid;
+    LOG(INFO) << "bid = " << bid;
 
 
     size_t sz = COMMAND_HEADER_SIZE + 
@@ -521,6 +525,9 @@ daemon :: process_get(const wtf::connection& conn,
     LOG(INFO) << "GET: " << msg->as_slice().hex();
 
     up = up >> sid >> bid >> len;
+
+    LOG(INFO) << "sid = " << sid;
+    LOG(INFO) << "bid = " << bid;
 
     uint8_t* data = new uint8_t[len];
     LOG(INFO) << "len: " << len;
@@ -556,6 +563,7 @@ daemon :: process_get(const wtf::connection& conn,
 
     delete [] data;
 
+    LOG(INFO) << "respons: " << resp->as_slice().hex();
     send(conn, resp);
 }
 

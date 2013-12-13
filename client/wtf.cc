@@ -615,6 +615,18 @@ wtf_client :: open(const char* path)
 }
 
 void
+wtf_client :: begin_tx()
+{
+    //XXX: Call hyperdex stuff.
+}
+
+int64_t
+wtf_client :: end_tx()
+{
+    //XXX: flush?
+}
+
+void
 wtf_client :: lseek(int64_t fd, uint64_t offset)
 {
     m_fds[fd]->set_offset(offset);
@@ -657,24 +669,6 @@ wtf_client :: write(int64_t fd,
         if ((bl > 0 && block_off > 0) || (len < bl))
         {
             //Overwrite a partial block.
-
-            /*XXX: send a special instruction to servers that already have the
-              block so that we can copy it and append new
-              data rather than copy the whole block over the network. */ 
-
-            ////std::cout << "ERROR (not implemented): You tried "
-                //<< "over-writing a partial block." << std::endl;
-            if (block_off > 0)
-            {
-                ////std::cout << "Block offset is " << block_off << std::endl;
-            }    
-            else
-            {
-                ////std::cout << "Block length " << len << " does not match "
-                   // << "existing block length " << bl << std::endl;
-            }
-            abort();
-
             typedef std::vector<wtf::block_id> block_map;
             block_map::iterator it = f->lookup_block_begin(bid);
 
@@ -722,12 +716,11 @@ wtf_client :: write(int64_t fd,
 
 int64_t
 wtf_client :: read(int64_t fd, char* data,
-                   uint32_t data_sz,
+                   uint32_t* data_sz,
                    wtf_returncode* status)
 {
     int64_t rid = 0;
     int64_t lid = 0;
-    uint32_t rem = data_sz;
 
     cout << "wtf read:" << " fd " << fd << " data_sz " << data_sz << endl;
 
@@ -739,6 +732,9 @@ wtf_client :: read(int64_t fd, char* data,
     e::intrusive_ptr<file> f = m_fds[fd];
 
     update_file_cache(f->path().get(), f);
+
+    uint32_t rem = MIN(*data_sz, f->length() - f->offset());
+    uint32_t sz = 0;
 
     while(rem > 0)
     {
@@ -770,10 +766,12 @@ wtf_client :: read(int64_t fd, char* data,
         }
 
         rem -= len;
+        sz += len;
         data += len;
         f->set_offset(f->offset() + len);
     }
 
+    *data_sz = sz;
     return rid;
 
 
@@ -805,14 +803,14 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
     int64_t rid = -1;
     if(m_fds.find(fd) == m_fds.end())
     {
-        //std::cout << "bad fd" << std::endl;
+        std::cout << "bad fd" << std::endl;
     }
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
     if(f->commands_begin() == f->commands_end())
     {
-        //std::cout << "no commands" << std::endl;
+        std::cout << "no commands" << std::endl;
     }
 
     for (command_map::const_iterator it = f->commands_begin();
@@ -821,15 +819,15 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         e::intrusive_ptr<command> cmd = it->second;
         uint64_t id = it->first;
 
-        //std::cout << "Flushing " << cmd->nonce() << std::endl;
-        //std::cout << "STATUS: " << cmd->status() << std::endl;
-        //std::cout << "id: " << id << std::endl;
+        std::cout << "Flushing " << cmd->nonce() << std::endl;
+        std::cout << "STATUS: " << cmd->status() << std::endl;
+        std::cout << "id: " << id << std::endl;
 
         if (cmd->status() != WTF_SUCCESS)
         {
             *rc = WTF_GARBAGE;
 
-            //std::cout << "Looping" << std::endl;
+            std::cout << "Looping" << std::endl;
             rid = loop(it->first, -1, rc);
 
             if (rid < 0 || *rc != WTF_SUCCESS)
@@ -844,8 +842,12 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
         switch (cmd->msgtype())
         {
+            std::cout << "Handling " << cmd->msgtype() << std::endl;
+            case WTFNET_UPDATE:
+                handle_update(cmd, f); 
+                break;
             case WTFNET_PUT:
-                handle_put(cmd, f); //XXX: rename
+                handle_put(cmd, f); 
                 break;
             case WTFNET_GET:
                 handle_get(cmd, f);
@@ -1003,6 +1005,37 @@ wtf_client :: handle_command_response(const po6::net::location& from,
     map->erase(it);
     m_complete.insert(std::make_pair(c->nonce(), c));
     return 0;
+}
+
+void
+wtf_client :: handle_update(e::intrusive_ptr<command>& cmd,
+                         e::intrusive_ptr<file>& f)
+{
+    uint64_t sid; 
+    uint64_t bid;
+    uint64_t block_index = cmd->block();
+    uint64_t len = cmd->offset() + cmd->length();
+
+    if ((block_index + 1) * CHUNKSIZE >= f->length())
+    {
+        len = MAX(len, f->length() - block_index*CHUNKSIZE);
+    }
+
+    std::auto_ptr<e::buffer> msg(e::buffer::create(cmd->output(), cmd->output_sz()));
+    e::unpacker up = msg->unpack_from(0);
+    up = up >> sid >> bid;
+
+    if (up.error())
+    {
+        m_last_error_host = cmd->sent_to().address;
+        //XXX: implement proper return value
+        return;
+    }
+
+    //std::cout << "sid: " << sid << "bid: " << bid << std::endl;
+    std::cout << "UPDATE: bid=" << block_index << " len=" << len << std::endl;
+
+    f->update_blocks(block_index, len, cmd->version(), sid, bid);
 }
 
 void

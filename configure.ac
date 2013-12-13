@@ -88,6 +88,21 @@ if test x"${enable_log_commands}" = xyes; then
     AC_DEFINE([WTF_LOG_COMMANDS], [], [Log all commands that are submitted, issued and acknowledged])
 fi
 
+AC_ARG_ENABLE([hdfs-benchmarks], [AS_HELP_STRING([--enable-hdfs-benchmarks],
+              [build HDFS benchmarks @<:@default: no@:>@])],
+              [enable_hdfs_benchmarks=${enableval}], [enable_hdfs_benchmarks=no])
+AM_CONDITIONAL([ENABLE_HDFS_BENCHMARKS], [test x"${enable_hdfs_benchmarks}" = xyes])
+
+AC_ARG_ENABLE([debug], [AS_HELP_STRING([--enable-debug],
+              [compile with -ggdb -O0 @<:@default: no@:>@])],
+              [enable_debug=${enableval}], [enable_debug=no])
+AM_CONDITIONAL([ENABLE_DEBUG], [test x"${enable_debug}" = xyes])
+
+AC_ARG_ENABLE([gtest], [AS_HELP_STRING([--enable-gtest],
+              [enable gtest @<:@default: no@:>@])],
+              [enable_gtest=${enableval}], [enable_gtest=no])
+AM_CONDITIONAL([ENABLE_GTEST], [test x"${enable_gtest}" = xyes])
+
 AC_CHECK_FUNCS([clock_gettime mach_absolute_time])
 
 AC_CONFIG_FILES([Makefile

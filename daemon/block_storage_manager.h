@@ -41,9 +41,11 @@
 
 // WTF
 #include "common/ids.h"
+#include "blockstore/blockmap.h"
 
 namespace wtf
 {
+    class block_map;
     class block_storage_manager
     {
         public:
@@ -52,7 +54,8 @@ namespace wtf
 
         public:
             void setup(uint64_t sid,
-                       po6::pathname path);
+                       po6::pathname path,
+                       po6::pathname backing_path);
             void shutdown();
 
         public:
@@ -75,7 +78,7 @@ namespace wtf
         private:
             uint64_t m_prefix;
             uint64_t m_last_block_num;
-            po6::pathname m_path;
+            blockmap m_blockmap;
     };
 }
 
