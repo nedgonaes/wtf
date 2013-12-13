@@ -294,8 +294,6 @@ fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
     int64_t fd;
     uint32_t cur_filesize;
     uint32_t new_filesize;
-    char* cur_content;
-    char* new_content;
 
     fd = file_map[path];
 
@@ -303,13 +301,7 @@ fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
     fusewtf_get(path);
     fusewtf_read_filesize(&cur_filesize);
 
-    cur_content = new char[cur_filesize];
-
-    // Read all current content
-    fusewtf_read_content(path, cur_content, cur_filesize, 0);
-
     cout << "\tWRITING [" << path << "] size [" << size << "] offset [" << offset << "] buffer [" << buffer << "]" << endl;
-    cout << "\tCUR CONTENT [" << cur_content << "]" << endl;
 
     w->lseek(fd, offset);
 
@@ -318,9 +310,7 @@ fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
     cout << "w_retval " << w_retval << " w_status " << w_status << endl;
     w_retval = w->flush(fd, &w_status);
     cout << "w_retval " << w_retval << " w_status " << w_status << endl;
-    //delete[] new_content;
 
-    delete[] cur_content;
     return -1;
 }
 

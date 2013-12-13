@@ -1,7 +1,5 @@
-/* Simple program to test using HyperDex as inode map for a filesystem
- *
- * Set up:
- * echo 'space wtf key path attributes map(string, string) blockmap' | hyperdex add-space -h 127.0.0.1 -p 1982
+/*
+ * Simple program to test using HyperDex as inode map for a filesystem
  */
 
 // e
