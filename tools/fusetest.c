@@ -42,35 +42,39 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
     //printf("\t\t\t\tgetattr [%s]\n", path);
     sem_wait(&lock);
     memset(stbuf, 0, sizeof(struct stat));
-    if (fusewtf_search_is_dir(path) == 0 || strcmp(path, ROOT) == 0)
+
+    if(fusewtf_get(path) == -1)
+    {
+        printf("GETATTR: invalid [%s]\n", path);
+        fflush(stdout);
+        fprintf(logfile, "GETATTR: invalid [%s]\n", path);
+        ret = -ENOENT;
+    }
+     
+    else if (fusewtf_is_dir(path) == 1)
     {
         printf("GETATTR: dir [%s]\n", path);
         fflush(stdout);
         fprintf(logfile, "GETATTR: dir [%s]\n", path);
-        stbuf->st_mode = S_IFDIR | 0777;
+        stbuf->st_mode = S_IFDIR | fusewtf_get_mode();
     }
-    else if (fusewtf_get(path) == 0)
+
+    else 
     {
         printf("GETATTR: file [%s]\n", path);
         fflush(stdout);
         fprintf(logfile, "GETATTR: file [%s]\n", path);
-        stbuf->st_mode = S_IFREG | 0777;
+        stbuf->st_mode = S_IFREG | fusewtf_get_mode();
 
         uint32_t filesize;
         printf("find size [%s]\n", path);
         fusewtf_read_filesize(&filesize);
         if (filesize < 0)
         {
-            fprintf(logfile, "GETATTR ERROR: file [%s] has negative length\n", path);
+            fprintf(stdout, "GETATTR ERROR: file [%s] has negative length\n", path);
+            fflush(stdout);
         }
         stbuf->st_size = filesize;
-    }
-    else
-    {
-        printf("GETATTR: invalid [%s]\n", path);
-        fflush(stdout);
-        fprintf(logfile, "GETATTR: invalid [%s]\n", path);
-        ret = -ENOENT;
     }
 
     fusewtf_flush_loop();
@@ -89,7 +93,8 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     const char* to_add;
     const char* to_add_extracted;
 
-    //printf("\t\t\t\treaddir [%s]\n", path);
+    printf("\t\t\t\treaddir [%s]\n", path);
+    fflush(stdout);
     sem_wait(&lock);
     res = fusewtf_search(path, &to_add);
 

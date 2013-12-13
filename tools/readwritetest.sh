@@ -66,6 +66,7 @@ reset_cluster()
     sleep 5
     echo "STARTING WTF DAEMONS...\n"
     ${PSSH} -h ${WTF_DAEMONS} -i "${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -d"
+    ./wtf-mkfs -h ${HYPERDEX_COORDINATOR} -p ${HYPERDEX_PORT}
     #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
     sleep 5
 }

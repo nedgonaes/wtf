@@ -223,6 +223,7 @@ fusewtf_read_filesize(uint32_t* output_filesize)
 int
 fusewtf_read_filename(const char** output_filename)
 {
+    std::cout << "read_filename" << std::endl;
     if (h_status == HYPERDEX_CLIENT_SEARCHDONE)
     {
         *output_filename = NULL;
@@ -232,7 +233,8 @@ fusewtf_read_filename(const char** output_filename)
     // Reading
     if (attr_got == NULL)
     {
-        fprintf(logfusewtf, "attr_got is NULL\n");
+        fprintf(stdout, "attr_got is NULL\n");
+        fflush(stdout);
         *output_filename = NULL;
         return -1;
     }
@@ -244,7 +246,8 @@ fusewtf_read_filename(const char** output_filename)
             {
                 string output_filename_str(attr_got[i].value, attr_got[i].value_sz);
                 *output_filename = output_filename_str.c_str();
-                //fprintf(logfusewtf, "filename [%s]\n", *output_filename);
+                fprintf(stdout, "filename [%s]\n", *output_filename);
+                fflush(stdout);
                 return 0;
             }
         }
@@ -411,11 +414,13 @@ fusewtf_search_predicate(const char* value, hyperpredicate predicate, const char
     fusewtf_flush_loop();
 
     h_status = (hyperdex_client_returncode)NULL;
-    //cout << "\t\t\t\t\t\tsorted search " << query << endl;
+    cout << "\t\t\t\t\t\tsorted search " << query << endl;
     h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
 
     fusewtf_loop();
-    //fprintf(logfusewtf, "search [%s] predicate %d h_status %d\n", check.value, predicate, h_status);
+    fprintf(logfusewtf, "search [%s] predicate %d h_status %d\n", check.value, predicate, h_status);
+    fprintf(stdout, "search [%s] predicate %d h_status %d\n", check.value, predicate, h_status);
+    fflush(stdout);
     if (h_status == HYPERDEX_CLIENT_SUCCESS)
     {
         fusewtf_read_filename(one_result);
@@ -453,14 +458,44 @@ fusewtf_search_exists(const char* value)
 }
 
 int
-fusewtf_search_is_dir(const char* value)
+fusewtf_is_dir()
 {
-    int reg = fusewtf_search_exists(value);
-    int equ = fusewtf_search_exists_predicate(value, HYPERPREDICATE_EQUALS);
-    int ret = reg == 0 && equ != 0? 0 : -1;
+    for (int i = 0; i < attr_size_got; ++i)
+    {
+        if (strcmp(attr_got[i].attr, "directory") == 0)
+        {
+            uint64_t is_dir;
 
-    //fprintf(logfusewtf, "[%s] reg %d equ %d ret %d\n", value, reg, equ, ret);
-    return ret;
+            e::unpacker up(attr_got[i].value, attr_got[i].value_sz);
+            up = up >> is_dir;
+
+            if (is_dir == 0)
+            {
+                return 0;
+            }
+            else
+            {
+                return 1;
+            }
+        }
+    }
+}
+
+mode_t
+fusewtf_get_mode()
+{
+    for (int i = 0; i < attr_size_got; ++i)
+    {
+        if (strcmp(attr_got[i].attr, "mode") == 0)
+        {
+            uint64_t mode;
+
+            e::unpacker up(attr_got[i].value, attr_got[i].value_sz);
+            up = up >> mode;
+
+            return mode;
+        }
+    }
 }
 
 void
