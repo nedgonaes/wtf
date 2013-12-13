@@ -1184,6 +1184,27 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
 }
 
 int64_t
+wtf_client :: truncate(int fd, off_t length)
+{
+    size_t sz = length - m_fds[fd]->length();
+    if (sz > 0)
+    {
+        wtf_returncode status;
+        char* data = new char[sz];
+        memset(data, 0, sz);
+        write(fd, data, sz, 3,
+                    &status);
+        flush(fd, &status);
+    }
+    else
+    {
+        m_fds[fd]->truncate(length); 
+    }
+
+    return 0;
+}
+
+int64_t
 wtf_client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
 {
     char* start = abspath;
