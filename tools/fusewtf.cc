@@ -341,7 +341,7 @@ fusewtf_get(const char* path)
     h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
     //h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
     fusewtf_loop();
-    cout << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
+    cout << "get: " << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
     if (h_status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
     {
         /*
