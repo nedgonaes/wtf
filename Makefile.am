@@ -180,8 +180,8 @@ wtf_shelltest_SOURCES = tools/shelltest.cc
 wtf_shelltest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 wtf_fusetest_SOURCES = tools/fusetest.c
-wtf_fusetest_LDADD = libfusewtf.la libwtf.la -lfuse 
-wtf_fusetest_CPPFLAGS = -D_FILE_OFFSET_BITS=64
+wtf_fusetest_LDADD = libfusewtf.la -lfuse libwtf.la
+wtf_fusetest_CPPFLAGS = -D_FILE_OFFSET_BITS=64 -I/home/jianneng/Documents/research/os/install/include
 
 wtf_readtest_SOURCES = tools/readtest.cc
 wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)

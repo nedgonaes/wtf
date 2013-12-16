@@ -50,6 +50,8 @@ wtf-daemon
 wtf-initialize-cluster
 wtf.pc
 stamp-h1
+wtf-shelltest
+wtf-fusetest
 _logs
 wtf-fusetest
 wtf-shelltest

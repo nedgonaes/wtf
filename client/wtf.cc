@@ -847,7 +847,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
     if(f->commands_begin() == f->commands_end())
     {
-        std::cout << "no commands" << std::endl;
+        //std::cout << "no commands" << std::endl;
     }
 
     for (command_map::const_iterator it = f->commands_begin();
@@ -856,15 +856,15 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
         e::intrusive_ptr<command> cmd = it->second;
         uint64_t id = it->first;
 
-        std::cout << "Flushing " << cmd->nonce() << std::endl;
-        std::cout << "STATUS: " << cmd->status() << std::endl;
-        std::cout << "id: " << id << std::endl;
+        //std::cout << "Flushing " << cmd->nonce() << std::endl;
+        //std::cout << "STATUS: " << cmd->status() << std::endl;
+        //std::cout << "id: " << id << std::endl;
 
         if (cmd->status() != WTF_SUCCESS)
         {
             *rc = WTF_GARBAGE;
 
-            std::cout << "Looping" << std::endl;
+            //std::cout << "Looping" << std::endl;
             rid = loop(it->first, -1, rc);
 
             if (rid < 0 || *rc != WTF_SUCCESS)
@@ -1177,7 +1177,6 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
                 up = up >> mode;
 
                 f->mode = mode;
-                std::cout << mode << std::endl;
             }
         }
     }
@@ -1188,20 +1187,32 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
 int64_t
 wtf_client :: truncate(int fd, off_t length)
 {
-    size_t sz = length - m_fds[fd]->length();
-    if (sz > 0)
+    size_t sz;
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    if (length == f->length())
     {
+        return 0;
+    }
+
+    if (length > f->length())
+    {
+        sz = length - f->length();
+        //cout << "expanding to sz " << sz << endl;
         wtf_returncode status;
         char* data = new char[sz];
         memset(data, 0, sz);
-        write(fd, data, sz, 3,
-                    &status);
+        write(fd, data, sz, 3, &status);
         flush(fd, &status);
     }
     else
     {
-        m_fds[fd]->truncate(length); 
+        //cout << "truncating" << endl;
+        f->truncate(length); 
     }
+
+    update_hyperdex(f);
+    cout << "updated" << endl;
 
     return 0;
 }
@@ -1438,7 +1449,6 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     //XXX; get rid of magic string.
     const char* name = "blockmap";
 
-
     uint64_t mode = f->mode;
     uint64_t directory = f->is_directory;
     struct hyperdex_client_attribute attr[2];
@@ -1453,8 +1463,6 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     attr[1].value_sz = sizeof(directory);
     attr[1].datatype = HYPERDATATYPE_INT64;
 
- 
- 
     ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &status);
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
 
@@ -1472,7 +1480,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
      * construct a hyperdex attribute list for all dirty blocks
      */
     for (block_map::const_iterator it = f->blocks_begin();
-         it != f->blocks_end(); ++it)
+            it != f->blocks_end(); ++it)
     {
         if (it->second->dirty())
         {
@@ -1492,7 +1500,7 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
             ++i;
         }
     }
-    
+
     //XXX; get rid of magic string.
     //XXX; atomic map add?
     /*
@@ -1528,10 +1536,10 @@ retry:
     }
 
     for (std::vector<struct hyperdex_client_map_attribute>::iterator it = attrs.begin();
-         it != attrs.end(); ++it)
+            it != attrs.end(); ++it)
     {
-       free(const_cast<char*>(it->value));
-       free(const_cast<char*>(it->map_key));
+        free(const_cast<char*>(it->value));
+        free(const_cast<char*>(it->map_key));
     }
 
 

@@ -39,7 +39,6 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 {
     int ret = 0;
 
-    //printf("\t\t\t\tgetattr [%s]\n", path);
     sem_wait(&lock);
     memset(stbuf, 0, sizeof(struct stat));
 
@@ -106,7 +105,8 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     while (res == 0)
     {
         fusewtf_extract_name(to_add, path, &to_add_extracted);
-        if (to_add_extracted != NULL)
+        //printf("to_add [%s] extracted [%s]\n", to_add, to_add_extracted);
+        if (to_add_extracted != NULL && *to_add_extracted != '\0')
         {
             filler(buf, to_add_extracted, NULL, 0);
         }
@@ -235,9 +235,8 @@ static int fusetest_mknod(const char *pathname, mode_t mode, dev_t dev)
 
 static int fusetest_mkdir(const char *pathname, mode_t mode)
 {
-    return fusewtf_mkdir(pathname, mode);
     printf("\t\t\t\tmkdir [%s]\n", pathname);
-    return 0;
+    return fusewtf_mkdir(pathname, mode);
 }
 
 static int fusetest_symlink(const char *old_path, const char *new_path)
@@ -246,9 +245,14 @@ static int fusetest_symlink(const char *old_path, const char *new_path)
     return 0;
 }
 
-static int fusetest_rmdir(const char *pathname)
+static int fusetest_rmdir(const char *path)
 {
-    printf("\t\t\t\trmdir [%s]\n", pathname);
+    printf("\t\t\t\trmdir [%s]\n", path);
+    sem_wait(&lock);
+    fusewtf_del(path);
+
+    fusewtf_flush_loop();
+    sem_post(&lock);
     return 0;
 }
 
@@ -273,7 +277,7 @@ static int fusetest_chown(const char *path, uid_t owner, gid_t group)
 static int fusetest_truncate(const char *path, off_t length)
 {
     printf("\t\t\t\ttruncate [%s] length [%zu]\n", path, length);
-    return 0;
+    return fusewtf_truncate(path, length);
 }
 
 static int fusetest_fsync(const char *path, int isdatasync, struct fuse_file_info *fi)

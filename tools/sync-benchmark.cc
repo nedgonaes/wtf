@@ -111,9 +111,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
             wtf_returncode status = WTF_GARBAGE;
-            std::string f = file();
             std::cout << "File: " << f << std::endl;
-            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777);
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
 
             tll->start(&ts, 1);
             std::cout << "writing to " << fd << " vdata [" << v.data() << "] vsize [" << v.size() << "]" << std::endl;

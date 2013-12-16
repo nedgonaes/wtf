@@ -60,40 +60,48 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
     string input_str(input);
     string output_str;
 
-    int start = strlen(prefix);
-
-    // If not root, then account for extra slash at end of prefix
-    if (start != 1)
+    if (strcmp(input, prefix) == 0)
     {
-        start++;
-    }
-
-    // In case the name extracted is a directory
-    size_t next_slash_pos = input_str.find("/", start);
-    if (next_slash_pos == string::npos)
-    {
-        output_str = input_str.substr(start).c_str();
-    }
-    else
-    {
-        output_str = input_str.substr(start, next_slash_pos - start).c_str();
-    }
-
-    //fprintf(logfusewtf, "extracted [%s]\n", *output);
-    
-    if (string_set.find(output_str) == string_set.end())
-    {
-        //fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
-        string_set.insert(output_str);
-        *output = output_str.c_str();
-    }
-    else
-    {
-        //fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
         *output = NULL;
+        return 0;
     }
+    else
+    {
+        int start = strlen(prefix);
 
-    return 0;
+        // If not root, then account for extra slash at end of prefix
+        if (start != 1)
+        {
+            start++;
+        }
+
+        // In case the name extracted is a directory
+        size_t next_slash_pos = input_str.find("/", start);
+        if (next_slash_pos == string::npos)
+        {
+            output_str = input_str.substr(start).c_str();
+        }
+        else
+        {
+            output_str = input_str.substr(start, next_slash_pos - start).c_str();
+        }
+
+        //fprintf(logfusewtf, "extracted [%s]\n", *output);
+
+        if (string_set.find(output_str) == string_set.end())
+        {
+            //fprintf(logfusewtf, "[%s] not in set\n", output_str.c_str());
+            string_set.insert(output_str);
+            *output = output_str.c_str();
+        }
+        else
+        {
+            //fprintf(logfusewtf, "[%s] in set\n", output_str.c_str());
+            *output = NULL;
+        }
+
+        return 0;
+    }
 }
 
 void
@@ -120,7 +128,9 @@ int
 fusewtf_create(const char* path, mode_t mode)
 {
     cout << "\t\t\t\t\t\tcreate " << path << endl;
-    return fusewtf_open(path, O_CREAT, mode);
+    fusewtf_open(path, O_CREAT, mode);
+    fusewtf_flush(path);
+    return 0;
 }
 
 int
@@ -286,7 +296,7 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
         //cout << "replace end character with EOF" << endl;
         //buffer[file_size - offset] = EOF;
     }
-    cout << "w_retval " << w_retval << " w_status " << w_status << " [" << buffer << "]" << endl;
+    //cout << "w_retval " << w_retval << " w_status " << w_status << " [" << string(buffer, size) << "]" << endl;
 
     return read_size;
 }
@@ -295,36 +305,29 @@ size_t
 fusewtf_write(const char* path, const char* buffer, size_t size, off_t offset)
 {
     int64_t fd;
-    uint32_t cur_filesize;
-    uint32_t new_filesize;
-    char* cur_content;
-    char* new_content;
 
     fd = file_map[path];
 
-    // Get file size
-    fusewtf_get(path);
-    fusewtf_read_filesize(&cur_filesize);
-
-    cur_content = new char[cur_filesize];
-
-    // Read all current content
-    fusewtf_read_content(path, cur_content, cur_filesize, 0);
-
     cout << "\tWRITING [" << path << "] size [" << size << "] offset [" << offset << "] buffer [" << buffer << "]" << endl;
-    cout << "\tCUR CONTENT [" << cur_content << "]" << endl;
-
-    w->lseek(fd, offset);
-
     cout << "\t\t\t\t\t\tw write [" << buffer << "] size [" << size << "]" << endl;
+    w->lseek(fd, offset);
     w_retval = w->write(fd, buffer, size, NUM_REPLICATIONS, &w_status);
     cout << "w_retval " << w_retval << " w_status " << w_status << endl;
     w_retval = w->flush(fd, &w_status);
     cout << "w_retval " << w_retval << " w_status " << w_status << endl;
-    //delete[] new_content;
 
-    delete[] cur_content;
     return -1;
+}
+
+int
+fusewtf_truncate(const char* path, off_t length)
+{
+    int64_t fd;
+
+    fd = file_map[path];
+
+    cout << "\t\t\t\t\t\tw truncate [" << path << "] fd [" << fd << "] length [" << length << "]" << endl;
+    return w->truncate(fd, length);
 }
 
 int
@@ -344,17 +347,16 @@ fusewtf_get(const char* path)
     h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
     //h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
     fusewtf_loop();
-    cout << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
+    //cout << "get: " << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
     if (h_status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
     {
         /*
         for (int i = 0; i < attr_size_got; ++i)
         {
-            cout << "attribute " << i << ": " << attr_got[i].attr << endl;
+            cout << "attribute " << i << ": " << attr_got[i].attr << " sz " << attr_got[i].value_sz << endl;
             if (strcmp(attr_got[i].attr, "path") == 0)
             {
-                //cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                //printf("value [%.5s]\n", attr_got[i].value);
+                cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
             }
             else if (strcmp(attr_got[i].attr, "blockmap") == 0)
             {
@@ -460,42 +462,51 @@ fusewtf_search_exists(const char* value)
 int
 fusewtf_is_dir()
 {
+    uint64_t is_dir;
+    string path;
+
     for (int i = 0; i < attr_size_got; ++i)
     {
-        if (strcmp(attr_got[i].attr, "directory") == 0)
+        if (strcmp(attr_got[i].attr, "path") == 0)
         {
-            uint64_t is_dir;
-
-            e::unpacker up(attr_got[i].value, attr_got[i].value_sz);
+            path = string(attr_got[i].value, attr_got[i].value_sz);
+        }
+        else if (strcmp(attr_got[i].attr, "directory") == 0)
+        {
+            //cout << "directory sz " << attr_got[i].value_sz << " [" << string(attr_got[i].value, attr_got[i].value_sz) << "]" << endl;
+            e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
             up = up >> is_dir;
-
-            if (is_dir == 0)
-            {
-                return 0;
-            }
-            else
-            {
-                return 1;
-            }
+            e::unpack64be((uint8_t *)&is_dir, &is_dir);
         }
     }
+
+    cout << "[" << path << "] is_dir: " << is_dir << endl;
+    return is_dir == 0 ? 0 : 1;
 }
 
 mode_t
 fusewtf_get_mode()
 {
+    uint64_t mode;
+    string path;
     for (int i = 0; i < attr_size_got; ++i)
     {
-        if (strcmp(attr_got[i].attr, "mode") == 0)
+        if (strcmp(attr_got[i].attr, "path") == 0)
         {
-            uint64_t mode;
+            path = string(attr_got[i].value, attr_got[i].value_sz);
+        }
+        else if (strcmp(attr_got[i].attr, "mode") == 0)
+        {
+            //cout << "mode sz " << attr_got[i].value_sz << " [" << string(attr_got[i].value, attr_got[i].value_sz) << "]" << endl;
 
             e::unpacker up(attr_got[i].value, attr_got[i].value_sz);
             up = up >> mode;
-
-            return mode;
+            e::unpack64be((uint8_t *)&mode, &mode);
         }
     }
+
+    cout << "[" << path << "] mode: " << mode << endl;
+    return mode;
 }
 
 void
