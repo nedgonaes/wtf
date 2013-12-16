@@ -107,11 +107,19 @@ fusewtf_extract_name(const char* input, const char* prefix, const char** output)
 void
 fusewtf_loop()
 {
-    if (verbose) printf("first h_retval %ld h_status %d:", h_retval, h_status);
-    if (verbose) cout << h_status << endl;
-    h_retval = h->loop(-1, &h_status);
-    if (verbose) printf("final h_retval %ld h_status %d:", h_retval, h_status);
-    if (verbose) cout << h_status << endl << endl;
+    printf("first h_retval %ld h_status %d:", h_retval, h_status);
+    cout << h_status << endl;
+    hyperdex_client_returncode status = HYPERDEX_CLIENT_GARBAGE;
+    h_retval = h->loop(-1, &status);
+
+    if (h_retval < 0)
+    {
+        h_status = status;
+    }
+
+    printf("final h_retval %ld h_status %d:", h_retval, h_status);
+    cout << h_status << endl << endl;
+    fflush(stdout);
 }
 
 void
@@ -270,33 +278,14 @@ fusewtf_read_content(const char* path, char* buffer, size_t size, off_t offset)
 {
     int64_t fd;
     uint32_t file_size;
-    uint32_t read_size;
+    uint32_t read_size = size;
 
     fd = file_map[path];
-
-    fusewtf_get(path);
-    fusewtf_read_filesize(&file_size);
-
-    if (offset >= file_size)
-    {
-        return 0;
-    }
-
     w->lseek(fd, offset);
-    read_size = file_size - offset;
-    read_size = size < read_size ? size : read_size;
-
-    cout << "\t\t\t\t\t\tw read content [" << path << "] size [" << size << "] offset [" << offset << "] read_size [" << read_size << "]" << endl;
+    cout << "\t\t\t\t\t\tw read content [" << path << "] size [" 
+        << size << "] offset [" << offset << "]" << endl;
     w_retval = w->read(fd, buffer, &read_size, &w_status);
     fusewtf_flush(path);
-    //w_retval = w->flush(fd, &w_status);
-
-    if (file_size <= offset + size)
-    {
-        //cout << "replace end character with EOF" << endl;
-        //buffer[file_size - offset] = EOF;
-    }
-    //cout << "w_retval " << w_retval << " w_status " << w_status << " [" << string(buffer, size) << "]" << endl;
 
     return read_size;
 }
@@ -333,24 +322,15 @@ fusewtf_truncate(const char* path, off_t length)
 int
 fusewtf_get(const char* path)
 {
-    struct hyperdex_client_attribute_check check;
-    check.attr = "path";
-    check.value = path;
-    check.value_sz = strlen(check.value);
-    check.datatype = HYPERDATATYPE_STRING;
-    check.predicate = HYPERPREDICATE_EQUALS;
-
     fusewtf_flush_loop();
 
     h_status = (hyperdex_client_returncode)NULL;
-    //cout << "\t\t\t\t\t\tsorted search " << path << endl;
-    h_retval = h->sorted_search(space, &check, 1, "path", 100, false, &h_status, &attr_got, &attr_size_got);
-    //h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
+    cout << "\t\t\t\t\t\tget " << path << endl;
+    h_retval = h->get(space, path, strlen(path), &h_status, &attr_got, &attr_size_got);
     fusewtf_loop();
-    //cout << "get: " << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
+    cout << "get: " << h_status << " " << attr_got << " " << attr_size_got << " " << path << endl;
     if (h_status == HYPERDEX_CLIENT_SUCCESS && attr_got != NULL)
     {
-        /*
         for (int i = 0; i < attr_size_got; ++i)
         {
             cout << "attribute " << i << ": " << attr_got[i].attr << " sz " << attr_got[i].value_sz << endl;
@@ -377,12 +357,7 @@ fusewtf_get(const char* path)
                     cout << "BLOCK LENGTH " << b->length() << endl;
                 }
             }
-            else
-            {
-                cout << "unexpected attribute" << endl;
-            }
         }
-        */
         return 0;
     }
     else

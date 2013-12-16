@@ -176,14 +176,7 @@ static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
     sem_wait(&lock);
     printf("\t\t\t\tread [%s]\n", path);
     printf("read [%s], size %zu, offset %zu\n", path, size, offset);
-    if(fusewtf_search_exists(path) != 0)
-    {
-        ret = -ENOENT;
-    }
-    else
-    {
-        read_size = fusewtf_read_content(path, buf, size, offset);
-    }
+    read_size = fusewtf_read_content(path, buf, size, offset);
 
     fusewtf_flush_loop();
     sem_post(&lock);
