@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2012-2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of WTF nor the names of its contributors may be
+//     * Neither the name of HyperDex nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -25,399 +25,189 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#define __STDC_LIMIT_MACROS
-
-// C++
-#include <sstream>
-
 // STL
 #include <algorithm>
-#include <tr1/memory>
+#include <sstream>
 
-// po6
-#include <po6/net/location.h>
+// e
+#include <e/endian.h>
 
-// WTF
-#include "common/coordinator_returncode.h"
+// Replicant
+#include <replicant_state_machine.h>
+
+// WTF 
 #include "common/serialization.h"
 #include "coordinator/coordinator.h"
-#include "coordinator/server_state.h"
+#include "coordinator/transitions.h"
+#include "coordinator/util.h"
 
-//////////////////////////// C Transition Functions ////////////////////////////
+#define ALARM_INTERVAL 30
 
-using namespace wtf;
+using wtf::coordinator;
 
-static inline void
-generate_response(replicant_state_machine_context* ctx, coordinator_returncode x)
+// ASSUME:  I'm assuming only one server ever changes state at a time for a
+//          given transition.  If you violate this assumption, fixup
+//          converge_intent.
+
+namespace
 {
-    const char* ptr = NULL;
 
-    switch (x)
-    {
-        case COORD_SUCCESS:
-            ptr = "\x22\x80";
-            break;
-        case COORD_MALFORMED:
-            ptr = "\x22\x81";
-            break;
-        case COORD_DUPLICATE:
-            ptr = "\x22\x82";
-            break;
-        case COORD_NOT_FOUND:
-            ptr = "\x22\x83";
-            break;
-        case COORD_INITIALIZED:
-            ptr = "\x22\x84";
-            break;
-        case COORD_UNINITIALIZED:
-            ptr = "\x22\x85";
-            break;
-        default:
-            ptr = "\x00\x00";
-            break;
-    }
-
-    replicant_state_machine_set_response(ctx, ptr, 2);
+std::string
+to_string(const po6::net::location& loc)
+{
+    std::ostringstream oss;
+    oss << loc;
+    return oss.str();
 }
 
-#define PROTECT_UNINITIALIZED \
-    do \
-    { \
-        if (!obj) \
-        { \
-            fprintf(replicant_state_machine_log_stream(ctx), "cannot operate on NULL object\n"); \
-            return generate_response(ctx, COORD_UNINITIALIZED); \
-        } \
-        coordinator* c = static_cast<coordinator*>(obj); \
-        if (c->cluster() == 0) \
-        { \
-            fprintf(replicant_state_machine_log_stream(ctx), "cluster not initialized\n"); \
-            return generate_response(ctx, COORD_UNINITIALIZED); \
-        } \
-    } \
-    while (0)
-
-#define CHECK_UNPACK(MSGTYPE) \
-    do \
-    { \
-        if (up.error() || up.remain()) \
-        { \
-            fprintf(log, "received malformed \"" #MSGTYPE "\" message\n"); \
-            return generate_response(ctx, COORD_MALFORMED); \
-        } \
-    } while (0)
-
-#define INVARIANT_BROKEN(X) \
-    fprintf(log, "invariant broken at " __FILE__ ":%d:  %s\n", __LINE__, (X))
-
-extern "C"
-{
-
-void*
-wtf_coordinator_create(struct replicant_state_machine_context* ctx)
-{
-    if (replicant_state_machine_condition_create(ctx, "config") < 0)
-    {
-        fprintf(replicant_state_machine_log_stream(ctx), "could not create condition \"config\"\n");
-        return NULL;
-    }
-
-    if (replicant_state_machine_condition_create(ctx, "acked") < 0)
-    {
-        fprintf(replicant_state_machine_log_stream(ctx), "could not create condition \"acked\"\n");
-        return NULL;
-    }
-
-    coordinator* c = new (std::nothrow) coordinator();
-
-    if (!c)
-    {
-        fprintf(replicant_state_machine_log_stream(ctx), "memory allocation failed\n");
-    }
-
-    return c;
-}
-
-void*
-wtf_coordinator_recreate(struct replicant_state_machine_context* ctx,
-                              const char* /*data*/, size_t /*data_sz*/)
-{
-    coordinator* c = new (std::nothrow) coordinator();
-
-    if (!c)
-    {
-        fprintf(replicant_state_machine_log_stream(ctx), "memory allocation failed\n");
-    }
-
-    fprintf(replicant_state_machine_log_stream(ctx), "recreate is not implemented\n");
-    // XXX recreate from (data,data_sz)
-    return c;
-}
-
+template <typename T>
 void
-wtf_coordinator_destroy(struct replicant_state_machine_context*, void* obj)
+shift_and_pop(size_t idx, std::vector<T>* v)
 {
-    if (obj)
+    for (size_t i = idx + 1; i < v->size(); ++i)
     {
-        delete static_cast<coordinator*>(obj);
+        (*v)[i - 1] = (*v)[i];
+    }
+
+    v->pop_back();
+}
+
+template <typename T>
+void
+remove(const T& t, std::vector<T>* v)
+{
+    for (size_t i = 0; i < v->size(); )
+    {
+        if ((*v)[i] == t)
+        {
+            shift_and_pop(i, v);
+        }
+        else
+        {
+            ++i;
+        }
     }
 }
 
-void
-wtf_coordinator_snapshot(struct replicant_state_machine_context* ctx,
-                              void* /*obj*/, const char** data, size_t* sz)
+template <class T, class TID>
+bool
+find_id(const TID& id, std::vector<T>& v, T** found)
 {
-    fprintf(replicant_state_machine_log_stream(ctx), "snapshot is not implemented\n");
-    // XXX snapshot to (data,data_sz)
-    *data = NULL;
-    *sz = 0;
-}
-
-void
-wtf_coordinator_initialize(struct replicant_state_machine_context* ctx,
-                                void* obj, const char* data, size_t data_sz)
-{
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-
-    if (!c)
+    for (size_t i = 0; i < v.size(); ++i)
     {
-        fprintf(log, "cannot operate on NULL object\n");
-        return generate_response(ctx, COORD_UNINITIALIZED);
+        if (v[i].id == id)
+        {
+            *found = &v[i];
+            return true;
+        }
     }
 
-    uint64_t cluster;
-    e::unpacker up(data, data_sz);
-    up = up >> cluster;
-    CHECK_UNPACK(initialize);
-    c->initialize(ctx, cluster);
+    return false;
 }
 
+template <class T, class TID>
 void
-wtf_coordinator_get_config(struct replicant_state_machine_context* ctx,
-                                void* obj, const char* data, size_t data_sz)
+remove_id(const TID& id, std::vector<T>* v)
 {
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    e::unpacker up(data, data_sz);
-    CHECK_UNPACK(get_config);
-    c->get_config(ctx);
+    for (size_t i = 0; i < v->size(); )
+    {
+        if ((*v)[i].id == id)
+        {
+            shift_and_pop(i, v);
+        }
+        else
+        {
+            ++i;
+        }
+    }
 }
 
-void
-wtf_coordinator_ack_config(struct replicant_state_machine_context* ctx,
-                                void* obj, const char* data, size_t data_sz)
-{
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    uint64_t _sid;
-    uint64_t version;
-    e::unpacker up(data, data_sz);
-    up = up >> _sid >> version;
-    CHECK_UNPACK(ack_config);
-    server_id sid(_sid);
-    c->ack_config(ctx, sid, version);
-}
-
-void
-wtf_coordinator_server_register(struct replicant_state_machine_context* ctx,
-                                     void* obj, const char* data, size_t data_sz)
-{
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    uint64_t _sid;
-    po6::net::location bind_to;
-    e::unpacker up(data, data_sz);
-    up = up >> _sid >> bind_to;
-    CHECK_UNPACK(server_register);
-    server_id sid(_sid);
-    c->server_register(ctx, sid, bind_to);
-}
-
-void
-wtf_coordinator_server_reregister(struct replicant_state_machine_context* ctx,
-                                       void* obj, const char* data, size_t data_sz)
-{
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    uint64_t _sid;
-    po6::net::location bind_to;
-    e::unpacker up(data, data_sz);
-    up = up >> _sid >> bind_to;
-    CHECK_UNPACK(server_reregister);
-    server_id sid(_sid);
-    c->server_reregister(ctx, sid, bind_to);
-}
-
-void
-wtf_coordinator_server_suspect(struct replicant_state_machine_context* ctx,
-                                    void* obj, const char* data, size_t data_sz)
-{
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    uint64_t _sid;
-    uint64_t version;
-    e::unpacker up(data, data_sz);
-    up = up >> _sid >> version;
-    CHECK_UNPACK(server_suspect);
-    server_id sid(_sid);
-    c->server_suspect(ctx, sid, version);
-}
-
-void
-wtf_coordinator_server_shutdown1(struct replicant_state_machine_context* ctx,
-                                      void* obj, const char* data, size_t data_sz)
-{
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    uint64_t _sid;
-    e::unpacker up(data, data_sz);
-    up = up >> _sid;
-    CHECK_UNPACK(server_shutdown1);
-    server_id sid(_sid);
-    c->server_shutdown1(ctx, sid);
-}
-
-void
-wtf_coordinator_server_shutdown2(struct replicant_state_machine_context* ctx,
-                                      void* obj, const char* data, size_t data_sz)
-{
-    PROTECT_UNINITIALIZED;
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    coordinator* c = static_cast<coordinator*>(obj);
-    uint64_t _sid;
-    e::unpacker up(data, data_sz);
-    up = up >> _sid;
-    CHECK_UNPACK(server_shutdown2);
-    server_id sid(_sid);
-    c->server_shutdown2(ctx, sid);
-}
-
-} // extern "C"
-
-/////////////////////////////// Coordinator Class //////////////////////////////
+} // namespace
 
 coordinator :: coordinator()
     : m_cluster(0)
-    , m_version(0)
     , m_counter(1)
-    , m_acked(0)
+    , m_version(0)
+    , m_flags(0)
     , m_servers()
-    , m_missing_acks()
+    , m_offline()
+    , m_config_ack_through(0)
+    , m_config_ack_barrier()
+    , m_config_stable_through(0)
+    , m_config_stable_barrier()
+    , m_checkpoint(0)
+    , m_checkpoint_stable_through(0)
+    , m_checkpoint_gc_through(0)
+    , m_checkpoint_stable_barrier()
     , m_latest_config()
-    , m_resp()
-    , m_seed()
 {
+    assert(m_config_ack_through == m_config_ack_barrier.min_version());
+    assert(m_config_stable_through == m_config_stable_barrier.min_version());
+    assert(m_checkpoint_stable_through == m_checkpoint_stable_barrier.min_version());
 }
 
 coordinator :: ~coordinator() throw ()
 {
 }
 
-uint64_t
-coordinator :: cluster() const
-{
-    return m_cluster;
-}
-
 void
-coordinator :: initialize(replicant_state_machine_context* ctx, uint64_t token)
+coordinator :: init(replicant_state_machine_context* ctx, uint64_t token)
 {
     FILE* log = replicant_state_machine_log_stream(ctx);
 
-    if (m_cluster == 0)
+    if (m_cluster != 0)
     {
-        fprintf(log, "initializing WTF cluster with id %lu\n", token);
-        m_cluster = token;
-        memset(&m_seed, 0, sizeof(m_seed));
-#ifdef __APPLE__
-        srand(m_seed);
-#else
-        srand48_r(m_cluster, &m_seed);
-#endif
-        issue_new_config(ctx);
+        fprintf(log, "cannot initialize HyperDex cluster with id %lu "
+                     "because it is already initialized to %lu\n", token, m_cluster);
+        // we lie to the client and pretend all is well
         return generate_response(ctx, COORD_SUCCESS);
+    }
+
+    replicant_state_machine_alarm(ctx, "alarm", ALARM_INTERVAL);
+    fprintf(log, "initializing HyperDex cluster with id %lu\n", token);
+    m_cluster = token;
+    generate_next_configuration(ctx);
+    return generate_response(ctx, COORD_SUCCESS);
+}
+
+void
+coordinator :: read_only(replicant_state_machine_context* ctx, bool ro)
+{
+    FILE* log = replicant_state_machine_log_stream(ctx);
+    uint64_t old_flags = m_flags;
+
+    if (ro)
+    {
+        if ((m_flags & HYPERDEX_CONFIG_READ_ONLY))
+        {
+            fprintf(log, "cluster already in read-only mode\n");
+        }
+        else
+        {
+            fprintf(log, "putting cluster into read-only mode\n");
+        }
+
+        m_flags |= HYPERDEX_CONFIG_READ_ONLY;
     }
     else
     {
-        return generate_response(ctx, COORD_INITIALIZED);
+        if ((m_flags & HYPERDEX_CONFIG_READ_ONLY))
+        {
+            fprintf(log, "putting cluster into read-write mode\n");
+        }
+        else
+        {
+            fprintf(log, "cluster already in read-write mode\n");
+        }
+
+        uint64_t mask = HYPERDEX_CONFIG_READ_ONLY;
+        mask = ~mask;
+        m_flags &= mask;
     }
-}
 
-void
-coordinator :: get_config(replicant_state_machine_context* ctx)
-{
-    assert(m_cluster != 0 && m_version != 0);
-
-    if (!m_latest_config.get())
+    if (old_flags != m_flags)
     {
-        regenerate_cached(ctx);
-    }
-
-    const char* output = reinterpret_cast<const char*>(m_latest_config->data());
-    size_t output_sz = m_latest_config->size();
-    replicant_state_machine_set_response(ctx, output, output_sz);
-}
-
-void
-coordinator :: ack_config(replicant_state_machine_context* ctx,
-                          const server_id& sid,
-                          uint64_t version)
-{
-    FILE* log = replicant_state_machine_log_stream(ctx);
-    server_state* ss = get_state(sid);
-
-    if (ss)
-    {
-        ss->acked = std::max(ss->acked, version);
-        fprintf(log, "server_id(%lu) acks config %lu\n", sid.get(), version);
-
-        if (ss->state == server_state::NOT_AVAILABLE &&
-            ss->acked > ss->version)
-        {
-            ss->state = server_state::AVAILABLE;
-        }
-
-        uint64_t remove_up_to = 0;
-
-        for (std::list<missing_acks>::iterator it = m_missing_acks.begin();
-                it != m_missing_acks.end(); ++it)
-        {
-            if (it->version() > ss->acked)
-            {
-                break;
-            }
-
-            it->ack(ss->id);
-
-            if (it->empty())
-            {
-                assert(remove_up_to < it->version());
-                remove_up_to = it->version();
-            }
-        }
-
-        while (!m_missing_acks.empty() && m_missing_acks.front().version() <= remove_up_to)
-        {
-            m_missing_acks.pop_front();
-        }
-
-        while (m_acked < remove_up_to)
-        {
-            if (replicant_state_machine_condition_broadcast(ctx, "acked", &m_acked) < 0)
-            {
-                fprintf(log, "could not broadcast on \"acked\" condition\n");
-                break;
-            }
-        }
-
-        fprintf(log, "servers have acked through version %lu\n", m_acked);
+        generate_next_configuration(ctx);
     }
 
     return generate_response(ctx, COORD_SUCCESS);
@@ -429,139 +219,478 @@ coordinator :: server_register(replicant_state_machine_context* ctx,
                                const po6::net::location& bind_to)
 {
     FILE* log = replicant_state_machine_log_stream(ctx);
-    std::ostringstream oss;
-    oss << bind_to;
+    server* srv = get_server(sid);
 
-    if (is_registered(sid))
+    if (srv)
     {
-        fprintf(log, "cannot register server_id(%lu) on address %s because the id is in use\n", sid.get(), oss.str().c_str());
-        return generate_response(ctx, wtf::COORD_DUPLICATE);
+        std::string str(to_string(srv->bind_to));
+        fprintf(log, "cannot register server(%lu) because the id belongs to "
+                     "server(%lu, %s)\n", sid.get(), srv->id.get(), str.c_str());
+        return generate_response(ctx, hyperdex::COORD_DUPLICATE);
     }
 
-    if (is_registered(bind_to))
-    {
-        fprintf(log, "cannot register server_id(%lu) on address %s because the address is in use\n", sid.get(), oss.str().c_str());
-        return generate_response(ctx, wtf::COORD_DUPLICATE);
-    }
-
-    m_servers.push_back(server_state(sid, bind_to));
-    m_servers.back().state = server_state::AVAILABLE;
-    std::stable_sort(m_servers.begin(), m_servers.end());
-    fprintf(log, "registered server_id(%lu) on address %s\n", sid.get(), oss.str().c_str());
-    issue_new_config(ctx);
-    return generate_response(ctx, wtf::COORD_SUCCESS);
+    srv = new_server(sid);
+    srv->state = server::ASSIGNED;
+    srv->bind_to = bind_to;
+    fprintf(log, "registered server(%lu)\n", sid.get());
+    generate_next_configuration(ctx);
+    return generate_response(ctx, COORD_SUCCESS);
 }
 
 void
-coordinator :: server_reregister(replicant_state_machine_context* ctx,
-                                 const server_id& sid,
-                                 const po6::net::location& bind_to)
+coordinator :: server_online(replicant_state_machine_context* ctx,
+                             const server_id& sid,
+                             const po6::net::location* bind_to)
 {
     FILE* log = replicant_state_machine_log_stream(ctx);
-    std::ostringstream oss;
-    oss << bind_to;
-    server_state* ss = get_state(sid);
+    server* srv = get_server(sid);
 
-    if (!ss)
+    if (!srv)
     {
-        fprintf(log, "cannot re-register server_id(%lu) on address %s because the server doesn't exist\n", sid.get(), oss.str().c_str());
-        return generate_response(ctx, wtf::COORD_DUPLICATE);
+        fprintf(log, "cannot bring server(%lu) online because "
+                     "the server doesn't exist\n", sid.get());
+        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
     }
 
-    ss->bind_to = po6::net::location();
-
-    if (is_registered(bind_to))
+    if (srv->state != server::ASSIGNED &&
+        srv->state != server::NOT_AVAILABLE &&
+        srv->state != server::SHUTDOWN &&
+        srv->state != server::AVAILABLE)
     {
-        fprintf(log, "cannot register server_id(%lu) on address %s because the address is in use\n", sid.get(), oss.str().c_str());
-        return generate_response(ctx, wtf::COORD_DUPLICATE);
+        fprintf(log, "cannot bring server(%lu) online because the server is "
+                     "%s\n", sid.get(), server::to_string(srv->state));
+        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
     }
 
-    ss->bind_to = bind_to;
-    ss->state = server_state::AVAILABLE;
-    fprintf(log, "re-registered server_id(%lu) on address %s\n", sid.get(), oss.str().c_str());
-    return generate_response(ctx, wtf::COORD_SUCCESS);
+    bool changed = false;
+
+    if (bind_to && srv->bind_to != *bind_to)
+    {
+        std::string from(to_string(srv->bind_to));
+        std::string to(to_string(*bind_to));
+
+        for (size_t i = 0; i < m_servers.size(); ++i)
+        {
+            if (m_servers[i].id != sid &&
+                m_servers[i].bind_to == *bind_to)
+            {
+                fprintf(log, "cannot change server(%lu) to %s "
+                             "because that address is in use by "
+                             "server(%lu)\n", sid.get(), to.c_str(),
+                             m_servers[i].id.get());
+                return generate_response(ctx, hyperdex::COORD_DUPLICATE);
+            }
+        }
+
+        fprintf(log, "changing server(%lu)'s address from %s to %s\n",
+                     sid.get(), from.c_str(), to.c_str());
+        srv->bind_to = *bind_to;
+        changed = true;
+    }
+
+    if (srv->state != server::AVAILABLE)
+    {
+        fprintf(log, "changing server(%lu) from %s to %s\n",
+                     sid.get(), server::to_string(srv->state),
+                     server::to_string(server::AVAILABLE));
+        srv->state = server::AVAILABLE;
+
+        if (!in_permutation(sid))
+        {
+            add_permutation(sid);
+        }
+
+        rebalance_replica_sets(ctx);
+        changed = true;
+    }
+
+    if (changed)
+    {
+        generate_next_configuration(ctx);
+    }
+
+    char buf[sizeof(uint64_t)];
+    e::pack64be(sid.get(), buf);
+    uint64_t client = replicant_state_machine_get_client(ctx);
+    replicant_state_machine_suspect(ctx, client, "server_suspect",  buf, sizeof(uint64_t));
+    return generate_response(ctx, COORD_SUCCESS);
+}
+
+void
+coordinator :: server_offline(replicant_state_machine_context* ctx,
+                              const server_id& sid)
+{
+    FILE* log = replicant_state_machine_log_stream(ctx);
+    server* srv = get_server(sid);
+
+    if (!srv)
+    {
+        fprintf(log, "cannot bring server(%lu) offline because "
+                     "the server doesn't exist\n", sid.get());
+        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+    }
+
+    if (srv->state != server::ASSIGNED &&
+        srv->state != server::NOT_AVAILABLE &&
+        srv->state != server::AVAILABLE &&
+        srv->state != server::SHUTDOWN)
+    {
+        fprintf(log, "cannot bring server(%lu) offline because the server is "
+                     "%s\n", sid.get(), server::to_string(srv->state));
+        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
+    }
+
+    if (srv->state != server::NOT_AVAILABLE && srv->state != server::SHUTDOWN)
+    {
+        fprintf(log, "changing server(%lu) from %s to %s\n",
+                     sid.get(), server::to_string(srv->state),
+                     server::to_string(server::NOT_AVAILABLE));
+        srv->state = server::NOT_AVAILABLE;
+        remove_permutation(sid);
+        rebalance_replica_sets(ctx);
+        generate_next_configuration(ctx);
+    }
+
+    return generate_response(ctx, COORD_SUCCESS);
+}
+
+void
+coordinator :: server_shutdown(replicant_state_machine_context* ctx,
+                               const server_id& sid)
+{
+    FILE* log = replicant_state_machine_log_stream(ctx);
+    server* srv = get_server(sid);
+
+    if (!srv)
+    {
+        fprintf(log, "cannot shutdown server(%lu) because "
+                     "the server doesn't exist\n", sid.get());
+        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+    }
+
+    if (srv->state != server::ASSIGNED &&
+        srv->state != server::NOT_AVAILABLE &&
+        srv->state != server::AVAILABLE &&
+        srv->state != server::SHUTDOWN)
+    {
+        fprintf(log, "cannot shutdown server(%lu) because the server is "
+                     "%s\n", sid.get(), server::to_string(srv->state));
+        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
+    }
+
+    if (srv->state != server::SHUTDOWN)
+    {
+        fprintf(log, "changing server(%lu) from %s to %s\n",
+                     sid.get(), server::to_string(srv->state),
+                     server::to_string(server::SHUTDOWN));
+        srv->state = server::SHUTDOWN;
+        rebalance_replica_sets(ctx);
+        generate_next_configuration(ctx);
+    }
+
+    return generate_response(ctx, COORD_SUCCESS);
+}
+
+void
+coordinator :: server_kill(replicant_state_machine_context* ctx,
+                           const server_id& sid)
+{
+    FILE* log = replicant_state_machine_log_stream(ctx);
+    server* srv = get_server(sid);
+
+    if (!srv)
+    {
+        fprintf(log, "cannot kill server(%lu) because "
+                     "the server doesn't exist\n", sid.get());
+        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+    }
+
+    if (srv->state != server::KILLED)
+    {
+        fprintf(log, "changing server(%lu) from %s to %s\n",
+                     sid.get(), server::to_string(srv->state),
+                     server::to_string(server::KILLED));
+        srv->state = server::KILLED;
+        remove_permutation(sid);
+        remove_offline(sid);
+        rebalance_replica_sets(ctx);
+        generate_next_configuration(ctx);
+    }
+
+    return generate_response(ctx, COORD_SUCCESS);
+}
+
+void
+coordinator :: server_forget(replicant_state_machine_context* ctx,
+                             const server_id& sid)
+{
+    FILE* log = replicant_state_machine_log_stream(ctx);
+    server* srv = get_server(sid);
+
+    if (!srv)
+    {
+        fprintf(log, "cannot forget server(%lu) because "
+                     "the server doesn't exist\n", sid.get());
+        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+    }
+
+    for (size_t i = 0; i < m_servers.size(); ++i)
+    {
+        if (m_servers[i].id == sid)
+        {
+            std::swap(m_servers[i], m_servers[m_servers.size() - 1]);
+            m_servers.pop_back();
+        }
+    }
+
+    std::stable_sort(m_servers.begin(), m_servers.end());
+    remove_permutation(sid);
+    remove_offline(sid);
+    rebalance_replica_sets(ctx);
+    generate_next_configuration(ctx);
+    return generate_response(ctx, COORD_SUCCESS);
 }
 
 void
 coordinator :: server_suspect(replicant_state_machine_context* ctx,
-                              const server_id& sid, uint64_t version)
+                              const server_id& sid)
 {
     FILE* log = replicant_state_machine_log_stream(ctx);
+    server* srv = get_server(sid);
 
-    if (version < m_version)
+    if (!srv)
+    {
+        fprintf(log, "cannot suspect server(%lu) because "
+                     "the server doesn't exist\n", sid.get());
+        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+    }
+
+    if (srv->state == server::SHUTDOWN)
     {
         return generate_response(ctx, COORD_SUCCESS);
     }
 
-    fprintf(log, "server_id(%lu) suspected\n", sid.get());
-
-    server_state* state = get_state(sid);
-
-    if (state && state->state == server_state::AVAILABLE)
+    if (srv->state != server::ASSIGNED &&
+        srv->state != server::NOT_AVAILABLE &&
+        srv->state != server::AVAILABLE)
     {
-        state->state = server_state::NOT_AVAILABLE;
-        state->version = m_version;
+        fprintf(log, "cannot suspect server(%lu) because the server is "
+                     "%s\n", sid.get(), server::to_string(srv->state));
+        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
     }
 
-    issue_new_config(ctx);
+    if (srv->state != server::NOT_AVAILABLE && srv->state != server::SHUTDOWN)
+    {
+        fprintf(log, "changing server(%lu) from %s to %s because we suspect it failed\n",
+                     sid.get(), server::to_string(srv->state),
+                     server::to_string(server::NOT_AVAILABLE));
+        srv->state = server::NOT_AVAILABLE;
+        remove_permutation(sid);
+        rebalance_replica_sets(ctx);
+        generate_next_configuration(ctx);
+    }
 
     return generate_response(ctx, COORD_SUCCESS);
 }
 
 void
-coordinator :: server_shutdown1(replicant_state_machine_context* ctx,
-                                const server_id& sid)
+coordinator :: report_disconnect(replicant_state_machine_context*,
+                                 const server_id& sid, uint64_t version)
 {
-    m_resp.reset(e::buffer::create(sizeof(uint16_t) + sizeof(uint64_t)));
-    *m_resp << static_cast<uint16_t>(COORD_SUCCESS) << m_version;
-    replicant_state_machine_set_response(ctx, reinterpret_cast<const char*>(m_resp->data()), m_resp->size());
+//XXX: figure out what this is for.
 }
 
 void
-coordinator :: server_shutdown2(replicant_state_machine_context* ctx,
-                                const server_id& sid)
+coordinator :: config_get(replicant_state_machine_context* ctx)
+{
+    assert(m_cluster != 0 && m_version != 0);
+    assert(m_latest_config.get());
+    const char* output = reinterpret_cast<const char*>(m_latest_config->data());
+    size_t output_sz = m_latest_config->size();
+    replicant_state_machine_set_response(ctx, output, output_sz);
+}
+
+void
+coordinator :: config_ack(replicant_state_machine_context* ctx,
+                          const server_id& sid, uint64_t version)
+{
+    m_config_ack_barrier.pass(version, sid);
+    check_ack_condition(ctx);
+}
+
+void
+coordinator :: config_stable(replicant_state_machine_context* ctx,
+                             const server_id& sid, uint64_t version)
+{
+    m_config_stable_barrier.pass(version, sid);
+    check_stable_condition(ctx);
+}
+
+void
+coordinator :: checkpoint(replicant_state_machine_context* ctx)
 {
     FILE* log = replicant_state_machine_log_stream(ctx);
-    server_state* ss = get_state(sid);
+    uint64_t cond_state = 0;
 
-    if (ss)
+    if (replicant_state_machine_condition_broadcast(ctx, "checkp", &cond_state) < 0)
     {
-        ss->state = server_state::SHUTDOWN;
+        fprintf(log, "could not broadcast on \"checkp\" condition\n");
     }
 
-    fprintf(log, "server_id(%lu) shutdown cleanly\n", sid.get());
-    issue_new_config(ctx);
-    return generate_response(ctx, COORD_SUCCESS);
+    ++m_checkpoint;
+    fprintf(log, "establishing checkpoint %lu\n", m_checkpoint);
+    assert(cond_state == m_checkpoint);
+    assert(m_checkpoint_stable_through <= m_checkpoint);
+    std::vector<server_id> sids;
+    servers_in_configuration(&sids);
+    m_checkpoint_stable_barrier.new_version(m_checkpoint, sids);
+    check_checkpoint_stable_condition(ctx);
 }
 
-server_state*
-coordinator :: get_state(const server_id& sid)
+void
+coordinator :: checkpoint_stable(replicant_state_machine_context* ctx,
+                                 const server_id& sid,
+                                 uint64_t config,
+                                 uint64_t number)
 {
-    std::vector<server_state>::iterator it;
-    it = std::lower_bound(m_servers.begin(), m_servers.end(), sid);
-
-    if (it != m_servers.end() && it->id == sid)
+    if (config < m_version)
     {
-        return &(*it);
+        return generate_response(ctx, COORD_NO_CAN_DO);
+    }
+
+    m_checkpoint_stable_barrier.pass(number, sid);
+    check_checkpoint_stable_condition(ctx);
+    generate_response(ctx, COORD_SUCCESS);
+}
+
+void
+coordinator :: alarm(replicant_state_machine_context* ctx)
+{
+    replicant_state_machine_alarm(ctx, "alarm", ALARM_INTERVAL);
+    checkpoint(ctx);
+}
+
+void
+coordinator :: debug_dump(replicant_state_machine_context* ctx)
+{
+}
+
+coordinator*
+coordinator :: recreate(replicant_state_machine_context* ctx,
+                        const char* data, size_t data_sz)
+{
+    std::auto_ptr<coordinator> c(new coordinator());
+
+    if (!c.get())
+    {
+        fprintf(replicant_state_machine_log_stream(ctx), "memory allocation failed\n");
+        return NULL;
+    }
+
+    e::unpacker up(data, data_sz);
+    up = up >> c->m_cluster >> c->m_counter >> c->m_version >> c->m_flags >> c->m_servers
+            >> c->m_offline 
+            >> c->m_config_ack_through >> c->m_config_ack_barrier
+            >> c->m_config_stable_through >> c->m_config_stable_barrier
+            >> c->m_checkpoint >> c->m_checkpoint_stable_through
+            >> c->m_checkpoint_gc_through >> c->m_checkpoint_stable_barrier;
+
+    if (up.error())
+    {
+        fprintf(replicant_state_machine_log_stream(ctx), "unpacking failed\n");
+        return NULL;
+    }
+
+    c->generate_cached_configuration(ctx);
+    replicant_state_machine_alarm(ctx, "alarm", ALARM_INTERVAL);
+    return c.release();
+}
+
+void
+coordinator :: snapshot(replicant_state_machine_context* /*ctx*/,
+                        const char** data, size_t* data_sz)
+{
+    size_t sz = sizeof(m_cluster)
+              + sizeof(m_counter)
+              + sizeof(m_version)
+              + sizeof(m_flags)
+              + pack_size(m_servers)
+              + pack_size(m_offline)
+              + sizeof(m_config_ack_through)
+              + pack_size(m_config_ack_barrier)
+              + sizeof(m_config_stable_through)
+              + pack_size(m_config_stable_barrier)
+              + sizeof(m_checkpoint)
+              + sizeof(m_checkpoint_stable_through)
+              + sizeof(m_checkpoint_gc_through)
+              + pack_size(m_checkpoint_stable_barrier);
+
+    std::auto_ptr<e::buffer> buf(e::buffer::create(sz));
+    e::buffer::packer pa = buf->pack_at(0);
+    pa = pa << m_cluster << m_counter << m_version << m_flags << m_servers
+            << m_offline 
+            << m_config_ack_through << m_config_ack_barrier
+            << m_config_stable_through << m_config_stable_barrier
+            << m_checkpoint << m_checkpoint_stable_through
+            << m_checkpoint_gc_through << m_checkpoint_stable_barrier;
+
+    char* ptr = static_cast<char*>(malloc(buf->size()));
+    *data = ptr;
+    *data_sz = buf->size();
+
+    if (*data)
+    {
+        memmove(ptr, buf->data(), buf->size());
+    }
+}
+
+server*
+coordinator :: new_server(const server_id& sid)
+{
+    size_t idx = m_servers.size();
+    m_servers.push_back(server(sid));
+
+    for (; idx > 0; --idx)
+    {
+        if (m_servers[idx - 1].id < m_servers[idx].id)
+        {
+            break;
+        }
+
+        std::swap(m_servers[idx - 1], m_servers[idx]);
+    }
+
+    return &m_servers[idx];
+}
+
+server*
+coordinator :: get_server(const server_id& sid)
+{
+    for (size_t i = 0; i < m_servers.size(); ++i)
+    {
+        if (m_servers[i].id == sid)
+        {
+            return &m_servers[i];
+        }
     }
 
     return NULL;
 }
 
 bool
-coordinator :: is_registered(const server_id& sid)
+coordinator :: in_permutation(const server_id& sid)
 {
-    std::vector<server_state>::iterator it;
-    it = std::lower_bound(m_servers.begin(), m_servers.end(), sid);
-    return it != m_servers.end() && it->id == sid;
-}
-
-bool
-coordinator :: is_registered(const po6::net::location& bind_to)
-{
-    for (size_t i = 0; i < m_servers.size(); ++i)
+    for (size_t i = 0; i < m_permutation.size(); ++i)
     {
-        if (m_servers[i].bind_to == bind_to)
+        if (m_permutation[i] == sid)
+        {
+            return true;
+        }
+    }
+
+    for (size_t i = 0; i < m_spares.size(); ++i)
+    {
+        if (m_spares[i] == sid)
         {
             return true;
         }
@@ -571,7 +700,92 @@ coordinator :: is_registered(const po6::net::location& bind_to)
 }
 
 void
-coordinator :: issue_new_config(struct replicant_state_machine_context* ctx)
+coordinator :: add_permutation(const server_id& sid)
+{
+    if (m_spares.size() < m_desired_spares)
+    {
+        m_spares.push_back(sid);
+    }
+    else
+    {
+        m_permutation.push_back(sid);
+    }
+}
+
+void
+coordinator :: remove_permutation(const server_id& sid)
+{
+    remove(sid, &m_spares);
+
+    for (size_t i = 0; i < m_permutation.size(); ++i)
+    {
+        if (m_permutation[i] != sid)
+        {
+            continue;
+        }
+
+        if (m_spares.empty())
+        {
+            shift_and_pop(i, &m_permutation);
+        }
+        else
+        {
+            m_permutation[i] = m_spares.back();
+            m_spares.pop_back();
+        }
+
+        break;
+    }
+}
+
+void
+coordinator :: remove_offline(const server_id& sid)
+{
+    for (size_t i = 0; i < m_offline.size(); )
+    {
+        if (m_offline[i].sid == sid)
+        {
+            shift_and_pop(i, &m_offline);
+        }
+        else
+        {
+            ++i;
+        }
+    }
+}
+
+void
+coordinator :: check_ack_condition(replicant_state_machine_context* ctx)
+{
+    if (m_config_ack_through < m_config_ack_barrier.min_version())
+    {
+        FILE* log = replicant_state_machine_log_stream(ctx);
+        fprintf(log, "acked through version %lu\n", m_config_ack_barrier.min_version());
+    }
+
+    while (m_config_ack_through < m_config_ack_barrier.min_version())
+    {
+        replicant_state_machine_condition_broadcast(ctx, "ack", &m_config_ack_through);
+    }
+}
+
+void
+coordinator :: check_stable_condition(replicant_state_machine_context* ctx)
+{
+    if (m_config_stable_through < m_config_stable_barrier.min_version())
+    {
+        FILE* log = replicant_state_machine_log_stream(ctx);
+        fprintf(log, "stable through version %lu\n", m_config_stable_barrier.min_version());
+    }
+
+    while (m_config_stable_through < m_config_stable_barrier.min_version())
+    {
+        replicant_state_machine_condition_broadcast(ctx, "stable", &m_config_stable_through);
+    }
+}
+
+void
+coordinator :: generate_next_configuration(replicant_state_machine_context* ctx)
 {
     FILE* log = replicant_state_machine_log_stream(ctx);
     uint64_t cond_state;
@@ -582,84 +796,96 @@ coordinator :: issue_new_config(struct replicant_state_machine_context* ctx)
     }
 
     ++m_version;
-    std::vector<server_id> sids;
-
-    for (std::vector<server_state>::iterator it = m_servers.begin();
-            it != m_servers.end(); ++it)
-     {
-         sids.push_back(it->id);
-     }
-
-    m_missing_acks.push_back(missing_acks(m_version, sids));
     fprintf(log, "issuing new configuration version %lu\n", m_version);
-    m_latest_config.reset();
-}
-
-template <class T>
-static void
-uniquify/*not a word*/(std::vector<T>* v)
-{
-    std::sort(v->begin(), v->end());
-    typename std::vector<T>::iterator it;
-    it = std::unique(v->begin(), v->end());
-    v->resize(it - v->begin());
-}
-
-template <class T, class U>
-static bool
-contains(const std::vector<std::pair<T, U> >& v, const T& e)
-{
-    typename std::vector<std::pair<T, U> >::const_iterator it;
-    it = std::lower_bound(v.begin(), v.end(), std::make_pair(e, U()));
-    return it != v.end() && it->first == e;
-}
-
-template <class T, class TID>
-static void
-remove(std::vector<T>* v, const TID& id)
-{
-    for (size_t i = 0; i < v->size(); ++i)
-    {
-        if ((*v)[i].id == id)
-        {
-            for (size_t j = i; j + 1 < v->size(); ++j)
-            {
-                (*v)[j] = (*v)[j + 1];
-            }
-
-            v->pop_back();
-            return;
-        }
-    }
+    assert(cond_state == m_version);
+    std::vector<server_id> sids;
+    servers_in_configuration(&sids);
+    m_config_ack_barrier.new_version(m_version, sids);
+    m_config_stable_barrier.new_version(m_version, sids);
+    check_ack_condition(ctx);
+    check_stable_condition(ctx);
+    generate_cached_configuration(ctx);
 }
 
 void
-coordinator :: regenerate_cached(struct replicant_state_machine_context*)
+coordinator :: generate_cached_configuration(replicant_state_machine_context*)
 {
-    size_t sz = 3 * sizeof(uint64_t);
-    uint64_t num_servers = 0;
+    m_latest_config.reset();
+    size_t sz = 7 * sizeof(uint64_t);
 
     for (size_t i = 0; i < m_servers.size(); ++i)
     {
-        if (m_servers[i].state == server_state::AVAILABLE)
-        {
-            sz += sizeof(uint64_t) + pack_size(m_servers[i].bind_to);
-            ++num_servers;
-        }
+        sz += pack_size(m_servers[i]);
     }
 
     std::auto_ptr<e::buffer> new_config(e::buffer::create(sz));
     e::buffer::packer pa = new_config->pack_at(0);
-    pa = pa << m_cluster << m_version
-            << num_servers;
+    pa = pa << m_cluster << m_version << m_flags
+            << uint64_t(m_servers.size());
 
     for (size_t i = 0; i < m_servers.size(); ++i)
     {
-        if (m_servers[i].state == server_state::AVAILABLE)
-        {
-            pa = pa << m_servers[i].id.get() << m_servers[i].bind_to;
-        }
+        pa = pa << m_servers[i];
     }
 
     m_latest_config = new_config;
+}
+
+void
+coordinator :: servers_in_configuration(std::vector<server_id>* sids)
+{
+    for (std::vector<server_id>::iterator it = m_servers.begin();
+            it != m_servers.end(); ++it)
+    {
+        sids->push_back(it->id);
+    }
+
+    std::sort(sids->begin(), sids->end());
+    std::vector<server_id>::iterator sit;
+    sit = std::unique(sids->begin(), sids->end());
+    sids->resize(sit - sids->begin());
+}
+
+#define OUTSTANDING_CHECKPOINTS 120
+
+void
+coordinator :: check_checkpoint_stable_condition(replicant_state_machine_context* ctx)
+{
+    FILE* log = replicant_state_machine_log_stream(ctx);
+    assert(m_checkpoint_stable_through <= m_checkpoint);
+
+    if (m_checkpoint_stable_through < m_checkpoint_stable_barrier.min_version())
+    {
+        fprintf(log, "checkpoint %lu done\n", m_checkpoint_stable_barrier.min_version());
+    }
+
+    bool stabilized = false;
+
+    while (m_checkpoint_stable_through < m_checkpoint_stable_barrier.min_version())
+    {
+        stabilized = true;
+        replicant_state_machine_condition_broadcast(ctx, "checkps", &m_checkpoint_stable_through);
+    }
+
+    bool gc = false;
+
+    while (m_checkpoint_gc_through + OUTSTANDING_CHECKPOINTS < m_checkpoint_stable_barrier.min_version())
+    {
+        gc = true;
+        replicant_state_machine_condition_broadcast(ctx, "checkpgc", &m_checkpoint_gc_through);
+    }
+
+    if (gc && m_checkpoint_gc_through > 0)
+    {
+        fprintf(log, "garbage collect <= checkpoint %lu\n", m_checkpoint_gc_through);
+    }
+
+    assert(m_checkpoint_stable_through <= m_checkpoint);
+    assert(m_checkpoint_gc_through + OUTSTANDING_CHECKPOINTS <= m_checkpoint ||
+           m_checkpoint <= OUTSTANDING_CHECKPOINTS);
+
+    if (stabilized)
+    {
+	//XXX: do something.
+    }
 }

@@ -29,7 +29,7 @@
 #define wtf_configuration_h_
 
 // WTF
-#include "common/wtf_node.h"
+#include "common/server.h"
 
 namespace wtf
 {
@@ -54,22 +54,23 @@ class configuration
     // membership
     public:
         bool has_token(uint64_t token) const;
-        bool is_member(const wtf_node& node) const;
-        const wtf_node* node_from_token(uint64_t token) const;
-        const wtf_node* get_random_member(uint64_t id);
+        bool exists(const server_id& node) const;
+        server::state_t get_state(const server_id& id) const;
+        const server* server_from_token(uint64_t token) const;
+        const server* get_random_server(uint64_t id);
 
     // iterators
     public:
-        const wtf_node* members_begin() const;
-        const wtf_node* members_end() const;
+        const server* servers_begin() const;
+        const server* servers_end() const;
 
     // modify the configuration
     public:
         void bump_version();
-        void add_member(const wtf_node& node);
+        void add_server(const server& node);
 
     public:
-        void debug_dump(std::ostream& out);
+        void dump(std::ostream& out);
 
     private:
         friend bool operator == (const configuration& lhs, const configuration& rhs);
@@ -81,7 +82,8 @@ class configuration
     private:
         uint64_t m_cluster;
         uint64_t m_version;
-        std::vector<wtf_node> m_members;
+        uint64_t m_flags;
+        std::vector<server> m_servers;
 };
 
 bool
@@ -97,15 +99,6 @@ operator << (e::buffer::packer lhs, const configuration& rhs);
 
 e::unpacker
 operator >> (e::unpacker lhs, configuration& rhs);
-
-char*
-pack_config(const configuration& config, char* ptr);
-
-size_t
-pack_size(const configuration& rhs);
-
-size_t
-pack_size(const std::vector<configuration>& rhs);
 
 } // namespace wtf
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2012, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,29 +25,25 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_coordinator_returncode_h_
-#define wtf_common_coordinator_returncode_h_
-
-namespace wtf
-{
-
-// occupies [8832, 8960)
-// these are hardcoded as byte strings in coordinator/coordinator.cc
-// keep them in sync
-enum coordinator_returncode
-{
-    COORD_SUCCESS = 8832,
-    COORD_MALFORMED = 8833,
-    COORD_DUPLICATE = 8834,
-    COORD_NOT_FOUND = 8835,
-    COORD_UNINITIALIZED = 8837,
-    COORD_NO_CAN_DO = 8839
-};
+// WTF
+#include "common/coordinator_returncode.h"
+#include "common/macros.h"
 
 std::ostream&
-operator << (std::ostream& lhs, coordinator_returncode rhs);
+wtf :: operator << (std::ostream& lhs, coordinator_returncode rhs)
+{
+    switch (rhs)
+    {
+        STRINGIFY(COORD_SUCCESS);
+        STRINGIFY(COORD_MALFORMED);
+        STRINGIFY(COORD_DUPLICATE);
+        STRINGIFY(COORD_NOT_FOUND);
+        STRINGIFY(COORD_UNINITIALIZED);
+        STRINGIFY(COORD_NO_CAN_DO);
+        default:
+            lhs << "unknown coordinator_returncode";
+            break;
+    }
 
-
-} // namespace wtf
-
-#endif // wtf_common_coordinator_returncode_h_
+    return lhs;
+}

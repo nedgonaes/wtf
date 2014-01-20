@@ -51,20 +51,31 @@ extern void
 wtf_coordinator_snapshot(struct replicant_state_machine_context* ctx,
                               void* obj, const char** data, size_t* sz);
 
-#define TRANSITION(X) extern void \
+#define TRANSITION(X) void \
     wtf_coordinator_ ## X(struct replicant_state_machine_context* ctx, \
                                void* obj, const char* data, size_t data_sz)
+TRANSITION(init);
 
-TRANSITION(initialize);
+TRANSITION(read_only);
+TRANSITION(fault_tolerance);
 
-TRANSITION(get_config);
-TRANSITION(ack_config);
+TRANSITION(config_get);
+TRANSITION(config_ack);
+TRANSITION(config_stable);
 
 TRANSITION(server_register);
-TRANSITION(server_reregister);
-TRANSITION(server_shutdown1);
-TRANSITION(server_shutdown2);
+TRANSITION(server_online);
+TRANSITION(server_offline);
+TRANSITION(server_shutdown);
+TRANSITION(server_kill);
+TRANSITION(server_forget);
 TRANSITION(server_suspect);
+TRANSITION(report_disconnect);
+TRANSITION(checkpoint_stable);
+
+TRANSITION(alarm);
+
+TRANSITION(debug_dump);
 
 #ifdef __cplusplus
 } /* extern "C" */

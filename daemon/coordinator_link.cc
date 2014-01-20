@@ -509,6 +509,7 @@ coordinator_link :: wait_for_config(configuration* config)
         int timeout = s_interrupts > 0 ? 10 * 1000: -1;
         replicant_returncode lstatus = REPLICANT_GARBAGE;
         int64_t lid = m_repl->loop(timeout, &lstatus);
+	LOG(INFO) << "replicant returned lid=" << lid;
 
         if (lid < 0)
         {

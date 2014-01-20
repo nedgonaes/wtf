@@ -32,20 +32,31 @@
 /* WTF */
 #include <coordinator/transitions.h>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-pedantic"
+
+
 struct replicant_state_machine rsm = {
     wtf_coordinator_create,
     wtf_coordinator_recreate,
     wtf_coordinator_destroy,
     wtf_coordinator_snapshot,
-    {{"get-config", wtf_coordinator_get_config},
-     {"ack-config", wtf_coordinator_ack_config},
-
-     {"server-register", wtf_coordinator_server_register},
-     {"server-reregister", wtf_coordinator_server_reregister},
-     {"server-suspect", wtf_coordinator_server_suspect},
-     {"server-shutdown1", wtf_coordinator_server_shutdown1},
-     {"server-shutdown2", wtf_coordinator_server_shutdown2},
-
-     {"initialize", wtf_coordinator_initialize},
+    {{"config_get", wtf_coordinator_config_get},
+     {"config_ack", wtf_coordinator_config_ack},
+     {"server_register", wtf_coordinator_server_register},
+     {"server_online", wtf_coordinator_server_online},
+     {"server_offline", wtf_coordinator_server_offline},
+     {"server_shutdown", wtf_coordinator_server_shutdown},
+     {"server_kill", wtf_coordinator_server_kill},
+     {"server_forget", wtf_coordinator_server_forget},
+     {"server_suspect", wtf_coordinator_server_suspect},
+     {"report_disconnect", wtf_coordinator_report_disconnect},
+     {"checkpoint_stable", hyperdex_coordinator_checkpoint_stable},
+     {"alarm", wtf_coordinator_alarm},
+     {"read_only", wtf_coordinator_read_only},
+     {"debug_dump", wtf_coordinator_debug_dump},
+     {"init", wtf_coordinator_init},
      {NULL, NULL}}
 };
+
+#pragma GCC diagnostic pop

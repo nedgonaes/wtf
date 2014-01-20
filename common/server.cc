@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,29 +25,72 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_coordinator_returncode_h_
-#define wtf_common_coordinator_returncode_h_
+// WTF
+#include "common/serialization.h"
+#include "common/server.h"
 
-namespace wtf
+using wtf::server;
+
+const char*
+server :: to_string(state_t state)
 {
+    switch (state)
+    {
+        case ASSIGNED:
+            return "ASSIGNED";
+        case NOT_AVAILABLE:
+            return "NOT_AVAILABLE";
+        case AVAILABLE:
+            return "AVAILABLE";
+        case SHUTDOWN:
+            return "SHUTDOWN";
+        case KILLED:
+            return "KILLED";
+        default:
+            return "UNKNOWN";
+    }
+}
 
-// occupies [8832, 8960)
-// these are hardcoded as byte strings in coordinator/coordinator.cc
-// keep them in sync
-enum coordinator_returncode
+server :: server()
+    : state(KILLED)
+    , id()
+    , bind_to()
 {
-    COORD_SUCCESS = 8832,
-    COORD_MALFORMED = 8833,
-    COORD_DUPLICATE = 8834,
-    COORD_NOT_FOUND = 8835,
-    COORD_UNINITIALIZED = 8837,
-    COORD_NO_CAN_DO = 8839
-};
+}
 
-std::ostream&
-operator << (std::ostream& lhs, coordinator_returncode rhs);
+server :: server(const server_id& sid)
+    : state(ASSIGNED)
+    , id(sid)
+    , bind_to()
+{
+}
 
+bool
+wtf :: operator < (const server& lhs, const server& rhs)
+{
+    return lhs.id < rhs.id;
+}
 
-} // namespace wtf
+e::buffer::packer
+wtf :: operator << (e::buffer::packer lhs, const server& rhs)
+{
+    uint8_t s = static_cast<uint8_t>(rhs.state);
+    return lhs << s << rhs.id << rhs.bind_to;
+}
 
-#endif // wtf_common_coordinator_returncode_h_
+e::unpacker
+wtf :: operator >> (e::unpacker lhs, server& rhs)
+{
+    uint8_t s;
+    lhs = lhs >> s >> rhs.id >> rhs.bind_to;
+    rhs.state = static_cast<server::state_t>(s);
+    return lhs;
+}
+
+size_t
+wtf :: pack_size(const server& p)
+{
+    return sizeof(uint8_t)
+         + sizeof(uint64_t)
+         + pack_size(p.bind_to);
+}

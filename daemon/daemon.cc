@@ -235,13 +235,22 @@ daemon :: run(bool daemonize,
 
     m_coord.set_coordinator_address(coordinator.address.c_str(), coordinator.port);
 
-    m_us.address = bind_to;
+    uint64_t sid;
 
-    if (!generate_token(&m_us.token))
+    if (!generate_token(&sid))
     {
-        PLOG(ERROR) << "could not read random tokens from /dev/urandom";
+        PLOG(ERROR) << "could not read random token from /dev/urandom";
         return EXIT_FAILURE;
     }
+
+    LOG(INFO) << "generated new random token:  " << sid;
+
+    if (!m_coord.register_id(server_id(sid), bind_to))
+    {
+        return EXIT_FAILURE;
+    }
+
+    m_us = server_id(sid);
 
     m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, threads));
     m_busybee->set_ignore_signals();
@@ -271,7 +280,7 @@ daemon :: run(bool daemonize,
             continue;
         }
 
-        if (old_config.version() >= new_config.version())
+        if (old_config.version() > new_config.version())
         {
             LOG(INFO) << "received new configuration version=" << new_config.version()
                       << " that's not newer than our current configuration version="
