@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2012-2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of WTF nor the names of its contributors may be
+//     * Neither the name of HyperDex nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -28,15 +28,9 @@
 #ifndef wtf_coordinator_coordinator_h_
 #define wtf_coordinator_coordinator_h_
 
-// C
-#include <cstdlib>
-
 // STL
-#include <list>
 #include <map>
-#include <memory>
-#include <utility>
-#include <vector>
+#include <tr1/memory>
 
 // po6
 #include <po6/net/location.h>
@@ -44,13 +38,11 @@
 // Replicant
 #include <replicant_state_machine.h>
 
-// WTF
+// WTF 
 #include "common/ids.h"
-#include "coordinator/missing_acks.h"
-#include "coordinator/server_state.h"
-
-namespace wtf
-{
+#include "coordinator/server.h"
+#include "coordinator/offline_server.h"
+#include "coordinator/server_barrier.h"
 
 class coordinator
 {
@@ -58,58 +50,108 @@ class coordinator
         coordinator();
         ~coordinator() throw ();
 
+    // identity
     public:
-        uint64_t cluster() const;
+        void init(replicant_state_machine_context* ctx, uint64_t token);
+        uint64_t cluster() const { return m_cluster; }
 
+    // cluster management
     public:
-        // Setup the cluster
-        void initialize(replicant_state_machine_context* ctx, uint64_t token);
-        // Issue configs
-        void get_config(replicant_state_machine_context* ctx);
-        void ack_config(replicant_state_machine_context* ctx, const server_id&, uint64_t version);
-        // Manage cluster membership
+        void read_only(replicant_state_machine_context* ctx, bool ro);
+
+    // server management
+    public:
         void server_register(replicant_state_machine_context* ctx,
                              const server_id& sid,
                              const po6::net::location& bind_to);
-        void server_reregister(replicant_state_machine_context* ctx,
-                               const server_id& sid,
-                               const po6::net::location& bind_to);
+        void server_online(replicant_state_machine_context* ctx,
+                           const server_id& sid,
+                           const po6::net::location* bind_to);
+        void server_offline(replicant_state_machine_context* ctx,
+                            const server_id& sid);
+        void server_shutdown(replicant_state_machine_context* ctx,
+                             const server_id& sid);
+        void server_kill(replicant_state_machine_context* ctx,
+                         const server_id& sid);
+        void server_forget(replicant_state_machine_context* ctx,
+                           const server_id& sid);
         void server_suspect(replicant_state_machine_context* ctx,
-                            const server_id& sid, uint64_t version);
-        void server_shutdown1(replicant_state_machine_context* ctx,
-                              const server_id& sid);
-        void server_shutdown2(replicant_state_machine_context* ctx,
-                              const server_id& sid);
+                            const server_id& sid);
+        void report_disconnect(replicant_state_machine_context* ctx,
+                               const server_id& sid, uint64_t version);
 
+    // config management
+    public:
+        void config_get(replicant_state_machine_context* ctx);
+        void config_ack(replicant_state_machine_context* ctx,
+                        const server_id& sid, uint64_t version);
+        void config_stable(replicant_state_machine_context* ctx,
+                           const server_id& sid, uint64_t version);
+
+    // checkpoint management
+    public:
+        void checkpoint(replicant_state_machine_context* ctx);
+        void checkpoint_stable(replicant_state_machine_context* ctx,
+                               const server_id& sid,
+                               uint64_t config,
+                               uint64_t number);
+
+    // alarm
+    public:
+        void alarm(replicant_state_machine_context* ctx);
+
+    // debug
+    public:
+        void debug_dump(replicant_state_machine_context* ctx);
+
+    // backup/restore
+    public:
+        static coordinator* recreate(replicant_state_machine_context* ctx,
+                                     const char* data, size_t data_sz);
+        void snapshot(replicant_state_machine_context* ctx,
+                      const char** data, size_t* data_sz);
+
+    // utilities
     private:
         // servers
-        server_state* get_state(const server_id& sid);
-        bool is_registered(const server_id& sid);
-        bool is_registered(const po6::net::location& bind_to);
-        // other
-        void issue_new_config(struct replicant_state_machine_context* ctx);
-        void regenerate_cached(struct replicant_state_machine_context* ctx);
+        server* new_server(const server_id& sid);
+        server* get_server(const server_id& sid);
+        void remove_offline(const server_id& sid);
+        // configuration
+        void check_ack_condition(replicant_state_machine_context* ctx);
+        void check_stable_condition(replicant_state_machine_context* ctx);
+        void generate_next_configuration(replicant_state_machine_context* ctx);
+        void generate_cached_configuration(replicant_state_machine_context* ctx);
+        void servers_in_configuration(std::vector<server_id>* sids);
+        // checkpoints
+        void check_checkpoint_stable_condition(replicant_state_machine_context* ctx);
 
     private:
+        // meta state
         uint64_t m_cluster;
-        uint64_t m_version;
         uint64_t m_counter;
-        uint64_t m_acked;
-        std::vector<server_state> m_servers;
-        std::list<missing_acks> m_missing_acks;
-        std::auto_ptr<e::buffer> m_latest_config; // cached config
-        std::auto_ptr<e::buffer> m_resp; // response space
-#ifdef __APPLE__
-        unsigned int m_seed;
-#else
-        drand48_data m_seed;
-#endif
+        uint64_t m_version;
+        uint64_t m_flags;
+        // servers
+        std::vector<server> m_servers;
+        std::vector<offline_server> m_offline;
+        // barriers
+        uint64_t m_config_ack_through;
+        server_barrier m_config_ack_barrier;
+        uint64_t m_config_stable_through;
+        server_barrier m_config_stable_barrier;
+        // checkpoints
+        uint64_t m_checkpoint;
+        uint64_t m_checkpoint_stable_through;
+        uint64_t m_checkpoint_gc_through;
+        server_barrier m_checkpoint_stable_barrier;
+        // cached config
+        std::auto_ptr<e::buffer> m_latest_config;
 
     private:
         coordinator(const coordinator&);
         coordinator& operator = (const coordinator&);
 };
 
-} // namespace wtf
 
 #endif // wtf_coordinator_coordinator_h_

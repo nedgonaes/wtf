@@ -41,15 +41,16 @@ using wtf::configuration;
 configuration :: configuration()
     : m_cluster()
     , m_version()
-    , m_members()
+    , m_flags()
+    , m_servers()
 {
 }
 
-configuration :: configuration(uint64_t c,
-                               uint64_t v)
-    : m_cluster(c)
-    , m_version(v)
-    , m_members()
+configuration :: configuration(const configuration& other)
+    : m_cluster(other.m_cluster)
+    , m_version(other.m_version)
+    , m_flags(other.m_flags)
+    , m_servers(other.m_servers)
 {
 }
 
@@ -60,12 +61,12 @@ configuration :: ~configuration() throw ()
 bool
 configuration :: validate() const
 {
-    for (size_t i = 0; i < m_members.size(); ++i)
+    for (size_t i = 0; i < m_servers.size(); ++i)
     {
-        for (size_t j = i + 1; j < m_members.size(); ++j)
+        for (size_t j = i + 1; j < m_servers.size(); ++j)
         {
-            if (m_members[i].token == m_members[j].token ||
-                m_members[i].address == m_members[j].address)
+            if (m_servers[i].token == m_servers[j].token ||
+                m_servers[i].address == m_servers[j].address)
             {
                 return false;
             }
@@ -76,42 +77,43 @@ configuration :: validate() const
 }
 
 bool
-configuration :: has_token(uint64_t token) const
+configuration :: exists(const server_id& id) const
 {
-    return node_from_token(token) != NULL;
+    for (size_t i = 0; i < m_servers.size(); ++i)
+    {
+        if (m_servers[i].id == id)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-bool
-configuration :: is_member(const wtf_node& node) const
-{
-    const wtf_node* n = node_from_token(node.token);
-    return n && *n == node;
-}
-
-const wtf_node*
+const server*
 configuration :: node_from_token(uint64_t token) const
 {
-    for (size_t i = 0; i < m_members.size(); ++i)
+    for (size_t i = 0; i < m_servers.size(); ++i)
     {
-        if (m_members[i].token == token)
+        if (m_servers[i].token == token)
         {
-            return &m_members[i];
+            return &m_servers[i];
         }
     }
 
     return NULL;
 }
 
-const wtf_node*
-configuration :: members_begin() const
+const server*
+configuration :: servers_begin() const
 {
-    return &m_members.front();
+    return &m_servers.front();
 }
 
-const wtf_node*
-configuration :: members_end() const
+const server*
+configuration :: servers_end() const
 {
-    return &m_members.front() + m_members.size();
+    return &m_servers.front() + m_servers.size();
 }
 
 void
@@ -121,30 +123,18 @@ configuration :: bump_version()
 }
 
 void
-configuration :: add_member(const wtf_node& node)
+configuration :: add_server(const server& node)
 {
-    assert(node_from_token(node.token) == NULL);
-    m_members.push_back(node);
-    std::sort(m_members.begin(), m_members.end());
+    assert(!exists(node.id));
+    m_servers.push_back(node);
+    std::sort(m_servers.begin(), m_servers.end());
 }
 
 const wtf_node*
-configuration :: get_random_member(uint64_t sid)
+configuration :: get_random_server(uint64_t sid)
 {
-    uint32_t id = sid % m_members.size();
-    return &m_members[id];
-}
-
-void
-configuration :: debug_dump(std::ostream& out)
-{
-    out << "configuration cluster=" << m_cluster << " version=" << m_version << std::endl;
-
-    for (size_t i = 0; i <m_members.size(); ++i)
-    {
-        out << "server id=" << m_members[i].token 
-            << " address=" << m_members[i].address << std::endl;
-    }
+    uint32_t id = sid % m_servers.size();
+    return &m_servers[id];
 }
 
 bool
@@ -152,14 +142,15 @@ wtf :: operator == (const configuration& lhs, const configuration& rhs)
 {
     if (lhs.m_cluster != rhs.m_cluster ||
         lhs.m_version != rhs.m_version ||
-        lhs.m_members.size() != rhs.m_members.size())
+	lhs.m_flags != rhs.m_flags ||
+        lhs.m_servers.size() != rhs.m_servers.size())
     {
         return false;
     }
 
-    for (size_t i = 0; i < lhs.m_members.size(); ++i)
+    for (size_t i = 0; i < lhs.m_servers.size(); ++i)
     {
-        if (lhs.m_members[i] != rhs.m_members[i])
+        if (lhs.m_servers[i] != rhs.m_servers[i])
         {
             return false;
         }
@@ -173,89 +164,52 @@ wtf :: operator << (std::ostream& lhs, const configuration& rhs)
 {
     lhs << "configuration(cluster=" << rhs.m_cluster
         << ", version=" << rhs.m_version
-        << ", members=[";
+        << ", flags=" << rhs.m_flags
+        << ", servers=[";
 
-    for (size_t i = 0; i < rhs.m_members.size(); ++i)
+    for (size_t i = 0; i < rhs.m_servers.size(); ++i)
     {
-        lhs << rhs.m_members[i] << (i + 1 < rhs.m_members.size() ? ", " : "");
+        lhs << rhs.m_servers[i] << (i + 1 < rhs.m_servers.size() ? ", " : "");
     }
 
     lhs << "])";
     return lhs;
 }
 
-e::buffer::packer
-wtf :: operator << (e::buffer::packer lhs, const configuration& rhs)
-{
-    lhs = lhs << rhs.m_cluster
-              << rhs.m_version
-              << uint64_t(rhs.m_members.size());
-
-    for (uint64_t i = 0; i < rhs.m_members.size(); ++i)
-    {
-        lhs = lhs << rhs.m_members[i];
-    }
-
-    return lhs;
-}
-
 e::unpacker
-wtf :: operator >> (e::unpacker lhs, configuration& rhs)
+wtf :: operator >> (e::unpacker up, configuration& c)
 {
-    uint64_t members_sz;
-    uint64_t chain_sz;
-    lhs = lhs >> rhs.m_cluster;
-    lhs = lhs >> rhs.m_version;
-    lhs = lhs >> members_sz;
-    //std::cout << "MEMBERS IN CONFIG: " << members_sz << std::endl;
-    
-    rhs.m_members.resize(members_sz);
+    uint64_t num_servers;
+    up = up >> c.m_cluster >> c.m_version >> c.m_flags
+            >> num_servers;
+    c.m_servers.clear();
+    c.m_servers.reserve(num_servers);
 
-    for (uint64_t i = 0; i < rhs.m_members.size(); ++i)
+    for (size_t i = 0; !up.error() && i < num_servers; ++i)
     {
-        lhs = lhs >> rhs.m_members[i];
+        server s;
+        up = up >> s;
+        c.m_servers.push_back(s);
     }
 
-    return lhs;
+    return up;
 }
 
-
-char*
-wtf :: pack_config(const configuration& config, char* ptr)
+std::string
+configuration :: dump() const
 {
-    // XXX inefficient, lazy hack
-    std::auto_ptr<e::buffer> msg(e::buffer::create(pack_size(config)));
-    msg->pack_at(0) << config;
-    memmove(ptr, msg->data(), msg->size());
-    return ptr + msg->size();
-}
+    std::ostringstream out;
+    out << "cluster " << m_cluster << "\n";
+    out << "version " << m_version << "\n";
+    out << "flags " << std::hex << m_flags << std::dec << "\n";
 
-size_t
-wtf :: pack_size(const configuration& rhs)
-{
-    size_t sz = sizeof(uint64_t) // rhs.m_cluster
-              + sizeof(uint64_t) // rhs.m_prev_token
-              + sizeof(uint64_t) // rhs.m_this_token
-              + sizeof(uint64_t) // rhs.m_version
-              + sizeof(uint64_t); // rhs.m_members.size()
-
-    for (size_t i = 0; i < rhs.m_members.size(); ++i)
+    for (size_t i = 0; i < m_servers.size(); ++i)
     {
-        sz += pack_size(rhs.m_members[i]);
+        out << "server "
+            << m_servers[i].id.get() << " "
+            << m_servers[i].bind_to << " "
+            << server::to_string(m_servers[i].state) << "\n";
     }
 
-    return sz;
-}
-
-size_t
-wtf :: pack_size(const std::vector<configuration>& rhs)
-{
-    size_t sz = sizeof(uint32_t);
-
-    for (size_t i = 0; i < rhs.size(); ++i)
-    {
-        sz += pack_size(rhs[i]);
-    }
-
-    return sz;
+    return out.str();
 }

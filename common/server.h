@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,29 +25,47 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_coordinator_returncode_h_
-#define wtf_common_coordinator_returncode_h_
+#ifndef wtf_common_server_h_
+#define wtf_common_server_h_
 
-namespace wtf
-{
+// po6
+#include <po6/net/location.h>
 
-// occupies [8832, 8960)
-// these are hardcoded as byte strings in coordinator/coordinator.cc
-// keep them in sync
-enum coordinator_returncode
+// WTF
+#include "namespace.h"
+#include "common/ids.h"
+
+class server
 {
-    COORD_SUCCESS = 8832,
-    COORD_MALFORMED = 8833,
-    COORD_DUPLICATE = 8834,
-    COORD_NOT_FOUND = 8835,
-    COORD_UNINITIALIZED = 8837,
-    COORD_NO_CAN_DO = 8839
+    public:
+        enum state_t
+        {
+            ASSIGNED = 1,
+            NOT_AVAILABLE = 2,
+            AVAILABLE = 3,
+            SHUTDOWN = 4,
+            KILLED = 5
+        };
+        static const char* to_string(state_t state);
+
+    public:
+        server();
+        explicit server(const server_id&);
+
+    public:
+        state_t state;
+        server_id id;
+        po6::net::location bind_to;
 };
 
-std::ostream&
-operator << (std::ostream& lhs, coordinator_returncode rhs);
+bool
+operator < (const server& lhs, const server& rhs);
 
+e::buffer::packer
+operator << (e::buffer::packer lhs, const server& rhs);
+e::unpacker
+operator >> (e::unpacker lhs, server& rhs);
+size_t
+pack_size(const server& p);
 
-} // namespace wtf
-
-#endif // wtf_common_coordinator_returncode_h_
+#endif // wtf_common_server_h_

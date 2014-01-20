@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2012-2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of WTF nor the names of its contributors may be
+//     * Neither the name of HyperDex nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -25,29 +25,48 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_coordinator_returncode_h_
-#define wtf_common_coordinator_returncode_h_
+#ifndef wtf_coordinator_util_h_
+#define wtf_coordinator_util_h_
 
-namespace wtf
+// HyperDex
+#include "namespace.h"
+#include "common/coordinator_returncode.h"
+
+
+static inline void
+generate_response(replicant_state_machine_context* ctx, coordinator_returncode x)
 {
+    const char* ptr = NULL;
 
-// occupies [8832, 8960)
-// these are hardcoded as byte strings in coordinator/coordinator.cc
-// keep them in sync
-enum coordinator_returncode
-{
-    COORD_SUCCESS = 8832,
-    COORD_MALFORMED = 8833,
-    COORD_DUPLICATE = 8834,
-    COORD_NOT_FOUND = 8835,
-    COORD_UNINITIALIZED = 8837,
-    COORD_NO_CAN_DO = 8839
-};
+    switch (x)
+    {
+        case COORD_SUCCESS:
+            ptr = "\x22\x80";
+            break;
+        case COORD_MALFORMED:
+            ptr = "\x22\x81";
+            break;
+        case COORD_DUPLICATE:
+            ptr = "\x22\x82";
+            break;
+        case COORD_NOT_FOUND:
+            ptr = "\x22\x83";
+            break;
+        case COORD_UNINITIALIZED:
+            ptr = "\x22\x85";
+            break;
+        case COORD_NO_CAN_DO:
+            ptr = "\x22\x87";
+            break;
+        default:
+            ptr = "\xff\xff";
+            break;
+    }
 
-std::ostream&
-operator << (std::ostream& lhs, coordinator_returncode rhs);
+    replicant_state_machine_set_response(ctx, ptr, 2);
+}
 
+#define INVARIANT_BROKEN(X) \
+    fprintf(log, "invariant broken at " __FILE__ ":%d:  %s\n", __LINE__, X "\n")
 
-} // namespace wtf
-
-#endif // wtf_common_coordinator_returncode_h_
+#endif // wtf_coordinator_util_h_
