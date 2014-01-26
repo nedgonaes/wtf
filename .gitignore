@@ -49,9 +49,15 @@ wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster
 wtf.pc
+wtf-admin.pc
 stamp-h1
 wtf-shelltest
 wtf-fusetest
+wtf-server-forget
+wtf-server-kill
+wtf-server-offline
+wtf-server-online
+wtf-server-register
 _logs
 wtf-fusetest
 wtf-shelltest

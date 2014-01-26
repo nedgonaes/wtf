@@ -41,6 +41,7 @@ wtf :: operator << (std::ostream& lhs, wtf_network_msgtype rhs)
         STRINGIFY(WTFNET_GET);
         STRINGIFY(WTFNET_PUT);
         STRINGIFY(WTFNET_UPDATE);
+        STRINGIFY(WTFNET_CONFIG_MISMATCH);
         default:
             lhs << "unknown msgtype";
     }

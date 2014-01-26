@@ -35,6 +35,7 @@
 // BusyBee
 #include <busybee_constants.h>
 #include <busybee_st.h>
+#include <busybee_utils.h>
 
 // WTF
 #include "common/configuration.h"
@@ -46,7 +47,7 @@
 #include "common/special_objects.h"
 #include "client/command.h"
 #include "client/file.h"
-#include "client/coordinator_link.h"
+#include "common/coordinator_link.h"
 #include "client/wtf.h"
 
 using namespace wtf;
@@ -106,10 +107,9 @@ using namespace std;
 
 wtf_client :: wtf_client(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
-    : m_config(new wtf::configuration())
-    , m_busybee_mapper(new wtf::mapper())
-    , m_busybee(new busybee_st(m_busybee_mapper.get(), 0))
-    , m_coord(new wtf::coordinator_link(po6::net::hostname(host, port)))
+    : m_busybee_mapper(m_coord.config())
+    , m_busybee(&m_busybee_mapper, busybee_generate_id())
+    , m_coord(host, port)
     , m_nonce(1)
     , m_fileno(1)
     , m_have_seen_config(false)
@@ -154,7 +154,7 @@ wtf_client :: loop(int timeout, wtf_returncode* status)
 
 
         // Always set timeout
-        m_busybee->set_timeout(timeout);
+        m_busybee.set_timeout(timeout);
         int64_t ret = inner_loop(status);
 
         ////std::cout << "after inner_loop, status: " << *status << std::endl;
@@ -174,7 +174,7 @@ wtf_client :: loop(int timeout, wtf_returncode* status)
         m_last_error_desc = c->last_error_desc();
         m_last_error_file = c->last_error_file();
         m_last_error_line = c->last_error_line();
-        m_last_error_host = c->sent_to().address;
+        m_last_error_host = c->sent_to().bind_to;
         return c->nonce();
     }
 
@@ -200,7 +200,7 @@ wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
         }
 
         // Always set timeout
-        m_busybee->set_timeout(timeout);
+        m_busybee.set_timeout(timeout);
         int64_t ret = inner_loop(status);
 
         if (ret < 0)
@@ -224,208 +224,50 @@ wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
     m_last_error_desc = c->last_error_desc();
     m_last_error_file = c->last_error_file();
     m_last_error_line = c->last_error_line();
-    m_last_error_host = c->sent_to().address;
+    m_last_error_host = c->sent_to().bind_to;
     return c->nonce();
 }
 
 int64_t
 wtf_client :: maintain_coord_connection(wtf_returncode* status)
 {
-    if (!m_have_seen_config)
+    replicant_returncode rc;
+    uint64_t old_version = m_coord.config()->version();
+
+    if (!m_coord.ensure_configuration(&rc))
     {
-        if (!m_coord->wait_for_config(status))
+        if (rc == REPLICANT_INTERRUPTED)
         {
-            return -1;
+            WTFSETERROR(WTF_INTERRUPTED, "signal received");
+        }
+        else if (rc == REPLICANT_TIMEOUT)
+        {
+            WTFSETERROR(WTF_TIMEOUT, "operation timed out");
+        }
+        else
+        {
+            WTFSETERROR(WTF_COORDFAIL, m_coord.error().msg());
         }
 
-        if (m_busybee->set_external_fd(m_coord->poll_fd()) < 0)
-        {
-            *status = WTF_POLLFAILED;
-            return -1;
-        }
+        return false;
     }
-    else
+
+    if (m_busybee.set_external_fd(m_coord.poll_fd()) != BUSYBEE_SUCCESS)
     {
-        if (!m_coord->poll_for_config(status))
-        {
-            return 0;
-        }
+        *status = WTF_POLLFAILED;
+        return false;
     }
 
-    int64_t reconfigured = 0;
+    uint64_t new_version = m_coord.config()->version();
 
-    if (m_config->version() < m_coord->config().version())
+    if (old_version < new_version)
     {
-        *m_config = m_coord->config();
-        command_map::iterator i = m_commands.begin();
-
-        while (i != m_commands.end())
-        {
-            //XXX: Find the reconfigured nodes and retry ops to new nodes
-            ++i;
-        }
-
-        m_have_seen_config = true;
+        //XXX: what do we do here?
     }
 
-    return reconfigured;
-}
+    std::cout << m_coord.config()->dump() << std::endl;
 
-wtf_returncode
-wtf_client :: initialize_cluster(uint64_t cluster, const char* path)
-{
-    replicant_client* repl = m_coord->replicant();
-    replicant_returncode rstatus;
-    const char* errmsg = NULL;
-    size_t errmsg_sz = 0;
-
-    int64_t noid = repl->new_object("wtf", path, &rstatus,
-                                    &errmsg, &errmsg_sz);
-
-    if (noid < 0)
-    {
-        switch (rstatus)
-        {
-            case REPLICANT_BAD_LIBRARY:
-                return WTF_NOTFOUND;
-            case REPLICANT_INTERRUPTED:
-                return WTF_INTERRUPTED;
-            case REPLICANT_SERVER_ERROR:
-            case REPLICANT_NEED_BOOTSTRAP:
-            case REPLICANT_MISBEHAVING_SERVER:
-            case REPLICANT_BACKOFF:
-                return WTF_COORDFAIL;
-            case REPLICANT_SUCCESS:
-            case REPLICANT_NAME_TOO_LONG:
-            case REPLICANT_FUNC_NOT_FOUND:
-            case REPLICANT_OBJ_EXIST:
-            case REPLICANT_OBJ_NOT_FOUND:
-            case REPLICANT_COND_NOT_FOUND:
-            case REPLICANT_COND_DESTROYED:
-            case REPLICANT_TIMEOUT:
-            case REPLICANT_INTERNAL_ERROR:
-            case REPLICANT_NONE_PENDING:
-            case REPLICANT_GARBAGE:
-            default:
-                return WTF_INTERNAL;
-        }
-    }
-
-    replicant_returncode lstatus;
-    int64_t lid = repl->loop(noid, -1, &lstatus);
-
-    if (lid < 0)
-    {
-        repl->kill(noid);
-
-        switch (lstatus)
-        {
-            case REPLICANT_INTERRUPTED:
-                return WTF_INTERRUPTED;
-            case REPLICANT_SERVER_ERROR:
-            case REPLICANT_NEED_BOOTSTRAP:
-            case REPLICANT_MISBEHAVING_SERVER:
-            case REPLICANT_BACKOFF:
-                return WTF_COORDFAIL;
-            case REPLICANT_TIMEOUT:
-            case REPLICANT_SUCCESS:
-            case REPLICANT_NAME_TOO_LONG:
-            case REPLICANT_FUNC_NOT_FOUND:
-            case REPLICANT_OBJ_EXIST:
-            case REPLICANT_OBJ_NOT_FOUND:
-            case REPLICANT_COND_NOT_FOUND:
-            case REPLICANT_COND_DESTROYED:
-            case REPLICANT_BAD_LIBRARY:
-            case REPLICANT_INTERNAL_ERROR:
-            case REPLICANT_NONE_PENDING:
-            case REPLICANT_GARBAGE:
-            default:
-                return WTF_INTERNAL;
-        }
-    }
-
-    assert(lid == noid);
-
-    switch (rstatus)
-    {
-        case REPLICANT_SUCCESS:
-            break;
-        case REPLICANT_INTERRUPTED:
-            return WTF_INTERRUPTED;
-        case REPLICANT_OBJ_EXIST:
-            return WTF_DUPLICATE;
-        case REPLICANT_FUNC_NOT_FOUND:
-        case REPLICANT_OBJ_NOT_FOUND:
-        case REPLICANT_COND_NOT_FOUND:
-        case REPLICANT_COND_DESTROYED:
-        case REPLICANT_SERVER_ERROR:
-        case REPLICANT_NEED_BOOTSTRAP:
-        case REPLICANT_MISBEHAVING_SERVER:
-            return WTF_COORDFAIL;
-        case REPLICANT_NAME_TOO_LONG:
-        case REPLICANT_BAD_LIBRARY:
-            return WTF_COORD_LOGGED;
-        case REPLICANT_TIMEOUT:
-        case REPLICANT_BACKOFF:
-        case REPLICANT_INTERNAL_ERROR:
-        case REPLICANT_NONE_PENDING:
-        case REPLICANT_GARBAGE:
-        default:
-            return WTF_INTERNAL;
-    }
-
-    wtf_returncode status;
-    char data[sizeof(uint64_t)];
-    e::pack64be(cluster, data);
-    const char* output;
-    size_t output_sz;
-
-    if (!m_coord->make_rpc("initialize", data, sizeof(uint64_t),
-                           &status, &output, &output_sz))
-    {
-        return status;
-    }
-
-    status = WTF_SUCCESS;
-
-    if (output_sz >= 2)
-    {
-        uint16_t x;
-        e::unpack16be(output, &x);
-        coordinator_returncode rc = static_cast<coordinator_returncode>(x);
-
-        switch (rc)
-        {
-            case wtf::COORD_SUCCESS:
-                status = WTF_SUCCESS;
-                break;
-            case wtf::COORD_MALFORMED:
-                status = WTF_INTERNAL;
-                break;
-            case wtf::COORD_DUPLICATE:
-                status = WTF_CLUSTER_JUMP;
-                break;
-            case wtf::COORD_NOT_FOUND:
-                status = WTF_INTERNAL;
-                break;
-            case wtf::COORD_INITIALIZED:
-                status = WTF_DUPLICATE;
-                break;
-            case wtf::COORD_UNINITIALIZED:
-                status = WTF_COORDFAIL;
-                break;
-            default:
-                status = WTF_INTERNAL;
-                break;
-        }
-    }
-
-    if (output)
-    {
-        replicant_destroy_output(output, output_sz);
-    }
-
-    return status;
+    return true;
 }
 
 wtf_returncode
@@ -438,65 +280,8 @@ wtf_client :: show_config(std::ostream& out)
         return status;
     }
 
-    m_config->debug_dump(out);
+    out << m_coord.config()->dump();
     return WTF_SUCCESS;
-}
-
-wtf_returncode
-wtf_client :: kill(uint64_t server_id)
-{
-    wtf_returncode status;
-    char data[sizeof(uint64_t)];
-    e::pack64be(server_id, data);
-    const char* output;
-    size_t output_sz;
-
-    if (!m_coord->make_rpc("kill", data, sizeof(uint64_t),
-                           &status, &output, &output_sz))
-    {
-        return status;
-    }
-
-    status = WTF_SUCCESS;
-
-    if (output_sz >= 2)
-    {
-        uint16_t x;
-        e::unpack16be(output, &x);
-        coordinator_returncode rc = static_cast<coordinator_returncode>(x);
-
-        switch (rc)
-        {
-            case wtf::COORD_SUCCESS:
-                status = WTF_SUCCESS;
-                break;
-            case wtf::COORD_MALFORMED:
-                status = WTF_INTERNAL;
-                break;
-            case wtf::COORD_DUPLICATE:
-                status = WTF_DUPLICATE;
-                break;
-            case wtf::COORD_NOT_FOUND:
-                status = WTF_NOTFOUND;
-                break;
-            case wtf::COORD_INITIALIZED:
-                status = WTF_INTERNAL;
-                break;
-            case wtf::COORD_UNINITIALIZED:
-                status = WTF_COORDFAIL;
-                break;
-            default:
-                status = WTF_INTERNAL;
-                break;
-        }
-    }
-
-    if (output)
-    {
-        replicant_destroy_output(output, output_sz);
-    }
-
-    return status;
 }
 
 
@@ -507,7 +292,7 @@ int
 #endif
 wtf_client :: poll_fd()
 {
-    return m_busybee->poll_fd();
+    return m_busybee.poll_fd();
 }
 
 int64_t
@@ -534,8 +319,8 @@ wtf_client :: inner_loop(wtf_returncode* status)
     // Receive a message
     uint64_t id;
     std::auto_ptr<e::buffer> msg;
-    busybee_returncode rc = m_busybee->recv(&id, &msg);
-    const wtf_node* node = m_config->node_from_token(id);
+    busybee_returncode rc = m_busybee.recv(&id, &msg);
+    const server* node = m_coord.config()->server_from_id(server_id(id));
     
     ////std::cout << rc << std::endl;
 
@@ -568,11 +353,11 @@ wtf_client :: inner_loop(wtf_returncode* status)
 
     if (!node)
     {
-        m_busybee->drop(id);
+        m_busybee.drop(id);
         return 0;
     }
 
-    po6::net::location from = node->address;
+    po6::net::location from = node->bind_to;
     e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
     wtf_network_msgtype mt;
     up = up >> mt;
@@ -607,23 +392,30 @@ wtf_client :: open(const char* path, int flags)
 {
     wtf_returncode status;
     MAINTAIN_COORD_CONNECTION(&status);
+    std::cout << "OPEN WITH FLAGS: " << flags << std::endl;
 
     if (flags & (O_APPEND | O_ASYNC | O_CLOEXEC))
     {
-        return -1;
+        std::cout << "WARNING: FLAG NOT SUPPORTED" << std::endl;
     }
 
     if (flags & O_CREAT)
     {
-        //Should use other open with mode_t arg
+        std::cout << "WARNING: WRONG OPEN" << std::endl;
         return -1;
     }
 
     e::intrusive_ptr<file> f = new file(path);
-    m_fds[m_fileno] = f; 
     
-    update_file_cache(path, f, false);
+    if (update_file_cache(path, f, false) < 0)
+    {
+        std::cout << "WARNING: CANT UPDATE FILE CACHE" << std::endl;
+        return -1;
+    }
+
+    m_fds[m_fileno] = f; 
     f->flags = flags;
+
 
     return m_fileno++;
 }
@@ -643,6 +435,7 @@ wtf_client :: open(const char* path, int flags, mode_t mode)
     if (flags & O_CREAT)
     {
         update_file_cache(path, f, true);
+        update_hyperdex(f);
     }
     else
     {
@@ -656,13 +449,13 @@ wtf_client :: open(const char* path, int flags, mode_t mode)
 void
 wtf_client :: begin_tx()
 {
-    //XXX: Call hyperdex stuff.
+    //proprietary HyperDex Warp code here.
 }
 
 int64_t
 wtf_client :: end_tx()
 {
-    //XXX: flush?
+    //proprietary HyperDex Warp code here.
 }
 
 void
@@ -678,13 +471,14 @@ wtf_client :: write(int64_t fd,
                     uint32_t replicas,
                     wtf_returncode* status)
 {
+    std::cout << "WRITE FD " << fd << std::endl;
     int64_t rid = 0;
     int64_t lid = 0;
     uint32_t rem = data_sz;
 
     if (m_fds.find(fd) == m_fds.end())
     {
-        ////std::cout << "invalid fd: " << fd <<  std::endl;
+        std::cout << "invalid fd: " << fd <<  std::endl;
         return -1;
     }
 
@@ -693,16 +487,16 @@ wtf_client :: write(int64_t fd,
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
-        ////std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
-        ////std::cout << "bid " << bid << std::endl; 
+        std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
+        std::cout << "bid " << bid << std::endl; 
         uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
         len = MIN(len, rem); 
         uint64_t version = f->get_block_version(bid) + 1;
         uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
 
-        ////std::cout << "data_sz = " << data_sz << std::endl;
-        ////std::cout << "Len = " << len << std::endl;
-        ////std::cout << "Rem = " << rem << std::endl;
+        std::cout << "data_sz = " << data_sz << std::endl;
+        std::cout << "Len = " << len << std::endl;
+        std::cout << "Rem = " << rem << std::endl;
         uint64_t bl = f->get_block_length(bid);
 
         if ((bl > 0 && block_off > 0) || (len < bl))
@@ -715,7 +509,7 @@ wtf_client :: write(int64_t fd,
             for (block_map::iterator it = f->lookup_block_begin(bid);
                  it != f->lookup_block_end(bid); ++it)
             {
-                wtf::wtf_node node = *m_config->node_from_token(it->server());
+                wtf::server node = *m_coord.config()->server_from_id(server_id(it->server()));
                 e::intrusive_ptr<command> cmd = new command(node,
                                                 it->block(),
                                                 fd, bid, block_off, version,
@@ -730,7 +524,7 @@ wtf_client :: write(int64_t fd,
             for (int i = 0; i < replicas; ++i)
             {
                 //write new blocks or full-blocks.
-                e::intrusive_ptr<command> cmd = new command(wtf::wtf_node() /*send_to*/,
+                e::intrusive_ptr<command> cmd = new command(wtf::server() /*send_to*/,
                                                 0 /*remote_bid*/,
                                                 fd, bid, block_off, version,
                                                 data, len, m_nonce, wtf::WTFNET_PUT,
@@ -775,6 +569,10 @@ wtf_client :: read(int64_t fd, char* data,
     uint32_t rem = MIN(*data_sz, f->length() - f->offset());
     uint32_t sz = 0;
 
+    std::cout << "rem: " << rem << std::endl;
+    std::cout << "f->length(): " << f->length() << std::endl;
+    std::cout << "f->offset(): " << f->offset() << std::endl;
+
     while(rem > 0)
     {
         uint64_t bid = f->offset()/CHUNKSIZE;
@@ -784,7 +582,7 @@ wtf_client :: read(int64_t fd, char* data,
         uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
 
         wtf::block_id block = f->lookup_block(bid);
-        wtf::wtf_node send_to = *m_config->node_from_token(block.server());
+        wtf::server send_to = *m_coord.config()->server_from_id(server_id(block.server()));
         //XXX: pass in output buffer.
         //XXX: If read fails, read from the next node on the list.
 
@@ -804,6 +602,9 @@ wtf_client :: read(int64_t fd, char* data,
         rem -= len;
         sz += len;
         data += len;
+        std::cout << "rem: " << rem << std::endl;
+        std::cout << "len: " << len << std::endl;
+        std::cout << "sz: " << sz << std::endl;
         f->set_offset(f->offset() + len);
     }
 
@@ -847,7 +648,8 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
     if(f->commands_begin() == f->commands_end())
     {
-        //std::cout << "no commands" << std::endl;
+        std::cout << "no commands" << std::endl;
+        return 0;
     }
 
     for (command_map::const_iterator it = f->commands_begin();
@@ -915,15 +717,15 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
     //std::cout << "Configuration is: " ;
     //m_config->debug_dump(std::cout);
 
-    if(cmd->sent_to() == wtf_node())
+    if(cmd->sent_to().id == server().id)
     {
-        cmd->set_sent_to(*m_config->get_random_member(generate_token()));
+        cmd->set_sent_to(*m_coord.config()->get_random_server(generate_token()));
     }
 
     std::auto_ptr<e::buffer> msg(cmd->request()->copy());
-    wtf_node send_to = cmd->sent_to();
-    m_busybee_mapper->set(send_to);
-    busybee_returncode rc = m_busybee->send(send_to.token, msg);
+    server send_to = cmd->sent_to();
+    m_busybee.set_timeout(-1);
+    busybee_returncode rc = m_busybee.send(send_to.id.get(), msg);
 
     switch (rc)
     {
@@ -934,12 +736,13 @@ wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
             //XXX
             handle_disruption(send_to, status);
             WTFSETERROR(WTF_BACKOFF, "backoff before retrying");
-            BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
-            BUSYBEE_ERROR(INTERNAL, POLLFAILED);
-            BUSYBEE_ERROR(INTERNAL, ADDFDFAIL);
-            BUSYBEE_ERROR(INTERNAL, TIMEOUT);
-            BUSYBEE_ERROR(INTERNAL, EXTERNAL);
-            BUSYBEE_ERROR(INTERNAL, INTERRUPTED);
+            break;
+        BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
+        BUSYBEE_ERROR(INTERNAL, POLLFAILED);
+        BUSYBEE_ERROR(INTERNAL, ADDFDFAIL);
+        BUSYBEE_ERROR(INTERNAL, TIMEOUT);
+        BUSYBEE_ERROR(INTERNAL, EXTERNAL);
+        BUSYBEE_ERROR(INTERNAL, INTERRUPTED);
         default:
             WTFSETERROR(WTF_INTERNAL, "BusyBee returned unknown error");
     }
@@ -1053,6 +856,11 @@ wtf_client :: handle_update(e::intrusive_ptr<command>& cmd,
     uint64_t block_index = cmd->block();
     uint64_t len = cmd->offset() + cmd->length();
 
+    std::cout << "len: " << len << std::endl;
+    std::cout << "cmd->offset(): " << cmd->offset() << std::endl;
+    std::cout << "cmd->length(): " << cmd->length() << std::endl;
+    std::cout << "f->length(): " << f->length() << std::endl;
+
     if ((block_index + 1) * CHUNKSIZE >= f->length())
     {
         len = MAX(len, f->length() - block_index*CHUNKSIZE);
@@ -1064,7 +872,7 @@ wtf_client :: handle_update(e::intrusive_ptr<command>& cmd,
 
     if (up.error())
     {
-        m_last_error_host = cmd->sent_to().address;
+        m_last_error_host = cmd->sent_to().bind_to;
         //XXX: implement proper return value
         return;
     }
@@ -1089,7 +897,7 @@ wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
 
     if (up.error())
     {
-        m_last_error_host = cmd->sent_to().address;
+        m_last_error_host = cmd->sent_to().bind_to;
         //XXX: implement proper return value
         return;
     }
@@ -1121,60 +929,70 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
     {
         if (!create)
         {
+            errno = ENOENT;
             return -1;
         }
 
         /* The file does not exist or was deleted, truncate it. */
         f->set_offset(0);
         f->truncate();
+
     }
     else
     {
+        std::cout << "PATH " << path << " has " << attrs_sz << " attributes." << std::endl;
         for (size_t i = 0; i < attrs_sz; ++i)
         {
             if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
+                std::cout << "unpacking blockmap" << std::endl;
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
                 while (!up.empty())
                 {
-                    //std::cout << "up as slice hex [" << up.as_slice().hex() << "]" << std::endl;
+                    std::cout << "up as slice hex [" << up.as_slice().hex() << "]" << std::endl;
                     uint32_t idlen;
                     uint64_t id;
                     uint32_t valuelen;
                     up = up >> idlen >> id >> valuelen;
                     e::unpack64be((uint8_t*)&id, &id);
                     e::unpack32be((uint8_t*)&valuelen, &valuelen);
-                    //cout << "idlen " << idlen << " id " << id << " valuelen " << valuelen << endl;
+                    cout << "idlen " << idlen << " id " << id << " valuelen " << valuelen << endl;
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
                     up = up >> b;
                     f->update_blocks(id, b);
                 }
-
-                break;
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
             {
+                std::cout << "unpacking directory" << std::endl;
                 uint64_t is_dir;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
                 up = up >> is_dir;
+                e::unpack64be((uint8_t*)&is_dir, &is_dir);
 
                 if (is_dir == 0)
                 {
+                    std::cout << path << " is not a dir " << std::endl;
                     f->is_directory = false;
                 }
                 else
                 {
+                    std::cout << path << " is a dir " << std::endl;
                     f->is_directory = true;
                 }
             }
             else if (strcmp(attrs[i].attr, "mode") == 0)
             {
+                std::cout << "unpacking mode" << std::endl;
                 uint64_t mode;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
                 up = up >> mode;
+                e::unpack64be((uint8_t*)&mode, &mode);
+
+                std::cout << "MODE: " << mode << std::endl;
 
                 f->mode = mode;
             }
@@ -1317,6 +1135,27 @@ wtf_client :: getcwd(char* c, size_t len)
 }
 
 int64_t
+wtf_client :: getattr(const char* path, struct wtf_file_attrs* fa)
+{
+    std::cout << "getattr " << path << std::endl;
+    wtf_returncode status;
+
+    int64_t fd = open(path, O_RDONLY);
+    if (fd < 0)
+    {
+        return -1;
+    }
+
+    e::intrusive_ptr<file> f = m_fds[fd];
+    fa->is_dir = f->is_directory ? 1 : 0;
+    fa->size = f->length();
+    fa->mode = f->mode;
+    fa->flags = f->flags;
+    close(fd, &status);
+    return 0;
+}
+
+int64_t
 wtf_client :: chdir(char* path)
 {
     char *abspath = new char[PATH_MAX]; 
@@ -1438,6 +1277,7 @@ wtf_client :: mkdir(const char* path, mode_t mode)
 int64_t
 wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
 {
+    std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
     int i = 0;
 
@@ -1464,15 +1304,18 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     attr[1].datatype = HYPERDATATYPE_INT64;
 
     ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &status);
+    if (ret < 0)
+    {
+        std::cout << "PUT FAILED: " << status << std::endl;
+        return -1;
+    }
+
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
 
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
+        std::cout << "UPDATE FAILED: " << res << std::endl;
         return -1;
-    }
-    else
-    {
-        return 0;
     }
 
 
@@ -1484,6 +1327,8 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
     {
         if (it->second->dirty())
         {
+            std::cout << "UPDATING BLOCK " << it->first << " of " << f->path().get() << std::endl;
+            std::cout << "LEN: " << it->second->length() << std::endl;
             struct hyperdex_client_map_attribute attr;
             attrs.push_back(attr);
             attrs[i].attr = name;
@@ -1498,6 +1343,10 @@ wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
             attrs[i].value_datatype = HYPERDATATYPE_STRING;
             attrs[i].value_sz = sz;
             ++i;
+        }
+        else
+        {
+            std::cout << "BLOCK " << it->first << " of " << f->path().get() << "NOT DIRTY" << std::endl;
         }
     }
 
@@ -1579,7 +1428,7 @@ wtf_client :: handle_get(e::intrusive_ptr<command>& cmd,
 }
 
 void
-wtf_client :: handle_disruption(const wtf_node& from,
+wtf_client :: handle_disruption(const server& from,
                                       wtf_returncode*)
 {
     for (command_map::iterator it = m_commands.begin(); it != m_commands.end(); )
@@ -1587,7 +1436,7 @@ wtf_client :: handle_disruption(const wtf_node& from,
         e::intrusive_ptr<command> c = it->second;
 
         // If this op wasn't sent to the failed host, then skip it
-        if (c->sent_to() != from)
+        if (c->sent_to().id != from.id)
         {
             ++it;
             continue;

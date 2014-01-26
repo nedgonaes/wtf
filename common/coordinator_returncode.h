@@ -28,6 +28,8 @@
 #ifndef wtf_common_coordinator_returncode_h_
 #define wtf_common_coordinator_returncode_h_
 
+#include <iostream>
+
 namespace wtf
 {
 

@@ -25,37 +25,36 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+#include "common/ids.h"
 
-// e
-#include <e/buffer.h>
+#define CREATE_ID(TYPE) \
+    std::ostream& \
+    operator << (std::ostream& lhs, const TYPE ## _id& rhs) \
+    { \
+        return lhs << #TYPE "(" << rhs.get() << ")"; \
+    } \
+    e::buffer::packer \
+    operator << (e::buffer::packer pa, const TYPE ## _id& rhs) \
+    { \
+        return pa << rhs.get(); \
+    } \
+    e::unpacker \
+    operator >> (e::unpacker up, TYPE ## _id& rhs) \
+    { \
+        uint64_t id; \
+        up = up >> id; \
+        rhs = TYPE ## _id(id); \
+        return up; \
+    }
 
 namespace wtf
 {
 
-enum wtf_network_msgtype
-{
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
-};
-
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
-
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
+CREATE_ID(cluster)
+CREATE_ID(version)
+CREATE_ID(server)
 
 } // namespace wtf
 
-#endif // wtf_network_msgtype_h_
+#undef OPERATOR
+#undef CREATE_ID

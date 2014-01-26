@@ -31,6 +31,8 @@
 #include "config.h"
 #endif
 
+#define ALARM_INTERVAL 30
+
 // C
 #include <cmath>
 #include <stdio.h>
@@ -65,13 +67,14 @@
 #include "common/network_msgtype.h"
 #include "common/response_returncode.h"
 #include "common/special_objects.h"
-#include "common/wtf_node.h"
 #include "daemon/daemon.h"
 
 using wtf::daemon;
 
 int s_interrupts = 0;
 bool s_alarm = false;
+bool s_debug = false;
+
 
 #define CHECK_UNPACK(MSGTYPE, UNPACKER) \
     do \
@@ -90,26 +93,35 @@ bool s_alarm = false;
     pack_size(wtf::RESPONSE_SUCCESS) + sizeof(uint64_t))
 
 static void
-
-
 exit_on_signal(int /*signum*/)
 {
-    if (s_interrupts == 0)
+    if (__sync_fetch_and_add(&s_interrupts, 1) == 0)
     {
-        RAW_LOG(ERROR, "interrupted: initiating shutdown (interrupt again to exit immediately)");
+        RAW_LOG(ERROR, "interrupted: initiating shutdown; we'll try for up to 10 seconds (interrupt again to exit immediately)");
     }
     else
     {
         RAW_LOG(ERROR, "interrupted again: exiting immediately");
     }
+}
 
-    ++s_interrupts;
+static void
+exit_after_timeout(int /*signum*/)
+{
+    __sync_fetch_and_add(&s_interrupts, 1);
+    RAW_LOG(ERROR, "took too long to shutdown; just exiting");
 }
 
 static void
 handle_alarm(int /*signum*/)
 {
     s_alarm = true;
+}
+
+static void
+handle_debug(int /*signum*/)
+{
+    s_debug = true;
 }
 
 static void
@@ -129,14 +141,15 @@ daemon :: ~daemon() throw ()
 
 daemon :: daemon()
     : m_s() 
-    , m_busybee_mapper()
-    , m_busybee()
     , m_us()
+    , m_bind_to()
     , m_threads()
     , m_coord(this)
+    , m_busybee_mapper(&m_config)
+    , m_busybee()
     , m_blockman()
     , m_periodic()
-    , m_temporary_servers()
+    , m_config()
 {
     trip_periodic(0, &daemon::periodic_stat);
 }
@@ -234,6 +247,7 @@ daemon :: run(bool daemonize,
     bool restored = false;
 
     m_coord.set_coordinator_address(coordinator.address.c_str(), coordinator.port);
+    m_bind_to = bind_to;
 
     uint64_t sid;
 
@@ -252,16 +266,11 @@ daemon :: run(bool daemonize,
 
     m_us = server_id(sid);
 
-    m_busybee.reset(new busybee_mta(&m_busybee_mapper, m_us.address, m_us.token, threads));
+    LOG(INFO) << "token " << m_us.get();
+
+    m_busybee.reset(new busybee_mta(&m_busybee_mapper, bind_to, m_us.get(), threads));
     m_busybee->set_ignore_signals();
-
-    LOG(INFO) << "token " << m_us.token;
-    m_blockman.setup(m_us.token, data, backing_path);
-
-    if (!m_coord.register_id(server_id(m_us.token), m_us.address))
-    {
-        return EXIT_FAILURE;
-    }
+    m_blockman.setup(m_us.get(), data, backing_path);
 
     for (size_t i = 0; i < threads; ++i)
     {
@@ -270,33 +279,127 @@ daemon :: run(bool daemonize,
         t->start();
     }
 
-    while (!m_coord.exit_wait_loop())
-    {
-        configuration old_config = m_config;
-        configuration new_config;
+    //m_stat_collector.start();
+    alarm(ALARM_INTERVAL);
+    bool cluster_jump = false;
+    bool requested_exit = false;
+    uint64_t checkpoint = 0;
+    uint64_t checkpoint_stable = 0;
+    uint64_t checkpoint_gc = 0;
 
-        if (!m_coord.wait_for_config(&new_config))
+    while (__sync_fetch_and_add(&s_interrupts, 0) < 2 &&
+           !m_coord.should_exit())
+    {
+        if (s_alarm)
+        {
+            s_alarm = false;
+            alarm(ALARM_INTERVAL);
+        }
+
+        if (s_debug)
+        {
+            s_debug = false;
+            LOG(INFO) << "recieved SIGUSR2; dumping internal tables";
+            //XXX: debug dumps of various subsystems
+            LOG(INFO) << "end debug dump";
+        }
+
+        if (s_interrupts > 0 && !requested_exit)
+        {
+            if (!install_signal_handler(SIGALRM, exit_after_timeout))
+            {
+                __sync_fetch_and_add(&s_interrupts, 2);
+                break;
+            }
+
+            alarm(10);
+            m_coord.request_shutdown();
+            requested_exit = true;
+        }
+
+        if (m_config.version() > 0 &&
+            checkpoint < m_coord.checkpoint())
+        {
+            checkpoint = m_coord.checkpoint();
+            //m_repl.begin_checkpoint(checkpoint);
+        }
+
+        if (m_config.version() > 0 &&
+            checkpoint_stable < m_coord.checkpoint_stable())
+        {
+            checkpoint_stable = m_coord.checkpoint_stable();
+            //m_repl.end_checkpoint(checkpoint_stable);
+        }
+
+        if (m_config.version() > 0 &&
+            checkpoint_gc < m_coord.checkpoint_gc())
+        {
+            checkpoint_gc = m_coord.checkpoint_gc();
+            //m_data.set_checkpoint_lower_gc(checkpoint_gc);
+        }
+
+        if (!m_coord.maintain_link())
         {
             continue;
+        }
+
+        const configuration& old_config(m_config);
+        const configuration& new_config(m_coord.config());
+
+        if (old_config.cluster() != 0 &&
+            old_config.cluster() != new_config.cluster())
+        {
+            cluster_jump = true;
+            break;
         }
 
         if (old_config.version() > new_config.version())
         {
-            LOG(INFO) << "received new configuration version=" << new_config.version()
-                      << " that's not newer than our current configuration version="
-                      << old_config.version();
+            LOG(ERROR) << "received new configuration version=" << new_config.version()
+                       << " that's older than our current configuration version="
+                       << old_config.version();
+            continue;
+        }
+        else if (old_config.version() > new_config.version())
+        {
             continue;
         }
 
-        LOG(INFO) << "received new configuration version=" << new_config.version();
-        m_config = new_config;
+        LOG(INFO) << "moving to configuration version=" << new_config.version()
+                  << "; pausing all activity while we reconfigure";
 
+        //XXX: pause stuff.
+        m_config = new_config;
+        //XXX: unpause stuff
+        LOG(INFO) << "reconfiguration complete; resuming normal operation";
+        LOG(INFO) << "s_interrupts = " << s_interrupts;
         // let the coordinator know we've moved to this config
-        m_coord.ack_config(new_config.version());
+        m_coord.config_ack(new_config.version());
     }
 
-    LOG(INFO) << "shutting down.";
+    if (cluster_jump)
+    {
+        LOG(INFO) << "\n================================================================================\n"
+                  << "Exiting because the coordinator changed on us.\n"
+                  << "This is most likely an operations error.  Did you deploy a new HyperDex\n"
+                  << "cluster at the same address as the old cluster?\n"
+                  << "================================================================================";
+    }
+    else if (m_coord.should_exit() && !m_coord.config().exists(m_us))
+    {
+        LOG(INFO) << "\n================================================================================\n"
+                  << "Exiting because the coordinator says it doesn't know about this node.\n"
+                  << "Check the coordinator logs for details, but it's most likely the case that\n"
+                  << "this server was killed, or this server tried reconnecting to a different\n"
+                  << "coordinator.  You may just have to restart the daemon with a different \n"
+                  << "coordinator address or this node may be dead and you can simply erase it.\n"
+                  << "================================================================================";
+    }
 
+    __sync_fetch_and_add(&s_interrupts, 2);
+    //m_stat_collector.join();
+
+    m_blockman.shutdown();
     m_busybee->shutdown();
 
     for (size_t i = 0; i < m_threads.size(); ++i)
@@ -304,17 +407,8 @@ daemon :: run(bool daemonize,
         m_threads[i]->join();
     }
 
-    m_blockman.shutdown();
-    m_coord.shutdown();
-
-    if (m_coord.is_clean_shutdown())
-    {
-        LOG(INFO) << "wtf-daemon is gracefully shutting down";
-    }
-
     LOG(INFO) << "wtf-daemon will now terminate";
     return EXIT_SUCCESS;
-
 }
 
 void
@@ -323,12 +417,21 @@ daemon :: loop(size_t thread)
     sigset_t ss;
 
     size_t core = thread % sysconf(_SC_NPROCESSORS_ONLN);
+#ifdef __LINUX__
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
     CPU_SET(core, &cpuset);
     pthread_t cur = pthread_self();
     int x = pthread_setaffinity_np(cur, sizeof(cpu_set_t), &cpuset);
     assert(x == 0);
+#elif defined(__APPLE__)
+    thread_affinity_policy_data_t policy;
+    policy.affinity_tag = 0;
+    thread_policy_set(mach_thread_self(),
+                      THREAD_AFFINITY_POLICY,
+                      (thread_policy_t)&policy,
+                      THREAD_AFFINITY_POLICY_COUNT);
+#endif
 
     LOG(INFO) << "network thread " << thread << " started on core " << core;
 
@@ -436,11 +539,9 @@ daemon :: send(const wtf::connection& conn, std::auto_ptr<e::buffer> msg)
 }
 
 bool
-daemon :: send(const wtf_node& node, std::auto_ptr<e::buffer> msg)
+daemon :: send(const server& node, std::auto_ptr<e::buffer> msg)
 {
-    m_busybee_mapper.set(node);
-
-    switch (m_busybee->send(node.token, msg))
+    switch (m_busybee->send(node.id.get(), msg))
     {
         case BUSYBEE_SUCCESS:
             return true;
@@ -488,7 +589,7 @@ daemon :: process_put(const wtf::connection& conn,
     uint64_t bid;
     ssize_t ret = 0;
 
-    sid = m_us.token;
+    sid = m_us.get();
     e::slice data = up.as_slice();
 
     LOG(INFO) << "PUT: " << data.hex();
@@ -595,11 +696,11 @@ daemon :: process_update(const wtf::connection& conn,
     e::slice data = up.as_slice();
     LOG(INFO) << "UPDATE: " << data.hex();
 
-    if (sid != m_us.token)
+    if (sid != m_us.get())
     {
         LOG(ERROR) << "Rejecting UPDATE because server ID " << sid
                    << " from the message did not match this server's ID "
-                   << m_us.token;
+                   << m_us;
         sid = 0;
         bid = 0;
         ret = -1;

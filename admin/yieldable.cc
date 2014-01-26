@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,33 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+// WTF
+#include "admin/yieldable.h"
 
-// e
-#include <e/buffer.h>
+using wtf::yieldable;
 
-namespace wtf
+yieldable :: yieldable(uint64_t id,
+                       wtf_admin_returncode* s)
+    : m_ref(0)
+    , m_admin_visible_id(id)
+    , m_status(s)
+    , m_error()
 {
+}
 
-enum wtf_network_msgtype
+yieldable :: ~yieldable() throw ()
 {
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
-};
+}
 
 std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
+yieldable :: error(const char* file, size_t line)
+{
+    m_error.set_loc(file, line);
+    return m_error.set_msg();
+}
 
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+void
+yieldable :: set_error(const e::error& err)
+{
+    m_error = err;
+}

@@ -120,7 +120,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             if (reqid < 0)
             {
-                std::cerr << "wtf_client->write encountered" << status << std::endl;
+                std::cerr << "wtf_client->write encountered" << status << ":" <<
+                    cl.last_error_file() << ":" << cl.last_error_line() << ":" << cl.last_error_desc() << std::endl;
                 return;
             }
 

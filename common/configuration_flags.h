@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,50 +25,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_wtf_node_h_
-#define wtf_wtf_node_h_
+#ifndef wtf_common_configuration_flags_h_
+#define wtf_common_configuration_flags_h_
 
-// po6
-#include <po6/net/ipaddr.h>
-#include <po6/net/location.h>
+#define WTF_CONFIG_READ_ONLY 1
 
-// e
-#include <e/buffer.h>
-
-namespace wtf
-{
-
-class wtf_node
-{
-    public:
-        wtf_node();
-        wtf_node(uint64_t token, const po6::net::location& address);
-        ~wtf_node() throw ();
-
-    public:
-        uint64_t token;
-        po6::net::location address;
-};
-
-bool
-operator < (const wtf_node& lhs, const wtf_node& rhs);
-bool
-operator == (const wtf_node& lhs, const wtf_node& rhs);
-inline bool
-operator != (const wtf_node& lhs, const wtf_node& rhs) { return !(lhs == rhs); }
-
-std::ostream&
-operator << (std::ostream& lhs, const wtf_node& rhs);
-
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_node& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_node& rhs);
-
-size_t
-pack_size(const wtf_node& rhs);
-
-} // namespace wtf
-
-#endif // wtf_wtf_node_h_
+#endif // wtf_common_configuration_flags_h_

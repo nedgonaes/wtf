@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -26,66 +26,63 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // WTF
-#include "common/wtf_node.h"
-#include "packing.h"
+#include "admin/pending_string.h"
 
-using wtf::wtf_node;
+using wtf::pending_string;
 
-wtf_node :: wtf_node()
-    : token()
-    , address()
+pending_string :: pending_string(uint64_t id,
+                                 wtf_admin_returncode* status,
+                                 wtf_admin_returncode _status,
+                                 const std::string& string,
+                                 const char** store)
+    : pending(id, status)
+    , m_status(_status)
+    , m_string(string)
+    , m_store(store)
+    , m_done(false)
 {
 }
 
-wtf_node :: wtf_node(uint64_t t, const po6::net::location& a)
-    : token(t)
-    , address(a)
+pending_string :: ~pending_string() throw ()
 {
-}
-
-wtf_node :: ~wtf_node() throw ()
-{
-}
-
-bool
-wtf :: operator < (const wtf_node& lhs, const wtf_node& rhs)
-{
-    if (lhs.token == rhs.token)
-    {
-        return lhs.address < rhs.address;
-    }
-
-    return lhs.token < rhs.token;
 }
 
 bool
-wtf :: operator == (const wtf_node& lhs, const wtf_node& rhs)
+pending_string :: can_yield()
 {
-    return lhs.token == rhs.token &&
-           lhs.address == rhs.address;
+    return !m_done;
 }
 
-std::ostream&
-wtf :: operator << (std::ostream& lhs, const wtf_node& rhs)
+bool
+pending_string :: yield(wtf_admin_returncode* status)
 {
-    return lhs << "wtf_node(bind_to=" << rhs.address
-               << ", token=" << rhs.token << ")";
+    assert(this->can_yield());
+    m_done = true;
+    *status = WTF_ADMIN_SUCCESS;
+    set_status(m_status);
+    *m_store = m_string.c_str();
+    return true;
 }
 
-e::buffer::packer
-wtf :: operator << (e::buffer::packer lhs, const wtf_node& rhs)
+void
+pending_string :: handle_sent_to(const server_id&)
 {
-    return lhs << rhs.token << rhs.address;
+    abort();
 }
 
-e::unpacker
-wtf :: operator >> (e::unpacker lhs, wtf_node& rhs)
+void
+pending_string :: handle_failure(const server_id&)
 {
-    return lhs >> rhs.token >> rhs.address;
+    abort();
 }
 
-size_t
-wtf :: pack_size(const wtf_node& rhs)
+bool
+pending_string :: handle_message(admin*,
+                                 const server_id&,
+                                 wtf_network_msgtype,
+                                 std::auto_ptr<e::buffer>,
+                                 e::unpacker,
+                                 wtf_admin_returncode*)
 {
-    return sizeof(uint64_t) + pack_size(rhs.address);
+    abort();
 }

@@ -33,8 +33,8 @@
 // HyperDex
 #include <hyperdex/client.hpp>
 
-static long _connect_port = 1982;
-static const char* _connect_host = "127.0.0.1";
+//WTF
+#include "tools/common.h"
 
 hyperdex_client_returncode
 hyperdex_wait_for_result(hyperdex::Client& h, int64_t reqid, hyperdex_client_returncode& status)
@@ -64,18 +64,12 @@ hyperdex_wait_for_result(hyperdex::Client& h, int64_t reqid, hyperdex_client_ret
 
 int main(void)
 {    
+    wtf::connect_opts conn;
     e::argparser ap;
     ap.autohelp();
-    ap.arg().name('p', "port")
-        .description("port on the wtf coordinator")
-        .metavar("p")
-        .as_long(&_connect_port);
-    ap.arg().name('h', "host")
-        .description("address of wtf coordinator")
-        .metavar("h")
-        .as_string(&_connect_host);
- 
-    hyperdex::Client h(_connect_host, _connect_port);
+    ap.option_string("[OPTIONS]");
+
+    hyperdex::Client h(conn.coord_host(), conn.coord_port());
 
     hyperdex_client_returncode status;
     int64_t ret = -1;

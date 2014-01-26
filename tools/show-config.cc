@@ -1,4 +1,4 @@
-// Copyright (c) 2012, Robert Escriva
+// Copyright (c) 2012-2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -26,73 +26,75 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // C
-#include <cstdio>
-#include <stdint.h>
+#include <cstdlib>
 
-// STL
-#include <vector>
-
-// po6
-#include <po6/io/fd.h>
-
-// WTF 
+// HyperDex
+#include <hyperdex/admin.hpp>
 #include "tools/common.h"
 
 int
 main(int argc, const char* argv[])
 {
-    po6::pathname libpath;
+    hyperdex::connect_opts conn;
+    e::argparser ap;
+    ap.autohelp();
+    ap.add("Connect to a cluster:", conn.parser());
 
-    if (!wtf::locate_coordinator_lib(argv[0], &libpath))
+    if (!ap.parse(argc, argv))
     {
-        std::cerr << "cannot locate the WTF coordinator library" << std::endl;
         return EXIT_FAILURE;
     }
 
-    // setup the environment
-    if (setenv("REPLICANT_WRAP", "wtf-coordinator", 1) < 0)
+    if (!conn.validate())
     {
-        std::cerr << "could not setup the environment: " << strerror(errno) << std::endl;
+        std::cerr << "invalid host:port specification\n" << std::endl;
+        ap.usage();
         return EXIT_FAILURE;
     }
 
-    // generate a random token
-    uint64_t token;
-    po6::io::fd sysrand(open("/dev/urandom", O_RDONLY));
-
-    if (sysrand.get() < 0 ||
-        sysrand.read(&token, sizeof(token)) != sizeof(token))
+    if (ap.args_sz() != 0)
     {
-        std::cerr << "could not generate random token for cluster" << std::endl;
+        std::cerr << "command takes no positional arguments" << std::endl;
+        ap.usage();
         return EXIT_FAILURE;
     }
 
-    char token_buf[21];
-    snprintf(token_buf, 21, "%ld", token);
-
-    // exec replicant daemon
-    std::vector<const char*> args;
-    args.push_back("replicant");
-    args.push_back("daemon");
-
-    for (int i = 1; i < argc; ++i)
+    try
     {
-        args.push_back(argv[i]);
+        hyperdex::Admin h(conn.host(), conn.port());
+        hyperdex_admin_returncode rrc;
+        const char* config = NULL;
+        int64_t rid = h.dump_config(&rrc, &config);
+
+        if (rid < 0)
+        {
+            std::cerr << "could not show config: " << h.error_message() << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        hyperdex_admin_returncode lrc;
+        int64_t lid = h.loop(-1, &lrc);
+
+        if (lid < 0)
+        {
+            std::cerr << "could not show config: " << h.error_message() << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        assert(rid == lid);
+
+        if (rrc != HYPERDEX_ADMIN_SUCCESS)
+        {
+            std::cerr << "could not show config: " << h.error_message() << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        std::cout << config;
+        return EXIT_SUCCESS;
     }
-
-    args.push_back("--object");
-    args.push_back("wtf");
-    args.push_back("--library");
-    args.push_back(libpath.get());
-    args.push_back("--init-string");
-    args.push_back(token_buf);
-    args.push_back(NULL);
-
-    if (execvp("replicant", const_cast<char*const*>(&args[0])) < 0)
+    catch (std::exception& e)
     {
-        perror("could not exec replicant");
+        std::cerr << "error: " << e.what() << std::endl;
         return EXIT_FAILURE;
     }
-
-    abort();
 }

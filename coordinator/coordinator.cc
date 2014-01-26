@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of HyperDex nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -37,13 +37,16 @@
 
 // WTF 
 #include "common/serialization.h"
+#include "common/server.h"
 #include "coordinator/coordinator.h"
 #include "coordinator/transitions.h"
 #include "coordinator/util.h"
+#include "common/configuration_flags.h"
 
 #define ALARM_INTERVAL 30
 
 using wtf::coordinator;
+using wtf::server;
 
 // ASSUME:  I'm assuming only one server ever changes state at a time for a
 //          given transition.  If you violate this assumption, fixup
@@ -157,14 +160,14 @@ coordinator :: init(replicant_state_machine_context* ctx, uint64_t token)
 
     if (m_cluster != 0)
     {
-        fprintf(log, "cannot initialize HyperDex cluster with id %lu "
+        fprintf(log, "cannot initialize WTF cluster with id %lu "
                      "because it is already initialized to %lu\n", token, m_cluster);
         // we lie to the client and pretend all is well
         return generate_response(ctx, COORD_SUCCESS);
     }
 
     replicant_state_machine_alarm(ctx, "alarm", ALARM_INTERVAL);
-    fprintf(log, "initializing HyperDex cluster with id %lu\n", token);
+    fprintf(log, "initializing WTF cluster with id %lu\n", token);
     m_cluster = token;
     generate_next_configuration(ctx);
     return generate_response(ctx, COORD_SUCCESS);
@@ -178,7 +181,7 @@ coordinator :: read_only(replicant_state_machine_context* ctx, bool ro)
 
     if (ro)
     {
-        if ((m_flags & HYPERDEX_CONFIG_READ_ONLY))
+        if ((m_flags & WTF_CONFIG_READ_ONLY))
         {
             fprintf(log, "cluster already in read-only mode\n");
         }
@@ -187,11 +190,11 @@ coordinator :: read_only(replicant_state_machine_context* ctx, bool ro)
             fprintf(log, "putting cluster into read-only mode\n");
         }
 
-        m_flags |= HYPERDEX_CONFIG_READ_ONLY;
+        m_flags |= WTF_CONFIG_READ_ONLY;
     }
     else
     {
-        if ((m_flags & HYPERDEX_CONFIG_READ_ONLY))
+        if ((m_flags & WTF_CONFIG_READ_ONLY))
         {
             fprintf(log, "putting cluster into read-write mode\n");
         }
@@ -200,7 +203,7 @@ coordinator :: read_only(replicant_state_machine_context* ctx, bool ro)
             fprintf(log, "cluster already in read-write mode\n");
         }
 
-        uint64_t mask = HYPERDEX_CONFIG_READ_ONLY;
+        uint64_t mask = WTF_CONFIG_READ_ONLY;
         mask = ~mask;
         m_flags &= mask;
     }
@@ -226,7 +229,7 @@ coordinator :: server_register(replicant_state_machine_context* ctx,
         std::string str(to_string(srv->bind_to));
         fprintf(log, "cannot register server(%lu) because the id belongs to "
                      "server(%lu, %s)\n", sid.get(), srv->id.get(), str.c_str());
-        return generate_response(ctx, hyperdex::COORD_DUPLICATE);
+        return generate_response(ctx, wtf::COORD_DUPLICATE);
     }
 
     srv = new_server(sid);
@@ -249,7 +252,7 @@ coordinator :: server_online(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot bring server(%lu) online because "
                      "the server doesn't exist\n", sid.get());
-        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+        return generate_response(ctx, wtf::COORD_NOT_FOUND);
     }
 
     if (srv->state != server::ASSIGNED &&
@@ -259,7 +262,7 @@ coordinator :: server_online(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot bring server(%lu) online because the server is "
                      "%s\n", sid.get(), server::to_string(srv->state));
-        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
+        return generate_response(ctx, wtf::COORD_NO_CAN_DO);
     }
 
     bool changed = false;
@@ -278,7 +281,7 @@ coordinator :: server_online(replicant_state_machine_context* ctx,
                              "because that address is in use by "
                              "server(%lu)\n", sid.get(), to.c_str(),
                              m_servers[i].id.get());
-                return generate_response(ctx, hyperdex::COORD_DUPLICATE);
+                return generate_response(ctx, wtf::COORD_DUPLICATE);
             }
         }
 
@@ -295,12 +298,6 @@ coordinator :: server_online(replicant_state_machine_context* ctx,
                      server::to_string(server::AVAILABLE));
         srv->state = server::AVAILABLE;
 
-        if (!in_permutation(sid))
-        {
-            add_permutation(sid);
-        }
-
-        rebalance_replica_sets(ctx);
         changed = true;
     }
 
@@ -327,7 +324,7 @@ coordinator :: server_offline(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot bring server(%lu) offline because "
                      "the server doesn't exist\n", sid.get());
-        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+        return generate_response(ctx, wtf::COORD_NOT_FOUND);
     }
 
     if (srv->state != server::ASSIGNED &&
@@ -337,7 +334,7 @@ coordinator :: server_offline(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot bring server(%lu) offline because the server is "
                      "%s\n", sid.get(), server::to_string(srv->state));
-        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
+        return generate_response(ctx, wtf::COORD_NO_CAN_DO);
     }
 
     if (srv->state != server::NOT_AVAILABLE && srv->state != server::SHUTDOWN)
@@ -346,8 +343,6 @@ coordinator :: server_offline(replicant_state_machine_context* ctx,
                      sid.get(), server::to_string(srv->state),
                      server::to_string(server::NOT_AVAILABLE));
         srv->state = server::NOT_AVAILABLE;
-        remove_permutation(sid);
-        rebalance_replica_sets(ctx);
         generate_next_configuration(ctx);
     }
 
@@ -365,7 +360,7 @@ coordinator :: server_shutdown(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot shutdown server(%lu) because "
                      "the server doesn't exist\n", sid.get());
-        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+        return generate_response(ctx, wtf::COORD_NOT_FOUND);
     }
 
     if (srv->state != server::ASSIGNED &&
@@ -375,7 +370,7 @@ coordinator :: server_shutdown(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot shutdown server(%lu) because the server is "
                      "%s\n", sid.get(), server::to_string(srv->state));
-        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
+        return generate_response(ctx, wtf::COORD_NO_CAN_DO);
     }
 
     if (srv->state != server::SHUTDOWN)
@@ -384,7 +379,6 @@ coordinator :: server_shutdown(replicant_state_machine_context* ctx,
                      sid.get(), server::to_string(srv->state),
                      server::to_string(server::SHUTDOWN));
         srv->state = server::SHUTDOWN;
-        rebalance_replica_sets(ctx);
         generate_next_configuration(ctx);
     }
 
@@ -402,7 +396,7 @@ coordinator :: server_kill(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot kill server(%lu) because "
                      "the server doesn't exist\n", sid.get());
-        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+        return generate_response(ctx, wtf::COORD_NOT_FOUND);
     }
 
     if (srv->state != server::KILLED)
@@ -411,9 +405,7 @@ coordinator :: server_kill(replicant_state_machine_context* ctx,
                      sid.get(), server::to_string(srv->state),
                      server::to_string(server::KILLED));
         srv->state = server::KILLED;
-        remove_permutation(sid);
         remove_offline(sid);
-        rebalance_replica_sets(ctx);
         generate_next_configuration(ctx);
     }
 
@@ -431,7 +423,7 @@ coordinator :: server_forget(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot forget server(%lu) because "
                      "the server doesn't exist\n", sid.get());
-        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+        return generate_response(ctx, wtf::COORD_NOT_FOUND);
     }
 
     for (size_t i = 0; i < m_servers.size(); ++i)
@@ -444,9 +436,7 @@ coordinator :: server_forget(replicant_state_machine_context* ctx,
     }
 
     std::stable_sort(m_servers.begin(), m_servers.end());
-    remove_permutation(sid);
     remove_offline(sid);
-    rebalance_replica_sets(ctx);
     generate_next_configuration(ctx);
     return generate_response(ctx, COORD_SUCCESS);
 }
@@ -462,7 +452,7 @@ coordinator :: server_suspect(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot suspect server(%lu) because "
                      "the server doesn't exist\n", sid.get());
-        return generate_response(ctx, hyperdex::COORD_NOT_FOUND);
+        return generate_response(ctx, wtf::COORD_NOT_FOUND);
     }
 
     if (srv->state == server::SHUTDOWN)
@@ -476,7 +466,7 @@ coordinator :: server_suspect(replicant_state_machine_context* ctx,
     {
         fprintf(log, "cannot suspect server(%lu) because the server is "
                      "%s\n", sid.get(), server::to_string(srv->state));
-        return generate_response(ctx, hyperdex::COORD_NO_CAN_DO);
+        return generate_response(ctx, wtf::COORD_NO_CAN_DO);
     }
 
     if (srv->state != server::NOT_AVAILABLE && srv->state != server::SHUTDOWN)
@@ -485,8 +475,6 @@ coordinator :: server_suspect(replicant_state_machine_context* ctx,
                      sid.get(), server::to_string(srv->state),
                      server::to_string(server::NOT_AVAILABLE));
         srv->state = server::NOT_AVAILABLE;
-        remove_permutation(sid);
-        rebalance_replica_sets(ctx);
         generate_next_configuration(ctx);
     }
 
@@ -677,73 +665,12 @@ coordinator :: get_server(const server_id& sid)
     return NULL;
 }
 
-bool
-coordinator :: in_permutation(const server_id& sid)
-{
-    for (size_t i = 0; i < m_permutation.size(); ++i)
-    {
-        if (m_permutation[i] == sid)
-        {
-            return true;
-        }
-    }
-
-    for (size_t i = 0; i < m_spares.size(); ++i)
-    {
-        if (m_spares[i] == sid)
-        {
-            return true;
-        }
-    }
-
-    return false;
-}
-
-void
-coordinator :: add_permutation(const server_id& sid)
-{
-    if (m_spares.size() < m_desired_spares)
-    {
-        m_spares.push_back(sid);
-    }
-    else
-    {
-        m_permutation.push_back(sid);
-    }
-}
-
-void
-coordinator :: remove_permutation(const server_id& sid)
-{
-    remove(sid, &m_spares);
-
-    for (size_t i = 0; i < m_permutation.size(); ++i)
-    {
-        if (m_permutation[i] != sid)
-        {
-            continue;
-        }
-
-        if (m_spares.empty())
-        {
-            shift_and_pop(i, &m_permutation);
-        }
-        else
-        {
-            m_permutation[i] = m_spares.back();
-            m_spares.pop_back();
-        }
-
-        break;
-    }
-}
-
 void
 coordinator :: remove_offline(const server_id& sid)
 {
     for (size_t i = 0; i < m_offline.size(); )
     {
-        if (m_offline[i].sid == sid)
+        if (m_offline[i].id == sid)
         {
             shift_and_pop(i, &m_offline);
         }
@@ -834,7 +761,7 @@ coordinator :: generate_cached_configuration(replicant_state_machine_context*)
 void
 coordinator :: servers_in_configuration(std::vector<server_id>* sids)
 {
-    for (std::vector<server_id>::iterator it = m_servers.begin();
+    for (std::vector<server>::iterator it = m_servers.begin();
             it != m_servers.end(); ++it)
     {
         sids->push_back(it->id);

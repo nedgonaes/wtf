@@ -184,7 +184,11 @@ wtf_client :: file :: truncate(off_t length)
         }
     }
 
-    m_block_map[block_index]->resize(length - block_index*CHUNKSIZE);
+    e::intrusive_ptr<wtf::block> b = m_block_map[block_index];
+    b->resize(length - block_index*CHUNKSIZE);
+    m_block_map[block_index] = b;
+    std::cout << "BLOCK " << block_index << " LEN: " << m_block_map[block_index]->length() << std::endl;
+    std::cout << "FILE LENGTH IS NOW " << this->length() << std::endl;
 }
 
 void

@@ -38,7 +38,7 @@
 // WTF
 #include "client/wtf.h"
 
-namespace wtf
+namespace wtf __attribute__((visibility("hidden")))
 {
 
 e::buffer::packer

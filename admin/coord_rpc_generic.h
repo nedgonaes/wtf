@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,42 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+#ifndef wtf_admin_coord_rpc_generic_h_
+#define wtf_admin_coord_rpc_generic_h_
 
-// e
-#include <e/buffer.h>
+// WTF
+#include "admin/coord_rpc.h"
 
-namespace wtf
+namespace wtf {
+
+class coord_rpc_generic : public coord_rpc
 {
+    public:
+        coord_rpc_generic(uint64_t admin_visible_id,
+                          wtf_admin_returncode* status,
+                          const char* opname);
+        virtual ~coord_rpc_generic() throw ();
 
-enum wtf_network_msgtype
-{
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
+    public:
+        virtual bool can_yield();
+        virtual bool yield(wtf_admin_returncode* status);
+
+    public:
+        virtual bool handle_response(admin* adm,
+                                     wtf_admin_returncode* status);
+
+    protected:
+        friend class e::intrusive_ptr<coord_rpc>;
+
+    private:
+        coord_rpc_generic(const coord_rpc_generic&);
+        coord_rpc_generic& operator = (const coord_rpc_generic&);
+
+    private:
+        const char* m_opname;
+        bool m_done;
 };
 
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
+}
 
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+#endif // wtf_admin_coord_rpc_generic_h_

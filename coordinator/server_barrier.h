@@ -37,7 +37,8 @@
 #include "common/ids.h"
 #include "common/serialization.h"
 
-
+namespace wtf
+{
 class server_barrier
 {
     public:
@@ -110,5 +111,5 @@ operator >> (e::unpacker up, server_barrier& ri)
 
     return up;
 }
-
+}
 #endif // wtf_coordinator_server_barrier_h_

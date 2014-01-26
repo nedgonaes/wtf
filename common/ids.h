@@ -57,24 +57,19 @@
         private: \
             uint64_t m_id; \
     }; \
-    inline std::ostream& \
-    operator << (std::ostream& lhs, const TYPE ## _id& rhs) \
+    std::ostream& \
+    operator << (std::ostream& lhs, const TYPE ## _id& rhs); \
+    inline size_t \
+    pack_size(const TYPE ## _id&) \
     { \
-        return lhs << #TYPE "(" << rhs.get() << ")"; \
+        return sizeof(uint64_t); \
     } \
-    inline e::buffer::packer \
-    operator << (e::buffer::packer pa, const TYPE ## _id& rhs) \
-    { \
-        return pa << rhs.get(); \
-    } \
-    inline e::unpacker \
-    operator >> (e::unpacker up, TYPE ## _id& rhs) \
-    { \
-        uint64_t id; \
-        up = up >> id; \
-        rhs = TYPE ## _id(id); \
-        return up; \
-    } \
+    e::buffer::packer \
+    operator << (e::buffer::packer pa, TYPE ## _id const& rhs); \
+    e::buffer::packer \
+    operator << (e::buffer::packer pa, const TYPE ## _id& rhs); \
+    e::unpacker \
+    operator >> (e::unpacker up, TYPE ## _id& rhs); \
     OPERATOR(TYPE, <) \
     OPERATOR(TYPE, <=) \
     OPERATOR(TYPE, ==) \

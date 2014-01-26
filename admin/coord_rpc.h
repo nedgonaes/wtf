@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,52 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+#ifndef wtf_admin_coord_rpc_h_
+#define wtf_admin_coord_rpc_h_
+
+// STL
+#include <memory>
 
 // e
-#include <e/buffer.h>
+#include <e/intrusive_ptr.h>
 
-namespace wtf
-{
+// Replicant
+#include <replicant.h>
 
-enum wtf_network_msgtype
+// WTF
+#include "include/wtf/admin.h"
+#include "common/configuration.h"
+#include "common/ids.h"
+#include "common/network_msgtype.h"
+#include "admin/yieldable.h"
+
+namespace wtf {
+class admin;
+
+class coord_rpc : public yieldable
 {
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
+    public:
+        coord_rpc(uint64_t admin_visible_id,
+                  wtf_admin_returncode* status);
+        virtual ~coord_rpc() throw ();
+
+    public:
+        virtual bool handle_response(admin* adm,
+                                     wtf_admin_returncode* status) = 0;
+
+    public:
+        replicant_returncode repl_status;
+        const char* repl_output;
+        size_t repl_output_sz;
+
+    protected:
+        friend class e::intrusive_ptr<coord_rpc>;
+
+    private:
+        coord_rpc(const coord_rpc&);
+        coord_rpc& operator = (const coord_rpc&);
 };
 
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
+}
 
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+#endif // wtf_admin_coord_rpc_h_

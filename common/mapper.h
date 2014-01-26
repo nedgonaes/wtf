@@ -31,25 +31,26 @@
 // BusyBee
 #include <busybee_mapper.h>
 
-// WTF
-#include <common/wtf_node.h>
-#include <common/ids.h>
+// WTF 
+#include "common/configuration.h"
 
 namespace wtf
 {
-
-class mapper : public busybee_mapper
+class mapper : public ::busybee_mapper
 {
     public:
-        mapper();
+        mapper(const configuration* config);
         ~mapper() throw ();
 
     public:
-        virtual bool lookup(uint64_t sid, po6::net::location* bound_to);
-        virtual void set(const wtf_node& n);
+        virtual bool lookup(uint64_t id, po6::net::location* addr);
 
     private:
-        wtf_node m_cache;
+        mapper(const mapper&);
+        mapper& operator = (const mapper&);
+
+    private:
+        const configuration* m_config;
 };
 
 } // namespace wtf

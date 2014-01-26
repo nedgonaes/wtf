@@ -44,91 +44,34 @@
 #include "common/network_msgtype.h"
 #include "client/wtf.h"
 #include "tools/common.h"
+#include "common/ids.h"
 
 static const char* _file = "writetestdata";
-
-static struct poptOption popts[] = {
-    POPT_AUTOHELP
-    CONNECT_TABLE
-    {"file", 'f', POPT_ARG_LONG, &_file, 'f',
-     "input data for test (default: testdata)",
-     "file"},
-    POPT_TABLEEND
-};
 
 int
 main(int argc, const char* argv[])
 {
-    poptContext poptcon;
-    poptcon = poptGetContext(NULL, argc, argv, popts, POPT_CONTEXT_POSIXMEHARDER);
-    e::guard g = e::makeguard(poptFreeContext, poptcon); g.use_variable();
-    poptSetOtherOptionHelp(poptcon, "[OPTIONS]");
+    wtf::connect_opts conn;
+    e::argparser ap;
+    ap.autohelp();
+    ap.option_string("[OPTIONS]");
     int rc;
 
-    while ((rc = poptGetNextOpt(poptcon)) != -1)
+    ap.add("Connect to a cluster:", conn.parser());
+
+    ap.arg().name('f', "file")
+        .description("input data for test (default: writetestdata)")
+        .metavar("file")
+        .as_string(&_file);
+
+    if (!ap.parse(argc, argv))
     {
-        switch (rc)
-        {
-            case 'h':
-                if (!check_host())
-                {
-                    return EXIT_FAILURE;
-                }
-                break;
-            case 'p':
-                if (!check_port())
-                {
-                    return EXIT_FAILURE;
-                }
-                break;
-            case 'H':
-                if (!check_hyper_host())
-                {
-                    return EXIT_FAILURE;
-                }
-                break;
-            case 'P':
-                if (!check_hyper_port())
-                {
-                    return EXIT_FAILURE;
-                }
-                break;
-            case 'f':
-                break;
-
-            case POPT_ERROR_NOARG:
-            case POPT_ERROR_BADOPT:
-            case POPT_ERROR_BADNUMBER:
-            case POPT_ERROR_OVERFLOW:
-                std::cerr << poptStrerror(rc) << " " << poptBadOption(poptcon, 0) << std::endl;
-                return EXIT_FAILURE;
-            case POPT_ERROR_OPTSTOODEEP:
-            case POPT_ERROR_BADQUOTE:
-            case POPT_ERROR_ERRNO:
-            default:
-                std::cerr << "logic error in argument parsing" << std::endl;
-                return EXIT_FAILURE;
-        }
-    }
-
-    const char** args = poptGetArgs(poptcon);
-    size_t num_args = 0;
-
-    while (args && args[num_args])
-    {
-        ++num_args;
-    }
-
-    if (num_args != 0)
-    {
-        std::cerr << "extra arguments provided\n" << std::endl;
-        poptPrintUsage(poptcon, stderr, 0);
         return EXIT_FAILURE;
     }
 
     try
     {
-        wtf_client r(_connect_host, _connect_port, _hyper_host, _hyper_port);
+        wtf_client r(conn.coord_host(), conn.coord_port(), conn.hyper_host(), conn.hyper_port());
         std::string s;
         std::ifstream f(_file);
 

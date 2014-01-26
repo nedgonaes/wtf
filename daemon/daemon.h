@@ -47,10 +47,10 @@
 #include <busybee_mta.h>
 
 // WTF
-#include "daemon/coordinator_link.h"
-#include "common/mapper.h"
-#include "common/wtf_node.h"
+#include "daemon/coordinator_link_wrapper.h"
+#include "common/server.h"
 #include "common/configuration.h"
+#include "common/mapper.h"
 #include "daemon/settings.h"
 #include "daemon/connection.h"
 #include "daemon/block_storage_manager.h"
@@ -95,7 +95,7 @@ class daemon
     private:
         bool recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg);
         bool send(const wtf::connection& conn, std::auto_ptr<e::buffer> msg);
-        bool send(const wtf_node& node, std::auto_ptr<e::buffer> msg);
+        bool send(const server& node, std::auto_ptr<e::buffer> msg);
         bool send_no_disruption(uint64_t token, std::auto_ptr<e::buffer> msg);
 
     // Handle communication disruptions
@@ -119,18 +119,18 @@ class daemon
         bool generate_token(uint64_t* token);
 
     private:
-        friend class coordinator_link;
+        friend class coordinator_link_wrapper;
 
     private:
         settings m_s;
-        wtf::mapper m_busybee_mapper;
-        std::auto_ptr<busybee_mta> m_busybee;
-        wtf_node m_us;
+        wtf::server_id m_us;
+        po6::net::location m_bind_to;
         std::vector<std::tr1::shared_ptr<po6::threads::thread> > m_threads;
-        coordinator_link m_coord;
+        coordinator_link_wrapper m_coord;
+        mapper m_busybee_mapper;
+        std::auto_ptr<busybee_mta> m_busybee;
         wtf::block_storage_manager m_blockman;
         std::vector<periodic> m_periodic;
-        std::map<uint64_t, uint64_t> m_temporary_servers;
         std::set<uint64_t> m_disrupted_backoff;
         bool m_disrupted_retry_scheduled;
         configuration m_config;

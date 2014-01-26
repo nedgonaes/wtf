@@ -44,10 +44,11 @@
 #include "client/command.h"
 #include "common/network_msgtype.h"
 #include "common/block_id.h"
+#include "common/ids.h"
 
-using wtf::wtf_node;
+using wtf::server;
 
-wtf_client :: command :: command(wtf::wtf_node send_to,
+wtf_client :: command :: command(wtf::server send_to,
                                  uint64_t remote_bid,
                                  int64_t fd,
                                  uint64_t block,
@@ -89,13 +90,13 @@ wtf_client :: command :: command(wtf::wtf_node send_to,
             m_output_sz = sizeof(uint64_t)*2;
             break;
         case wtf::WTFNET_UPDATE:
-            pa = pa << m_sent_to.token << remote_bid << m_offset;
+            pa = pa << m_sent_to.id<< remote_bid << m_offset;
             pa = pa.copy(e::slice(data, length));
             m_output = new char[sizeof(uint64_t)*2];
             m_output_sz = sizeof(uint64_t)*2;
             break;
         case wtf::WTFNET_GET:
-            pa = pa << m_sent_to.token << remote_bid << uint64_t(m_output_sz);
+            pa = pa << m_sent_to.id << remote_bid << uint64_t(m_output_sz);
             break;
         default:
             break;
@@ -125,7 +126,7 @@ wtf_client :: command :: ~command() throw ()
 }
 
 void
-wtf_client :: command :: set_sent_to(const wtf_node& s)
+wtf_client :: command :: set_sent_to(const server& s)
 {
     m_sent_to = s;
 }

@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of HyperDex nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -28,11 +28,11 @@
 #ifndef wtf_coordinator_util_h_
 #define wtf_coordinator_util_h_
 
-// HyperDex
-#include "namespace.h"
+// WTF 
 #include "common/coordinator_returncode.h"
 
-
+namespace wtf
+{
 static inline void
 generate_response(replicant_state_machine_context* ctx, coordinator_returncode x)
 {
@@ -68,5 +68,5 @@ generate_response(replicant_state_machine_context* ctx, coordinator_returncode x
 
 #define INVARIANT_BROKEN(X) \
     fprintf(log, "invariant broken at " __FILE__ ":%d:  %s\n", __LINE__, X "\n")
-
+}
 #endif // wtf_coordinator_util_h_

@@ -38,8 +38,7 @@ class configuration
 {
     public:
         configuration();
-        configuration(uint64_t cluster,
-                      uint64_t version);
+        configuration(const configuration& other);
         ~configuration() throw ();
 
     // metadata
@@ -56,8 +55,9 @@ class configuration
         bool has_token(uint64_t token) const;
         bool exists(const server_id& node) const;
         server::state_t get_state(const server_id& id) const;
-        const server* server_from_token(uint64_t token) const;
-        const server* get_random_server(uint64_t id);
+        po6::net::location get_address(const server_id& id) const;
+        const server* server_from_id(server_id id) const;
+        const server* get_random_server(uint64_t id) const;
 
     // iterators
     public:
@@ -70,11 +70,10 @@ class configuration
         void add_server(const server& node);
 
     public:
-        void dump(std::ostream& out);
+        std::string dump() const;
 
     private:
         friend bool operator == (const configuration& lhs, const configuration& rhs);
-        friend std::ostream& operator << (std::ostream& lhs, const configuration& rhs);
         friend e::buffer::packer operator << (e::buffer::packer lhs, const configuration& rhs);
         friend e::unpacker operator >> (e::unpacker lhs, configuration& rhs);
         friend size_t pack_size(const configuration& rhs);

@@ -49,8 +49,14 @@
 // HyperDex
 #include <hyperdex/client.hpp>
 
+// busybee
+#include <busybee_st.h>
+
 //wtf
 #include <common/network_msgtype.h>
+#include <common/configuration.h>
+#include <common/mapper.h>
+#include <common/coordinator_link.h>
 
 enum wtf_returncode
 {
@@ -81,12 +87,20 @@ enum wtf_returncode
     WTF_GARBAGE      = 8575
 };
 
+struct wtf_file_attrs
+{
+    size_t size;
+    mode_t mode;
+    int flags;
+    int is_dir;
+};
+
 void
 wtf_destroy_output(const char* output, size_t output_sz);
 
 namespace wtf
 {
-class wtf_node;
+class server;
 class configuration;
 class coordinator_link;
 class mapper;
@@ -112,6 +126,7 @@ class wtf_client
         int64_t chdir(char* path);
         int64_t open(const char* path, int flags);
         int64_t open(const char* path, int flags, mode_t mode);
+        int64_t getattr(const char* path, struct wtf_file_attrs* fa);
 
         void lseek(int64_t fd, uint64_t offset);
         void begin_tx();
@@ -177,7 +192,7 @@ class wtf_client
         // Send commands and receive responses
         int64_t send_to_blockserver(e::intrusive_ptr<command> cmd,
                                     wtf_returncode* status);
-        void handle_disruption(const wtf::wtf_node& node,
+        void handle_disruption(const wtf::server& node,
                                wtf_returncode* status);
         int64_t handle_command_response(const po6::net::location& from,
                                         std::auto_ptr<e::buffer> msg,
@@ -202,10 +217,9 @@ class wtf_client
         wtf_client& operator = (const wtf_client& rhs);
 
     private:
-        std::auto_ptr<wtf::configuration> m_config;
-        std::auto_ptr<wtf::mapper> m_busybee_mapper;
-        std::auto_ptr<class busybee_st> m_busybee;
-        const std::auto_ptr<wtf::coordinator_link> m_coord;
+        wtf::mapper m_busybee_mapper;
+        busybee_st m_busybee;
+        wtf::coordinator_link m_coord;
         uint64_t m_nonce;
         uint64_t m_fileno;
         bool m_have_seen_config;

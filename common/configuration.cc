@@ -35,7 +35,7 @@
 // WTF
 #include "common/configuration.h"
 
-using wtf::wtf_node;
+using wtf::server;
 using wtf::configuration;
 
 configuration :: configuration()
@@ -65,8 +65,8 @@ configuration :: validate() const
     {
         for (size_t j = i + 1; j < m_servers.size(); ++j)
         {
-            if (m_servers[i].token == m_servers[j].token ||
-                m_servers[i].address == m_servers[j].address)
+            if (m_servers[i].id== m_servers[j].id ||
+                m_servers[i].bind_to == m_servers[j].bind_to)
             {
                 return false;
             }
@@ -91,17 +91,45 @@ configuration :: exists(const server_id& id) const
 }
 
 const server*
-configuration :: node_from_token(uint64_t token) const
+configuration :: server_from_id(server_id id) const
 {
     for (size_t i = 0; i < m_servers.size(); ++i)
     {
-        if (m_servers[i].token == token)
+        if (m_servers[i].id == id)
         {
             return &m_servers[i];
         }
     }
 
     return NULL;
+}
+
+po6::net::location
+configuration :: get_address(const server_id& id) const
+{
+    for (size_t i = 0; i < m_servers.size(); ++i)
+    {
+        if (m_servers[i].id == id)
+        {
+            return m_servers[i].bind_to;
+        }
+    }
+
+    return po6::net::location();
+}
+
+server::state_t
+configuration :: get_state(const server_id& id) const
+{
+    for (size_t i = 0; i < m_servers.size(); ++i)
+    {
+        if (m_servers[i].id == id)
+        {
+            return m_servers[i].state;
+        }
+    }
+
+    return server::KILLED;
 }
 
 const server*
@@ -130,8 +158,8 @@ configuration :: add_server(const server& node)
     std::sort(m_servers.begin(), m_servers.end());
 }
 
-const wtf_node*
-configuration :: get_random_server(uint64_t sid)
+const server*
+configuration :: get_random_server(uint64_t sid) const
 {
     uint32_t id = sid % m_servers.size();
     return &m_servers[id];
@@ -150,30 +178,15 @@ wtf :: operator == (const configuration& lhs, const configuration& rhs)
 
     for (size_t i = 0; i < lhs.m_servers.size(); ++i)
     {
-        if (lhs.m_servers[i] != rhs.m_servers[i])
+        if (lhs.m_servers[i].id != rhs.m_servers[i].id ||
+            lhs.m_servers[i].bind_to != rhs.m_servers[i].bind_to ||
+            lhs.m_servers[i].state != rhs.m_servers[i].state)
         {
             return false;
         }
     }
 
     return true;
-}
-
-std::ostream&
-wtf :: operator << (std::ostream& lhs, const configuration& rhs)
-{
-    lhs << "configuration(cluster=" << rhs.m_cluster
-        << ", version=" << rhs.m_version
-        << ", flags=" << rhs.m_flags
-        << ", servers=[";
-
-    for (size_t i = 0; i < rhs.m_servers.size(); ++i)
-    {
-        lhs << rhs.m_servers[i] << (i + 1 < rhs.m_servers.size() ? ", " : "");
-    }
-
-    lhs << "])";
-    return lhs;
 }
 
 e::unpacker
@@ -196,7 +209,7 @@ wtf :: operator >> (e::unpacker up, configuration& c)
 }
 
 std::string
-configuration :: dump() const
+wtf :: configuration :: dump() const
 {
     std::ostringstream out;
     out << "cluster " << m_cluster << "\n";

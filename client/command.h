@@ -33,13 +33,13 @@
 
 // WTF
 #include "common/network_msgtype.h"
-#include "common/wtf_node.h"
+#include "common/server.h"
 #include "client/wtf.h"
 
 class wtf_client::command
 {
     public:
-        command(wtf::wtf_node send_to,
+        command(wtf::server send_to,
                 uint64_t remote_bid,
                 int64_t fd,
                 uint64_t block,
@@ -64,7 +64,7 @@ class wtf_client::command
         int64_t offset() const throw() { return m_offset; }
         int64_t length() const throw() { return m_length; }
         e::buffer* request() const throw () { return m_request.get(); }
-        const wtf::wtf_node& sent_to() const throw () { return m_sent_to; }
+        const wtf::server& sent_to() const throw () { return m_sent_to; }
         const char* last_error_desc() const throw() { return m_last_error_desc; }
         const char* last_error_file() const throw() { return m_last_error_file; }
         uint64_t last_error_line() const throw() { return m_last_error_line; }
@@ -73,7 +73,7 @@ class wtf_client::command
 
     public:
         void set_fd(int64_t fd) { m_fd = fd; }
-        void set_sent_to(const wtf::wtf_node& sent_to);
+        void set_sent_to(const wtf::server& sent_to);
         void fail(wtf_returncode status);
         void succeed(std::auto_ptr<e::buffer> msg,
                      const e::slice& resp,
@@ -98,7 +98,7 @@ class wtf_client::command
     private:
         size_t m_ref;
         uint64_t m_nonce;
-        wtf::wtf_node m_sent_to;
+        wtf::server m_sent_to;
         uint64_t m_remote_bid;
         int64_t m_fd;
         uint64_t m_block;

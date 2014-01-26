@@ -43,9 +43,10 @@
 #include <replicant.h>
 
 // WTF
-#include "namespace.h"
 #include "common/configuration.h"
 
+namespace wtf
+{
 class coordinator_link
 {
     public:
@@ -106,5 +107,5 @@ class coordinator_link
         size_t m_output_sz;
         std::list<int64_t> m_pending_ids;
 };
-
+}
 #endif // wtf_common_coordinator_link_h_

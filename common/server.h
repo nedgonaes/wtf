@@ -32,9 +32,10 @@
 #include <po6/net/location.h>
 
 // WTF
-#include "namespace.h"
 #include "common/ids.h"
 
+namespace wtf
+{
 class server
 {
     public:
@@ -67,5 +68,5 @@ e::unpacker
 operator >> (e::unpacker lhs, server& rhs);
 size_t
 pack_size(const server& p);
-
+}
 #endif // wtf_common_server_h_

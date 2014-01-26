@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,17 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+// WTF
+#include "admin/pending.h"
 
-// e
-#include <e/buffer.h>
+using wtf::pending;
 
-namespace wtf
+pending :: pending(uint64_t id,
+                   wtf_admin_returncode* s)
+    : yieldable(id, s)
 {
+}
 
-enum wtf_network_msgtype
+pending :: ~pending() throw ()
 {
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
-};
-
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
-
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+}

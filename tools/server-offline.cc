@@ -1,4 +1,4 @@
-// Copyright (c) 2012, Robert Escriva
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of Replicant nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -26,73 +26,84 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // C
-#include <cstdio>
-#include <stdint.h>
-
-// STL
-#include <vector>
-
-// po6
-#include <po6/io/fd.h>
+#include <cstdlib>
 
 // WTF 
+#include <wtf/admin.hpp>
 #include "tools/common.h"
 
 int
 main(int argc, const char* argv[])
 {
-    po6::pathname libpath;
+    wtf::connect_opts conn;
+    e::argparser ap;
+    ap.autohelp();
+    ap.option_string("[OPTIONS] <server-id>");
+    ap.add("Connect to a cluster:", conn.parser());
 
-    if (!wtf::locate_coordinator_lib(argv[0], &libpath))
+    if (!ap.parse(argc, argv))
     {
-        std::cerr << "cannot locate the WTF coordinator library" << std::endl;
         return EXIT_FAILURE;
     }
 
-    // setup the environment
-    if (setenv("REPLICANT_WRAP", "wtf-coordinator", 1) < 0)
+    if (!conn.validate())
     {
-        std::cerr << "could not setup the environment: " << strerror(errno) << std::endl;
+        std::cerr << "invalid host:port specification\n" << std::endl;
+        ap.usage();
         return EXIT_FAILURE;
     }
 
-    // generate a random token
-    uint64_t token;
-    po6::io::fd sysrand(open("/dev/urandom", O_RDONLY));
-
-    if (sysrand.get() < 0 ||
-        sysrand.read(&token, sizeof(token)) != sizeof(token))
+    if (ap.args_sz() != 1)
     {
-        std::cerr << "could not generate random token for cluster" << std::endl;
+        std::cerr << "please specify the server id" << std::endl;
+        ap.usage();
         return EXIT_FAILURE;
     }
 
-    char token_buf[21];
-    snprintf(token_buf, 21, "%ld", token);
+    char* end = NULL;
+    uint64_t token = strtoull(ap.args()[0], &end, 0);
 
-    // exec replicant daemon
-    std::vector<const char*> args;
-    args.push_back("replicant");
-    args.push_back("daemon");
-
-    for (int i = 1; i < argc; ++i)
+    if (*end != '\0' || ap.args()[0] == end)
     {
-        args.push_back(argv[i]);
-    }
-
-    args.push_back("--object");
-    args.push_back("wtf");
-    args.push_back("--library");
-    args.push_back(libpath.get());
-    args.push_back("--init-string");
-    args.push_back(token_buf);
-    args.push_back(NULL);
-
-    if (execvp("replicant", const_cast<char*const*>(&args[0])) < 0)
-    {
-        perror("could not exec replicant");
+        std::cerr << "server id must be a number" << std::endl;
+        ap.usage();
         return EXIT_FAILURE;
     }
 
-    abort();
+    try
+    {
+        wtf::Admin h(conn.coord_host(), conn.coord_port());
+        wtf_admin_returncode rrc;
+        int64_t rid = h.server_offline(token, &rrc);
+
+        if (rid < 0)
+        {
+            std::cerr << "could not mark server unavailable: " << rrc << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        wtf_admin_returncode lrc;
+        int64_t lid = h.loop(-1, &lrc);
+
+        if (lid < 0)
+        {
+            std::cerr << "could not mark server unavailable: " << lrc << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        assert(rid == lid);
+
+        if (rrc != WTF_ADMIN_SUCCESS)
+        {
+            std::cerr << "could not mark server unavailable: " << rrc << std::endl;
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "error: " << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
 }

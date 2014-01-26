@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of HyperDex nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -41,6 +41,8 @@
 #include "common/coordinator_link.h"
 #include "common/ids.h"
 
+namespace wtf
+{
 class daemon;
 
 // The thread whose calls the constructor can call everything.  All other
@@ -143,5 +145,5 @@ class coordinator_link_wrapper
         coordinator_link_wrapper(const coordinator_link_wrapper&);
         coordinator_link_wrapper& operator = (const coordinator_link_wrapper&);
 };
-
+}
 #endif // hyperdex_daemon_coordinator_link_wrapper_h_

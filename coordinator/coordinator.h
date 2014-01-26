@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of HyperDex nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -40,10 +40,11 @@
 
 // WTF 
 #include "common/ids.h"
-#include "coordinator/server.h"
-#include "coordinator/offline_server.h"
+#include "common/server.h"
 #include "coordinator/server_barrier.h"
 
+namespace wtf
+{
 class coordinator
 {
     public:
@@ -134,7 +135,7 @@ class coordinator
         uint64_t m_flags;
         // servers
         std::vector<server> m_servers;
-        std::vector<offline_server> m_offline;
+        std::vector<server> m_offline;
         // barriers
         uint64_t m_config_ack_through;
         server_barrier m_config_ack_barrier;
@@ -153,5 +154,5 @@ class coordinator
         coordinator& operator = (const coordinator&);
 };
 
-
+}
 #endif // wtf_coordinator_coordinator_h_

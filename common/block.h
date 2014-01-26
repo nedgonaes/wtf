@@ -54,7 +54,7 @@ class block
         uint64_t version() { return m_version; }
         uint64_t pack_size();
         void pack(char* buf) const;
-        uint64_t resize(uint64_t sz) { m_length = sz; }
+        uint64_t resize(uint64_t sz) { m_length = sz; m_dirty = true; return m_length; }
         uint64_t length() { return m_length; }
         block_id get_first_location() { return m_block_list[0]; }
         std::vector<wtf::block_id>::iterator blocks_begin() { return m_block_list.begin(); }

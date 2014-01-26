@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,52 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+#ifndef wtf_admin_pending_string_h_
+#define wtf_admin_pending_string_h_
 
-// e
-#include <e/buffer.h>
+// WTF
+#include "admin/pending.h"
 
-namespace wtf
+namespace wtf {
+class admin;
+
+class pending_string : public pending
 {
+    public:
+        pending_string(uint64_t admin_visible_id,
+                       wtf_admin_returncode* status,
+                       wtf_admin_returncode set_status,
+                       const std::string& string,
+                       const char** store);
+        virtual ~pending_string() throw ();
 
-enum wtf_network_msgtype
-{
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
+    // return to admin
+    public:
+        virtual bool can_yield();
+        virtual bool yield(wtf_admin_returncode* status);
+
+    // events
+    public:
+        virtual void handle_sent_to(const server_id& si);
+        virtual void handle_failure(const server_id& si);
+        virtual bool handle_message(admin* cl,
+                                    const server_id& si,
+                                    wtf_network_msgtype mt,
+                                    std::auto_ptr<e::buffer> msg,
+                                    e::unpacker up,
+                                    wtf_admin_returncode* status);
+
+    private:
+        pending_string(const pending_string&);
+        pending_string& operator = (const pending_string&);
+
+    private:
+        wtf_admin_returncode m_status;
+        std::string m_string;
+        const char** m_store;
+        bool m_done;
 };
 
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
+}
 
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+#endif // wtf_admin_pending_string_h_

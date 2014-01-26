@@ -30,8 +30,8 @@
 
 using wtf::mapper;
 
-mapper :: mapper()
-    : m_cache()
+mapper :: mapper(const wtf::configuration* config)
+    : m_config(config)
 {
 }
 
@@ -40,20 +40,8 @@ mapper :: ~mapper() throw ()
 }
 
 bool
-mapper :: lookup(uint64_t sid,
-                 po6::net::location* bound_to)
+mapper :: lookup(uint64_t id, po6::net::location* addr)
 {
-    if (sid == m_cache.token)
-    {
-        *bound_to = m_cache.address;
-        return true;
-    }
-
-    return false;
-}
-
-void
-mapper :: set(const wtf::wtf_node& n)
-{
-    m_cache = n;
+    *addr = m_config->get_address(server_id(id));
+    return *addr != po6::net::location();
 }

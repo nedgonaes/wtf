@@ -51,7 +51,7 @@ struct replicant_state_machine rsm = {
      {"server_forget", wtf_coordinator_server_forget},
      {"server_suspect", wtf_coordinator_server_suspect},
      {"report_disconnect", wtf_coordinator_report_disconnect},
-     {"checkpoint_stable", hyperdex_coordinator_checkpoint_stable},
+     {"checkpoint_stable", wtf_coordinator_checkpoint_stable},
      {"alarm", wtf_coordinator_alarm},
      {"read_only", wtf_coordinator_read_only},
      {"debug_dump", wtf_coordinator_debug_dump},

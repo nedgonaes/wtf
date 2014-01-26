@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,71 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+#ifndef wtf_admin_yieldable_h_
+#define wtf_admin_yieldable_h_
+
+// STL
+#include <memory>
 
 // e
-#include <e/buffer.h>
+#include <e/error.h>
+#include <e/intrusive_ptr.h>
+
+// WTF
+#include "include/wtf/admin.h"
+#include "common/configuration.h"
+#include "common/ids.h"
+#include "common/network_msgtype.h"
 
 namespace wtf
 {
 
-enum wtf_network_msgtype
+class admin;
+
+class yieldable
 {
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
+    public:
+        yieldable(uint64_t admin_visible_id,
+                  wtf_admin_returncode* status);
+        virtual ~yieldable() throw ();
+
+    public:
+        int64_t admin_visible_id() const { return m_admin_visible_id; }
+        void set_status(wtf_admin_returncode status) { *m_status = status; }
+        e::error error() const { return m_error; }
+
+    // return to admin
+    public:
+        virtual bool can_yield() = 0;
+        virtual bool yield(wtf_admin_returncode* status) = 0;
+
+    // refcount
+    protected:
+        friend class e::intrusive_ptr<yieldable>;
+        void inc() { ++m_ref; }
+        void dec() { if (--m_ref == 0) delete this; }
+        size_t m_ref;
+
+    protected:
+        std::ostream& error(const char* file, size_t line);
+        void set_error(const e::error& err);
+
+    // noncopyable
+    private:
+        yieldable(const yieldable& other);
+        yieldable& operator = (const yieldable& rhs);
+
+    // operation state
+    private:
+        int64_t m_admin_visible_id;
+        wtf_admin_returncode* m_status;
+        e::error m_error;
 };
 
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
+#define YIELDING_ERROR(CODE) \
+    this->set_status(WTF_ADMIN_ ## CODE); \
+    this->error(__FILE__, __LINE__)
 
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
+}
 
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+#endif // wtf_admin_yieldable_h_

@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,21 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_network_msgtype_h_
-#define wtf_network_msgtype_h_
+#ifndef wtf_admin_constants_h_
+#define wtf_admin_constants_h_
 
-// e
-#include <e/buffer.h>
+// BusyBee
+#include <busybee_constants.h>
 
-namespace wtf
-{
+#define WTF_ADMIN_HEADER_SIZE_REQ (BUSYBEE_HEADER_SIZE \
+                                        + sizeof(uint8_t) /*mt*/ \
+                                        + sizeof(uint8_t) /*flags*/ \
+                                        + sizeof(uint64_t) /*version*/ \
+                                        + sizeof(uint64_t) /*vidt*/ \
+                                        + sizeof(uint64_t) /*nonce*/)
+#define WTF_ADMIN_HEADER_SIZE_RESP (BUSYBEE_HEADER_SIZE \
+                                         + sizeof(uint8_t) /*mt*/ \
+                                         + sizeof(uint64_t) /*vidt*/ \
+                                         + sizeof(uint64_t) /*nonce*/)
 
-enum wtf_network_msgtype
-{
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
-};
-
-std::ostream&
-operator << (std::ostream& lhs, wtf_network_msgtype rhs);
-
-e::buffer::packer
-operator << (e::buffer::packer lhs, const wtf_network_msgtype& rhs);
-
-e::unpacker
-operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
-
-size_t
-pack_size(const wtf_network_msgtype& rhs);
-
-} // namespace wtf
-
-#endif // wtf_network_msgtype_h_
+#endif // wtf_admin_constants_h_
