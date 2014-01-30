@@ -585,16 +585,14 @@ daemon :: process_put(const wtf::connection& conn,
                             e::unpacker up)
 {
     wtf::response_returncode rc;
-    uint64_t sid;
     uint64_t bid;
     ssize_t ret = 0;
 
-    sid = m_us.get();
     e::slice data = up.as_slice();
 
     LOG(INFO) << "PUT: " << data.hex();
 
-    ret = m_blockman.write_block(data, sid, bid); 
+    ret = m_blockman.write_block(data, m_us.get(), bid); 
 
     if (ret < data.size())
     {
@@ -606,7 +604,6 @@ daemon :: process_put(const wtf::connection& conn,
     }
 
     LOG(INFO) << "Returning " << rc << " to client.";
-    LOG(INFO) << "sid = " << sid;
     LOG(INFO) << "bid = " << bid;
 
 
@@ -616,7 +613,7 @@ daemon :: process_put(const wtf::connection& conn,
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
-            << sid << bid;
+            << bid;
     send(conn, resp);
 }
 
@@ -627,21 +624,19 @@ daemon :: process_get(const wtf::connection& conn,
                       e::unpacker up)
 {
     wtf::response_returncode rc;
-    uint64_t sid;
     uint64_t bid;
     uint64_t len;
     ssize_t ret;
 
     LOG(INFO) << "GET: " << msg->as_slice().hex();
 
-    up = up >> sid >> bid >> len;
+    up = up >> bid >> len;
 
-    LOG(INFO) << "sid = " << sid;
     LOG(INFO) << "bid = " << bid;
 
     uint8_t* data = new uint8_t[len];
     LOG(INFO) << "len: " << len;
-    ret = m_blockman.read_block(sid, bid, data, len);
+    ret = m_blockman.read_block(m_us.get(), bid, data, len);
 
     if (ret < len)
     {
@@ -685,30 +680,17 @@ daemon :: process_update(const wtf::connection& conn,
                             e::unpacker up)
 {
     wtf::response_returncode rc;
-    uint64_t sid;
     uint64_t bid;
     uint64_t offset;
     ssize_t ret = 0;
 
 
-    up = up >> sid >> bid >> offset;
+    up = up >> bid >> offset;
 
     e::slice data = up.as_slice();
     LOG(INFO) << "UPDATE: " << data.hex();
 
-    if (sid != m_us.get())
-    {
-        LOG(ERROR) << "Rejecting UPDATE because server ID " << sid
-                   << " from the message did not match this server's ID "
-                   << m_us;
-        sid = 0;
-        bid = 0;
-        ret = -1;
-    }
-    else
-    {
-        ret = m_blockman.update_block(data, offset, sid, bid); 
-    }
+    ret = m_blockman.update_block(data, offset, m_us.get(), bid); 
 
     if (ret < data.size())
     {
@@ -728,7 +710,7 @@ daemon :: process_update(const wtf::connection& conn,
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
-            << sid << bid;
+            << bid;
     send(conn, resp);
 }
 

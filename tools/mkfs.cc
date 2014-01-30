@@ -62,14 +62,23 @@ hyperdex_wait_for_result(hyperdex::Client& h, int64_t reqid, hyperdex_client_ret
 }
 
 
-int main(void)
-{    
+int
+main(int argc, const char* argv[])
+{   
     wtf::connect_opts conn;
     e::argparser ap;
     ap.autohelp();
     ap.option_string("[OPTIONS]");
 
-    hyperdex::Client h(conn.coord_host(), conn.coord_port());
+    ap.add("Connect to a cluster:", conn.parser());
+
+
+    if (!ap.parse(argc, argv))
+    {
+        return EXIT_FAILURE;
+    }
+
+    hyperdex::Client h(conn.hyper_host(), conn.hyper_port());
 
     hyperdex_client_returncode status;
     int64_t ret = -1;

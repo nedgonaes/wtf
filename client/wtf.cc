@@ -53,75 +53,39 @@
 using namespace wtf;
 using namespace std;
 
-#define MAINTAIN_COORD_CONNECTION(STATUS) \
-    if (maintain_coord_connection(STATUS) < 0) \
-    { \
-        return -1; \
-    }
+#define ERROR(CODE) \
+    *status = WTF_CLIENT_ ## CODE; \
+    m_last_error.set_loc(__FILE__, __LINE__); \
+    m_last_error.set_msg()
 
-#define WTFSETERROR(CODE, DESC) \
-    do \
-    { \
-        m_last_error_desc = DESC; \
-        m_last_error_file = __FILE__; \
-        m_last_error_line = __LINE__; \
-        *status = CODE; \
-    } while (0)
-
-#define WTFSETSUCCESS WTFSETERROR(WTF_SUCCESS, "operation succeeded")
-
-// busybee header + nonce + msgtype
-#define COMMAND_MSGTYPE_OFFSET (BUSYBEE_HEADER_SIZE)
-#define COMMAND_NONCE_OFFSET (BUSYBEE_HEADER_SIZE + pack_size(wtf::WTFNET_PUT))
-#define COMMAND_DATA_OFFSET (COMMAND_NONCE_OFFSET + sizeof(uint64_t))
-
-#define BUSYBEE_ERROR(REPRC, BBRC) \
+#define _BUSYBEE_ERROR(BBRC) \
     case BUSYBEE_ ## BBRC: \
-        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " XSTR(BBRC)); \
-        return -1
+        ERROR(INTERNAL) << "internal error: BusyBee unexpectedly returned " XSTR(BBRC) << ": please file a bug"
 
-#define BUSYBEE_ERROR_DISCONNECT(REPRC, BBRC) \
-    case BUSYBEE_ ## BBRC: \
-        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " XSTR(BBRC)); \
-        reset_to_disconnected(); \
-        return -1
+#define BUSYBEE_ERROR_CASE(BBRC) \
+    _BUSYBEE_ERROR(BBRC); \
+    return -1;
 
-#define BUSYBEE_ERROR_CONTINUE(REPRC, BBRC) \
-    case BUSYBEE_ ## BBRC: \
-        WTFSETERROR(WTF_ ## REPRC, "BusyBee returned " XSTR(BBRC)); \
-        continue
-
-#define WTF_UNEXPECTED(MT) \
-    case WTFNET_ ## MT: \
-        WTFSETERROR(WTF_SERVERERROR, "unexpected " XSTR(MT) " message"); \
-        m_last_error_host = from; \
-        return -1
-
-#define WTF_UNEXPECTED_DISCONNECT(MT) \
-    case WTFNET_ ## MT: \
-        WTFSETERROR(WTF_SERVERERROR, "unexpected " XSTR(MT) " message"); \
-        m_last_error_host = from; \
-        reset_to_disconnected(); \
-        return -1
+#define BUSYBEE_ERROR_CASE_FALSE(BBRC) \
+    _BUSYBEE_ERROR(BBRC); \
+    return false;
 
 
 wtf_client :: wtf_client(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
-    : m_busybee_mapper(m_coord.config())
+    : m_coord(host, port)
+    , m_busybee_mapper(m_coord.config())
     , m_busybee(&m_busybee_mapper, busybee_generate_id())
-    , m_coord(host, port)
-    , m_nonce(1)
-    , m_fileno(1)
-    , m_have_seen_config(false)
-    , m_commands()
-    , m_complete()
-    , m_resend()
-    , m_fds()
-    , m_last_error_desc("")
-    , m_last_error_file(__FILE__)
-    , m_last_error_line(__LINE__)
-    , m_last_error_host()
+    , int64_t m_next_client_id(1)
+    , int64_t m_next_server_nonce(1)
+    , m_pending_ops()
+    , m_failed()
+    , m_yielding()
+    , m_yielded()
+    , m_last_error()
     , m_hyperdex_client(hyper_host, hyper_port)
+    , m_fileno(1)
+    , m_fds()
     , m_cwd("/")
 {
 }
@@ -130,102 +94,256 @@ wtf_client :: ~wtf_client() throw ()
 {
 }
 
-int64_t
-wtf_client :: send(e::intrusive_ptr<command>& cmd, wtf_returncode* status)
+bool
+wtf_client :: maintain_coord_connection(wtf_client_returncode* status)
 {
-    MAINTAIN_COORD_CONNECTION(status);
+    replicant_returncode rc;
+    uint64_t old_version = m_coord.config()->version();
 
-    // Create the command object
-    return send_to_blockserver(cmd, status);
+    if (!m_coord.ensure_configuration(&rc))
+    {
+        if (rc == REPLICANT_INTERRUPTED)
+        {
+            ERROR(INTERRUPTED) << "signal received";
+        }
+        else if (rc == REPLICANT_TIMEOUT)
+        {
+            ERROR(TIMEOUT) << "operation timed out";
+        }
+        else
+        {
+            ERROR(COORDFAIL) << "coordinator failure: " << m_coord.error().msg();
+        }
+
+        return false;
+    }
+
+    if (m_busybee.set_external_fd(m_coord.poll_fd()) != BUSYBEE_SUCCESS)
+    {
+        *status = WTF_CLIENT_POLLFAILED;
+        return false;
+    }
+
+    uint64_t new_version = m_coord.config()->version();
+
+    if (old_version < new_version)
+    {
+        pending_map_t::iterator it = m_pending_ops.begin();
+
+        while (it != m_pending_ops.end())
+        {
+            // If the mapping that was true when the operation started is no
+            // longer true, we fail the operation with a RECONFIGURE.
+            if (m_coord.config()->get_server_id(it->second.vsi) != it->second.si)
+            {
+                m_failed.push_back(it->second);
+                pending_map_t::iterator tmp = it;
+                ++it;
+                m_pending_ops.erase(tmp);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
+    return true;
 }
 
-int64_t
-wtf_client :: loop(int timeout, wtf_returncode* status)
+
+bool
+wtf_client :: send(network_msgtype mt,
+               const server_id& to,
+               uint64_t nonce,
+               std::auto_ptr<e::buffer> msg,
+               e::intrusive_ptr<pending> op,
+               wtf_client_returncode* status)
 {
-    ////std::cout << "Starting loop, status: " << *status << std::endl;
-    while ((!m_commands.empty() || !m_resend.empty())
-           && m_complete.empty())
+    const uint8_t type = static_cast<uint8_t>(mt);
+    const uint8_t flags = 0;
+    const uint64_t version = m_coord.config()->version();
+    msg->pack_at(BUSYBEE_HEADER_SIZE)
+        << type << nonce;
+    m_busybee.set_timeout(-1);
+    busybee_returncode rc = m_busybee.send(to, msg);
+
+    switch (rc)
     {
-        if (maintain_coord_connection(status) < 0)
+        case BUSYBEE_SUCCESS:
+            op->handle_sent_to(to);
+            m_pending_ops.insert(std::make_pair(nonce, pending_server_pair(to, op)));
+            return true;
+        case BUSYBEE_DISRUPTED:
+            handle_disruption(to);
+            ERROR(SERVERERROR) << "server " << to.get() << " had a communication disruption";
+            return false;
+        BUSYBEE_ERROR_CASE_FALSE(SHUTDOWN);
+        BUSYBEE_ERROR_CASE_FALSE(POLLFAILED);
+        BUSYBEE_ERROR_CASE_FALSE(ADDFDFAIL);
+        BUSYBEE_ERROR_CASE_FALSE(TIMEOUT);
+        BUSYBEE_ERROR_CASE_FALSE(EXTERNAL);
+        BUSYBEE_ERROR_CASE_FALSE(INTERRUPTED);
+        default:
+            ERROR(INTERNAL) << "internal error: BusyBee unexpectedly returned "
+                                << (unsigned) rc << ": please file a bug";
+            return false;
+    }
+}
+
+
+int64_t
+client :: loop(int timeout, wtf_client_returncode* status)
+{
+    *status = WTF_CLIENT_SUCCESS;
+    m_last_error = e::error();
+
+    while (m_yielding ||
+           !m_failed.empty() ||
+           !m_pending_ops.empty())
+    {
+        /* Handle currently yielding operation first. */
+        if (m_yielding)
+        {
+            if (!m_yielding->can_yield())
+            {
+                m_yielding = NULL;
+                continue;
+            }
+
+            if (!m_yielding->yield(status, &m_last_error))
+            {
+                return -1;
+            }
+
+            int64_t client_id = m_yielding->client_visible_id();
+            m_last_error = m_yielding->error();
+
+            if (!m_yielding->can_yield())
+            {
+                /* m_yielded is never read.  Its purpose is to
+                   delay the destruction of the yielding operation
+                   until at least the next loop call. */
+                m_yielded = m_yielding;
+                m_yielding = NULL;
+            }
+
+            return client_id;
+        }
+
+        /* Handle failed operations second */
+        else if (!m_failed.empty())
+        {
+            const pending_server_pair& psp(m_failed.front());
+            psp.op->handle_failure(psp.si);
+            m_yielding = psp.op;
+            m_failed.pop_front();
+            continue;
+        }
+
+        /* the previously yileded operation can be destroyed now
+           if no one else is referring to it. */
+        m_yielded = NULL;
+
+        /* Handle a new pending op. */
+        assert(!m_pending_ops.empty());
+
+        if (!maintain_coord_connection(status))
         {
             return -1;
         }
-        ////std::cout << "Looping, status: " << *status << std::endl;
 
-
-        // Always set timeout
+        uint64_t sid_num;
+        std::auto_ptr<e::buffer> msg;
         m_busybee.set_timeout(timeout);
-        int64_t ret = inner_loop(status);
+        busybee_returncode rc = m_busybee.recv(&sid_num, &msg);
+        server_id id(sid_num);
 
-        ////std::cout << "after inner_loop, status: " << *status << std::endl;
-
-        if (ret < 0)
+        switch (rc)
         {
-            return ret;
+            case BUSYBEE_SUCCESS:
+                break;
+            case BUSYBEE_INTERRUPTED:
+                ERROR(INTERRUPTED) << "signal received";
+                return -1;
+            case BUSYBEE_TIMEOUT:
+                ERROR(TIMEOUT) << "operation timed out";
+                return -1;
+            case BUSYBEE_DISRUPTED:
+                handle_disruption(id);
+                continue;
+            case BUSYBEE_EXTERNAL:
+                continue;
+            BUSYBEE_ERROR_CASE(POLLFAILED);
+            BUSYBEE_ERROR_CASE(ADDFDFAIL);
+            BUSYBEE_ERROR_CASE(SHUTDOWN);
+            default:
+                ERROR(INTERNAL) << "internal error: BusyBee unexpectedly returned "
+                                << (unsigned) rc << ": please file a bug";
+                return -1;
         }
 
-        assert(ret == 0);
+        e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
+        uint8_t mt;
+        int64_t nonce;
+        up = up >> mt >> nonce;
+
+        if (up.error())
+        {
+            ERROR(SERVERERROR) << "communication error: server "
+                               << sid_num << " sent message="
+                               << msg->as_slice().hex()
+                               << " with invalid header";
+            return -1;
+        }
+
+        network_msgtype msg_type = static_cast<network_msgtype>(mt);
+        pending_map_t::iterator it = m_pending_ops.find(nonce);
+
+        if (it == m_pending_ops.end())
+        {
+            continue;
+        }
+
+        const pending_server_pair psp(it->second);
+        e::intrusive_ptr<pending> op = psp.op;
+        m_pending_ops.erase(it);
+
+        if (msg_type == CONFIGMISMATCH)
+        {
+            m_failed.push_back(psp);
+            continue;
+        }
+
+        if (id == psp.si &&
+            m_coord.config()->exists(id))
+        {
+            if (!op->handle_message(this, id, msg_type, 
+                                    msg, up, status, &m_last_error))
+            {
+                return -1;
+            }
+
+            m_yielding = psp.op;
+        }
+        else if(id != psp.si)
+        {
+            ERROR(SERVERERROR) << "wrong server replied for nonce=" << nonce
+                               << ": expected it to come from "
+                               << psp.si
+                               << "; it came from "
+                               << id;
+            return -1;
+        }
+        else
+        {
+            ERROR(SERVERERROR) << "Server that replied for nonce=" << nonce
+                               << "is not in our configuration.";
+        }
     }
 
-    if (!m_complete.empty())
-    {
-        e::intrusive_ptr<command> c = m_complete.begin()->second;
-        m_complete.erase(m_complete.begin());
-        m_last_error_desc = c->last_error_desc();
-        m_last_error_file = c->last_error_file();
-        m_last_error_line = c->last_error_line();
-        m_last_error_host = c->sent_to().bind_to;
-        return c->nonce();
-    }
-
-    if (m_commands.empty())
-    {
-        WTFSETERROR(WTF_NONEPENDING, "no outstanding operations to process");
-        return -1;
-    }
-
-    WTFSETERROR(WTF_INTERNAL, "unhandled exit case from loop");
+    ERROR(NONEPENDING) << "no outstanding operations to process";
     return -1;
-}
-
-int64_t
-wtf_client :: loop(int64_t id, int timeout, wtf_returncode* status)
-{
-    while (m_commands.find(id) != m_commands.end() ||
-           m_resend.find(id) != m_resend.end())
-    {
-        if (maintain_coord_connection(status) < 0)
-        {
-            return -1;
-        }
-
-        // Always set timeout
-        m_busybee.set_timeout(timeout);
-        int64_t ret = inner_loop(status);
-
-        if (ret < 0)
-        {
-            return ret;
-        }
-
-        assert(ret == 0);
-    }
-
-    command_map::iterator it = m_complete.find(id);
-
-    if (it == m_complete.end())
-    {
-        WTFSETERROR(WTF_NONEPENDING, "no outstanding operation with the specified id");
-        return -1;
-    }
-
-    e::intrusive_ptr<command> c = it->second;
-    m_complete.erase(it);
-    m_last_error_desc = c->last_error_desc();
-    m_last_error_file = c->last_error_file();
-    m_last_error_line = c->last_error_line();
-    m_last_error_host = c->sent_to().bind_to;
-    return c->nonce();
 }
 
 int64_t
@@ -296,112 +414,23 @@ wtf_client :: poll_fd()
 }
 
 int64_t
-wtf_client :: inner_loop(wtf_returncode* status)
-{
-
-    int64_t ret = -1;
-    // Resend all those that need it
-    while (!m_resend.empty())
-    {
-        ////std::cout << "Resending..." << std::endl;
-        ret = send_to_blockserver(m_resend.begin()->second, status);
-
-        // As this is a retransmission, we only care about errors (< 0)
-        // not the success half (>=0).
-        if (ret < 0)
-        {
-            return ret;
-        }
-
-        m_resend.erase(m_resend.begin());
-    }
-
-    // Receive a message
-    uint64_t id;
-    std::auto_ptr<e::buffer> msg;
-    busybee_returncode rc = m_busybee.recv(&id, &msg);
-    const server* node = m_coord.config()->server_from_id(server_id(id));
-    
-    ////std::cout << rc << std::endl;
-
-    // And process it
-    switch (rc)
-    {
-        case BUSYBEE_SUCCESS:
-            break;
-        case BUSYBEE_DISRUPTED:
-            if (node)
-            {
-                handle_disruption(*node, status);
-            }
-
-            return 0;
-        case BUSYBEE_INTERRUPTED:
-            WTFSETERROR(WTF_INTERRUPTED, "signal received");
-            return -1;
-        case BUSYBEE_TIMEOUT:
-            WTFSETERROR(WTF_TIMEOUT, "operation timed out");
-            return -1;
-        BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
-        BUSYBEE_ERROR(INTERNAL, POLLFAILED);
-        BUSYBEE_ERROR(INTERNAL, ADDFDFAIL);
-        BUSYBEE_ERROR(INTERNAL, EXTERNAL);
-        default:
-            WTFSETERROR(WTF_INTERNAL, "BusyBee returned unknown error");
-            return -1;
-    }
-
-    if (!node)
-    {
-        m_busybee.drop(id);
-        return 0;
-    }
-
-    po6::net::location from = node->bind_to;
-    e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
-    wtf_network_msgtype mt;
-    up = up >> mt;
-
-    if (up.error())
-    {
-        WTFSETERROR(WTF_SERVERERROR, "unpack failed");
-        m_last_error_host = from;
-        return -1;
-    }
-
-    switch (mt)
-    {
-        case WTFNET_COMMAND_RESPONSE:
-            if ((ret = handle_command_response(from, msg, up, status)) < 0)
-            {
-                return ret;
-            }
-            break;
-        WTF_UNEXPECTED(NOP);
-        default:
-            WTFSETERROR(WTF_SERVERERROR, "invalid message type");
-            m_last_error_host = from;
-            return -1;
-    }
-
-    return 0;
-}
-
-int64_t
 wtf_client :: open(const char* path, int flags)
 {
     wtf_returncode status;
-    MAINTAIN_COORD_CONNECTION(&status);
-    std::cout << "OPEN WITH FLAGS: " << flags << std::endl;
+
+    if (!maintain_coord_connection(&status))
+    {
+        return -1;
+    }
 
     if (flags & (O_APPEND | O_ASYNC | O_CLOEXEC))
     {
-        std::cout << "WARNING: FLAG NOT SUPPORTED" << std::endl;
+        //XXX: we don't support these right now.
     }
 
     if (flags & O_CREAT)
     {
-        std::cout << "WARNING: WRONG OPEN" << std::endl;
+        ERROR(INVALID) << "O_CREAT flag specified for wrong open call.";
         return -1;
     }
 
@@ -409,7 +438,6 @@ wtf_client :: open(const char* path, int flags)
     
     if (update_file_cache(path, f, false) < 0)
     {
-        std::cout << "WARNING: CANT UPDATE FILE CACHE" << std::endl;
         return -1;
     }
 
@@ -465,6 +493,30 @@ wtf_client :: lseek(int64_t fd, uint64_t offset)
 }
 
 int64_t
+wtf_client :: perform_aggregation(const std::vector<server_id>& servers,
+                              e::intrusive_ptr<pending_aggregation> _op,
+                              network_msgtype mt,
+                              std::auto_ptr<e::buffer> msg,
+                              wtf_client_returncode* status)
+{
+    e::intrusive_ptr<pending> op(_op.get());
+
+    for (size_t i = 0; i < servers.size(); ++i)
+    {
+        uint64_t nonce = m_next_server_nonce++;
+        pending_server_pair psp(servers[i], op);
+        std::auto_ptr<e::buffer> msg_copy(msg->copy());
+
+        if (!send(mt, psp.si, nonce, msg_copy, op, status))
+        {
+            m_failed.push_back(psp);
+        }
+    }
+
+    return op->client_visible_id();
+}
+
+int64_t
 wtf_client :: write(int64_t fd,
                     const char* data,
                     uint32_t data_sz,
@@ -478,7 +530,7 @@ wtf_client :: write(int64_t fd,
 
     if (m_fds.find(fd) == m_fds.end())
     {
-        std::cout << "invalid fd: " << fd <<  std::endl;
+        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
     }
 
@@ -548,76 +600,187 @@ wtf_client :: write(int64_t fd,
 }
 
 int64_t
-wtf_client :: read(int64_t fd, char* data,
-                   uint32_t* data_sz,
+wtf_client :: write(int64_t fd, const char* buf,
+                   size_t * buf_sz, int num_replicas,
                    wtf_returncode* status)
 {
-    int64_t rid = 0;
-    int64_t lid = 0;
-
-    cout << "wtf read:" << " fd " << fd << " data_sz " << data_sz << endl;
-
     if (m_fds.find(fd) == m_fds.end())
     {
+        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
     }
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
+    //XXX
     update_file_cache(f->path().get(), f, false);
 
-    uint32_t rem = MIN(*data_sz, f->length() - f->offset());
-    uint32_t sz = 0;
+    /* The op object here is created once and a reference to it
+     * is inserted into the m_pending list for each send operation,
+     * which is called from perform_aggregation.  The pending_aggregation
+     * also has an internal list of server_ids it is waiting to hear back
+     * from, which is also appended to for each send op. As servers return
+     * acknowledgements, items are removed from both lists.  When the last
+     * server_id is removed from the list inside the op, it will be marked
+     * as can_yield, which will cause the loop() operation to return the
+     * client_id of the op. */
+    
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_write(client_id, status)
 
-    std::cout << "rem: " << rem << std::endl;
-    std::cout << "f->length(): " << f->length() << std::endl;
-    std::cout << "f->offset(): " << f->offset() << std::endl;
+    size_t rem = *buf_sz;
+    size_t next_buf_offset = 0;
 
     while(rem > 0)
     {
-        uint64_t bid = f->offset()/CHUNKSIZE;
-        uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
-        len = MIN(len, rem); 
-        uint64_t version = f->get_block_version(bid);
-        uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
+        std::vector<block_location> bl;
+        std::vector<server_id> servers;
+        size_t buf_offset = next_buf_offset;
+        uint32_t block_offset;
+        size_t slice_len;
+        networK_msgtype mt; // can be PUT or UPDATE
+        prepare_write_op(f, rem, bl, num_replicas, mt, next_buf_offset, block_offset, slice_len);
+        e::slice data = e::slice(buf + buf_offset, slice_len);
 
-        wtf::block_id block = f->lookup_block(bid);
-        wtf::server send_to = *m_coord.config()->server_from_id(server_id(block.server()));
-        //XXX: pass in output buffer.
-        //XXX: If read fails, read from the next node on the list.
+        for (size_t i = 0; i < bl.size(); ++i)
+        {
+            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                + sizeof(uint64_t) // client_id
+                + sizeof(uint64_t) // bl.bi (remote block number) 
+                + sizeof(uint64_t) // block_offset (remote block offset) 
+                + data.size();     // user data 
+            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+            e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ)
+                pa = pa << client_id << bl[i].bi << block_offset;
+            pa.copy(data);
 
-        e::intrusive_ptr<command> cmd = new command(send_to,
-                block.block(),
-                fd, bid, block_off, version,
-                NULL, 0, m_nonce, wtf::WTFNET_GET,
-                data, len);
+            if (!maintain_coord_connection(status))
+            {
+                return -1;
+            }
 
-        rid = send(cmd, status);
+            servers.push_back(bl[i].si);
+            perform_aggregation(servers, op, mt, msg, status);
+        }
+    }
 
-        if (rid < 0)
+    return client_id;
+}
+
+void
+wtf_client :: prepare_write_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              std::vector<block_location>& bl,
+                              int num_replicas,
+                              network_msgtype& mt,
+                              size_t buf_offset&,
+                              uint32_t block_offset&,
+                              size_t slice_len&)
+{
+    block_location bl = f->current_block();
+    size_t bytes_left = f->bytes_left_in_block();
+    size_t block_length = f->current_block_length();
+    block_offset = bytes_left - block_length;
+
+    if (block_offset != 0 || bytes_left < rem)
+    {
+        //partial block update case.
+        f->copy_current_block_locations(bl);
+        mt = wtf::WTFNET_UPDATE;
+    }
+    else
+    {
+        //full block write case
+        m_coord.config()->copy_n_block_locations(num_replicas, bl);
+        mt = wtf::WTFNET_PUT;
+    }
+
+    servers.push_back(server_id(bl.si));
+
+    size_t slice_len = std::min(bytes_left, rem);
+    f->advance(slice_len);
+    buf_offset += slice_len;
+    rem -= slice_len;
+}
+
+
+int64_t
+wtf_client :: read(int64_t fd, char* buf,
+                   uint32_t* buf_sz,
+                   wtf_returncode* status)
+{
+    if (m_fds.find(fd) == m_fds.end())
+    {
+        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
+        return -1;
+    }
+
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    //XXX
+    update_file_cache(f->path().get(), f, false);
+
+    /* The op object here is created once and a reference to it
+     * is inserted into the m_pending list for each send operation,
+     * which is called from perform_aggregation.  The pending_aggregation
+     * also has an internal list of server_ids it is waiting to hear back
+     * from, which is also appended to for each send op. As servers return
+     * acknowledgements, items are removed from both lists.  When the last
+     * server_id is removed from the list inside the op, it will be marked
+     * as can_yield, which will cause the loop() operation to return the
+     * client_id of the op. */
+    
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_read(client_id, status, buf, buf_sz)
+
+    size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
+    size_t buf_offset = 0;
+
+    while(rem > 0)
+    {
+        e::intrusive_ptr<block_location> bl;
+        std::vector<server_id> servers;
+        prepare_read_op(f, rem, buf_offset, bl, op, servers);
+        size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                  + sizeof(uint64_t) // client_id
+                  + sizeof(uint64_t); // bl.bi (local block number) 
+        std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+        msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << client_id << bl.bi;
+
+        if (!maintain_coord_connection(status))
         {
             return -1;
         }
 
-        rem -= len;
-        sz += len;
-        data += len;
-        std::cout << "rem: " << rem << std::endl;
-        std::cout << "len: " << len << std::endl;
-        std::cout << "sz: " << sz << std::endl;
-        f->set_offset(f->offset() + len);
+        perform_aggregation(servers, op, wtf::WTFNET_GET, msg, status);
     }
 
-    *data_sz = sz;
-    return rid;
+    return client_id;
+}
 
+void
+wtf_client :: prepare_read_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              size_t& buf_offset,
+                              e::intrusive_ptr<block_location>& bl, 
+                              e::intrusive_ptr<pending_read> op, 
+                              std::vector<server_id>& servers)
+{
+    size_t bytes_left = f->bytes_left_in_block();
+    size_t block_length = f->current_block_length();
+    size_t block_offset = bytes_left - block_length;
+    
+    bl = f->current_block();
+    servers.push_back(server_id(bl.si));
 
-//    //XXX: Make sure not to overwrite the outstanding changes.
+    size_t advance = std::min(bytes_left, rem);
 
-//    /*
-//     * Always read from hyperdex.  If we want to see latest
-//     * changes, must call flush() first.
-//     */ 
+    op->set_offset(bl.si, bl.bi, buf_offset, block_offset, advance);
+    f->advance(advance);
+    buf_offset += advance;
+    rem -= advance;
 }
 
 int64_t
@@ -640,7 +803,7 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
     int64_t rid = -1;
     if(m_fds.find(fd) == m_fds.end())
     {
-        std::cout << "bad fd" << std::endl;
+        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
     }
 
@@ -648,263 +811,12 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
     if(f->commands_begin() == f->commands_end())
     {
-        std::cout << "no commands" << std::endl;
         return 0;
     }
 
-    for (command_map::const_iterator it = f->commands_begin();
-         it != f->commands_end(); ++it)
-    {
-        e::intrusive_ptr<command> cmd = it->second;
-        uint64_t id = it->first;
+    //XXX: rewrite
 
-        //std::cout << "Flushing " << cmd->nonce() << std::endl;
-        //std::cout << "STATUS: " << cmd->status() << std::endl;
-        //std::cout << "id: " << id << std::endl;
-
-        if (cmd->status() != WTF_SUCCESS)
-        {
-            *rc = WTF_GARBAGE;
-
-            //std::cout << "Looping" << std::endl;
-            rid = loop(it->first, -1, rc);
-
-            if (rid < 0 || *rc != WTF_SUCCESS)
-            {
-                return rid;
-            }
-        }
-        else
-        {
-            rid = 1;
-        }
-
-        switch (cmd->msgtype())
-        {
-            std::cout << "Handling " << cmd->msgtype() << std::endl;
-            case WTFNET_UPDATE:
-                handle_update(cmd, f); 
-                break;
-            case WTFNET_PUT:
-                handle_put(cmd, f); 
-                break;
-            case WTFNET_GET:
-                handle_get(cmd, f);
-                break;
-            default:
-                //XXX: handle this case.
-                abort();
-        }
-
-    }
-
-    update_hyperdex(f);
-
-    //std::cout << "Done flushing." << std::endl;
-    
-    f->gc_completed(rc);
-    return rid;
-}
-
-int64_t
-wtf_client :: send_to_blockserver(e::intrusive_ptr<command> cmd,
-                                               wtf_returncode* status)
-{
-    static int last_node = 0;
-    bool sent = false;
-
-    //std::cout << "Sending to random node." << std::endl;
-    //std::cout << "Configuration is: " ;
-    //m_config->debug_dump(std::cout);
-
-    if(cmd->sent_to().id == server().id)
-    {
-        cmd->set_sent_to(*m_coord.config()->get_random_server(generate_token()));
-    }
-
-    std::auto_ptr<e::buffer> msg(cmd->request()->copy());
-    server send_to = cmd->sent_to();
-    m_busybee.set_timeout(-1);
-    busybee_returncode rc = m_busybee.send(send_to.id.get(), msg);
-
-    switch (rc)
-    {
-        case BUSYBEE_SUCCESS:
-            sent = true;
-            break;
-        case BUSYBEE_DISRUPTED:
-            //XXX
-            handle_disruption(send_to, status);
-            WTFSETERROR(WTF_BACKOFF, "backoff before retrying");
-            break;
-        BUSYBEE_ERROR(INTERNAL, SHUTDOWN);
-        BUSYBEE_ERROR(INTERNAL, POLLFAILED);
-        BUSYBEE_ERROR(INTERNAL, ADDFDFAIL);
-        BUSYBEE_ERROR(INTERNAL, TIMEOUT);
-        BUSYBEE_ERROR(INTERNAL, EXTERNAL);
-        BUSYBEE_ERROR(INTERNAL, INTERRUPTED);
-        default:
-            WTFSETERROR(WTF_INTERNAL, "BusyBee returned unknown error");
-    }
-
-    if (sent)
-    {
-
-        if (m_fds.find(cmd->fd()) == m_fds.end())
-        {
-            //std::cout << "invalid fd: " << cmd->fd() <<  std::endl;
-            return -1;
-        }
-
-        m_commands[cmd->nonce()] = cmd;
-        e::intrusive_ptr<file> f = m_fds[cmd->fd()];
-        f->add_command(cmd);
-        return cmd->nonce();
-    }
-    else
-    {
-        // We have an error captured by WTFSETERROR above.
-        return -1;
-    }
-}
-
-int64_t
-wtf_client :: handle_command_response(const po6::net::location& from,
-                                            std::auto_ptr<e::buffer> msg,
-                                            e::unpacker up,
-                                            wtf_returncode* status)
-{
-    // Parse the command response
-    uint64_t nonce;
-    wtf::response_returncode rc;
-
-    up = up >> nonce >> rc;
-
-    //std::cout << "nonce: " << nonce << " rc: " << rc << std::endl;
-
-    if (up.error())
-    {
-        WTFSETERROR(WTF_SERVERERROR, "unpack failed");
-        m_last_error_host = from;
-        return -1;
-    }
-
-    // Find the command
-    command_map::iterator it = m_commands.find(nonce);
-    command_map* map = &m_commands;
-
-    if (it == map->end())
-    {
-        it = m_resend.find(nonce);
-        map = &m_resend;
-    }
-
-    if (it == map->end())
-    {
-        return 0;
-    }
-
-    // Pass the response to the command
-    e::intrusive_ptr<command> c = it->second;
-    WTFSETSUCCESS;
-
-    switch (rc)
-    {
-        case wtf::RESPONSE_SUCCESS:
-            c->succeed(msg, up.as_slice(), WTF_SUCCESS);
-            break;
-        case wtf::RESPONSE_OBJ_NOT_EXIST:
-            c->fail(WTF_NOTFOUND);
-            m_last_error_desc = "object not found";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_SERVER_ERROR:
-            c->fail(WTF_SERVERERROR);
-            m_last_error_desc = "server reports error; consult server logs for details";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        case wtf::RESPONSE_MALFORMED:
-            c->fail(WTF_INTERNAL);
-            m_last_error_desc = "server reports that request was malformed";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-        default:
-            c->fail(WTF_SERVERERROR);
-            m_last_error_desc = "unknown response code";
-            m_last_error_file = __FILE__;
-            m_last_error_line = __LINE__;
-            break;
-    }
-
-    c->set_last_error_desc(m_last_error_desc);
-    c->set_last_error_file(m_last_error_file);
-    c->set_last_error_line(m_last_error_line);
-    map->erase(it);
-    m_complete.insert(std::make_pair(c->nonce(), c));
     return 0;
-}
-
-void
-wtf_client :: handle_update(e::intrusive_ptr<command>& cmd,
-                         e::intrusive_ptr<file>& f)
-{
-    uint64_t sid; 
-    uint64_t bid;
-    uint64_t block_index = cmd->block();
-    uint64_t len = cmd->offset() + cmd->length();
-
-    std::cout << "len: " << len << std::endl;
-    std::cout << "cmd->offset(): " << cmd->offset() << std::endl;
-    std::cout << "cmd->length(): " << cmd->length() << std::endl;
-    std::cout << "f->length(): " << f->length() << std::endl;
-
-    if ((block_index + 1) * CHUNKSIZE >= f->length())
-    {
-        len = MAX(len, f->length() - block_index*CHUNKSIZE);
-    }
-
-    std::auto_ptr<e::buffer> msg(e::buffer::create(cmd->output(), cmd->output_sz()));
-    e::unpacker up = msg->unpack_from(0);
-    up = up >> sid >> bid;
-
-    if (up.error())
-    {
-        m_last_error_host = cmd->sent_to().bind_to;
-        //XXX: implement proper return value
-        return;
-    }
-
-    //std::cout << "sid: " << sid << "bid: " << bid << std::endl;
-    std::cout << "UPDATE: bid=" << block_index << " len=" << len << std::endl;
-
-    f->update_blocks(block_index, len, cmd->version(), sid, bid);
-}
-
-void
-wtf_client :: handle_put(e::intrusive_ptr<command>& cmd,
-                         e::intrusive_ptr<file>& f)
-{
-    uint64_t sid; 
-    uint64_t bid;
-    uint64_t block_index = cmd->block();
-    uint64_t len = cmd->length();
-    std::auto_ptr<e::buffer> msg(e::buffer::create(cmd->output(), cmd->output_sz()));
-    e::unpacker up = msg->unpack_from(0);
-    up = up >> sid >> bid;
-
-    if (up.error())
-    {
-        m_last_error_host = cmd->sent_to().bind_to;
-        //XXX: implement proper return value
-        return;
-    }
-
-    //std::cout << "sid: " << sid << "bid: " << bid << std::endl;
-
-    f->update_blocks(block_index, len, cmd->version(), sid, bid);
 }
 
 int64_t
@@ -918,18 +830,17 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
     ret = m_hyperdex_client.get("wtf", path, strlen(path), &status, &attrs, &attrs_sz);
     if (ret == -1)
     {
-        //std::cout << "hyperdex_client_get returned " << status;
+        ERROR(INTERNAL) << " failed to update file cache.  HyperDex get failed with " << ret;
         return -1;
     }
 
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
-    //std::cout << "hyperdex_wait_for_result returned " << res;
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
         if (!create)
         {
-            errno = ENOENT;
+            ERROR(NOTFOUND) << "path not found in HyperDex.";
             return -1;
         }
 
@@ -940,24 +851,20 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
     }
     else
     {
-        std::cout << "PATH " << path << " has " << attrs_sz << " attributes." << std::endl;
         for (size_t i = 0; i < attrs_sz; ++i)
         {
             if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
-                std::cout << "unpacking blockmap" << std::endl;
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
                 while (!up.empty())
                 {
-                    std::cout << "up as slice hex [" << up.as_slice().hex() << "]" << std::endl;
                     uint32_t idlen;
                     uint64_t id;
                     uint32_t valuelen;
                     up = up >> idlen >> id >> valuelen;
                     e::unpack64be((uint8_t*)&id, &id);
                     e::unpack32be((uint8_t*)&valuelen, &valuelen);
-                    cout << "idlen " << idlen << " id " << id << " valuelen " << valuelen << endl;
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
                     up = up >> b;
                     f->update_blocks(id, b);
@@ -1043,7 +950,7 @@ wtf_client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
     int rel_len = strnlen(rel, PATH_MAX);
     if (rel[rel_len] != '\0')
     {
-        errno = ENAMETOOLONG;
+        ERROR(NAMETOOLONG) << "path name is too long.";
         return -1;
     }
         
@@ -1102,7 +1009,7 @@ wtf_client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
                     *abspath++ = *rel++;
                     if (abspath == end)
                     {
-                        errno = ENAMETOOLONG;
+                        ERROR(NAMETOOLONG) << "path name is too long.";
                         return -1;
                     }
                 }
@@ -1124,7 +1031,7 @@ wtf_client :: getcwd(char* c, size_t len)
 {
     if (len < m_cwd.size() + 1)
     {
-        errno = ERANGE;
+        ERROR(NAMETOOLONG) << "buffer too small for cwd.";
         return -1;
     }
 
@@ -1137,7 +1044,6 @@ wtf_client :: getcwd(char* c, size_t len)
 int64_t
 wtf_client :: getattr(const char* path, struct wtf_file_attrs* fa)
 {
-    std::cout << "getattr " << path << std::endl;
     wtf_returncode status;
 
     int64_t fd = open(path, O_RDONLY);
@@ -1179,7 +1085,7 @@ wtf_client :: chdir(char* path)
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
-        errno = ENOENT;
+        ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
         return -1;
     }
     else
@@ -1273,6 +1179,26 @@ wtf_client :: mkdir(const char* path, mode_t mode)
         return 0;
     }
 }
+
+int64_t 
+wtf_client :: opendir(const char* path)
+{
+    int64_t fd = m_fileno;
+    m_fileno;
+    m_fileno++;
+}
+
+int64_t 
+wtf_client :: closedir(int fd)
+{
+}
+
+int64_t 
+wtf_client :: readdir(int fd, char* entry)
+{
+    return 0;
+}
+
 
 int64_t
 wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
@@ -1421,31 +1347,26 @@ wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& 
 }
 
 void
-wtf_client :: handle_get(e::intrusive_ptr<command>& cmd,
-                         e::intrusive_ptr<file>& f)
+wtf_client :: handle_disruption(const server_id& si)
 {
-    //no need to do anything
-}
+    pending_map_t::iterator it = m_pending_ops.begin();
 
-void
-wtf_client :: handle_disruption(const server& from,
-                                      wtf_returncode*)
-{
-    for (command_map::iterator it = m_commands.begin(); it != m_commands.end(); )
+    while (it != m_pending_ops.end())
     {
-        e::intrusive_ptr<command> c = it->second;
-
-        // If this op wasn't sent to the failed host, then skip it
-        if (c->sent_to().id != from.id)
+        if (it->second.si == si)
+        {
+            m_failed.push_back(it->second);
+            pending_map_t::iterator tmp = it;
+            ++it;
+            m_pending_ops.erase(tmp);
+        }
+        else
         {
             ++it;
-            continue;
         }
-
-        m_resend.insert(*it);
-        m_commands.erase(it);
-        it = m_commands.begin();
     }
+
+    m_busybee.drop(si.get());
 }
 
 uint64_t

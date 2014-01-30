@@ -97,8 +97,34 @@ static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         off_t offset, struct fuse_file_info *fi)
 {
     LOGENTRY;
-    std::cout << "XXX:READDIR" << std::endl;
-    return 0;
+    (void) offset;
+    (void) fi;
+
+    int ret = 0;
+
+    sem_wait(&lock);
+
+    int64_t fd = w->opendir(path);
+    if (fd < 0)
+    {
+        ret = -errno;
+    }
+    else
+    {
+        char de[256];
+
+        while(w->readdir(fd, de) > -1)
+        {
+            if(filler(buf, de, NULL, 0))
+                break;
+        }
+
+        w->closedir(fd);
+    }
+
+    sem_post(&lock);
+
+    return ret;
 }
 
 static int fusetest_open(const char *path, struct fuse_file_info *fi)
@@ -115,9 +141,9 @@ static int fusetest_open(const char *path, struct fuse_file_info *fi)
     else
     {
         fi->fh = fd;
+        std::cout << "OPENED FD " << fd << std::endl;
     }
 
-    std::cout << "OPENED FD " << fd << std::endl;
 
     sem_post(&lock);
     LOGENTRY;
@@ -333,7 +359,7 @@ int main(int argc, char *argv[])
     fusetest_oper.readdir    = fusetest_readdir;
     fusetest_oper.release    = fusetest_release;
 //    fusetest_oper.unlink     = fusetest_unlink;
-//    fusetest_oper.utimens    = fusetest_utimens;
+    fusetest_oper.utimens    = fusetest_utimens;
     fusetest_oper.write      = fusetest_write;
 //    fusetest_oper.readlink   = fusetest_readlink;
 //    fusetest_oper.mknod      = fusetest_mknod;

@@ -53,38 +53,46 @@
 #include <busybee_st.h>
 
 //wtf
-#include <common/network_msgtype.h>
-#include <common/configuration.h>
-#include <common/mapper.h>
-#include <common/coordinator_link.h>
+#include "common/configuration.h"
+#include "common/coordinator_link.h"
+#include "common/mapper.h"
+#include "client/pending.h"
+#include "client/pending_aggregation.h"
 
 enum wtf_returncode
 {
-    WTF_SUCCESS      = 8448,
-    WTF_NOTFOUND     = 8449,
-    WTF_READONLY     = 8452,
+    WTF_CLIENT_SUCCESS      = 8448,
+    WTF_CLIENT_NOTFOUND     = 8449,
+    WTF_CLIENT_INVALID      = 8450,
+    WTF_CLIENT_BADF         = 8451,
+    WTF_CLIENT_READONLY     = 8452,
+    WTF_CLIENT_NAMETOOLONG  = 8453,
+    WTF_CLIENT_EXIST        = 8454,
+    WTF_CLIENT_ISDIR        = 8455,
+    WTF_CLIENT_NOTDIR       = 8456,
+    
 
     /* Error conditions */
-    WTF_UNKNOWNSPACE = 8512,
-    WTF_COORDFAIL    = 8513,
-    WTF_SERVERERROR  = 8514,
-    WTF_POLLFAILED   = 8515,
-    WTF_OVERFLOW     = 8516,
-    WTF_RECONFIGURE  = 8517,
-    WTF_TIMEOUT      = 8519,
-    WTF_NONEPENDING  = 8523,
-    WTF_NOMEM        = 8526,
-    WTF_BADCONFIG    = 8527,
-    WTF_DUPLICATE    = 8529,
-    WTF_INTERRUPTED  = 8530,
-    WTF_CLUSTER_JUMP = 8531,
-    WTF_COORD_LOGGED = 8532,
-    WTF_BACKOFF      = 8533,
+    WTF_CLIENT_UNKNOWNSPACE = 8512,
+    WTF_CLIENT_COORDFAIL    = 8513,
+    WTF_CLIENT_SERVERERROR  = 8514,
+    WTF_CLIENT_POLLFAILED   = 8515,
+    WTF_CLIENT_OVERFLOW     = 8516,
+    WTF_CLIENT_RECONFIGURE  = 8517,
+    WTF_CLIENT_TIMEOUT      = 8519,
+    WTF_CLIENT_NONEPENDING  = 8523,
+    WTF_CLIENT_NOMEM        = 8526,
+    WTF_CLIENT_BADCONFIG    = 8527,
+    WTF_CLIENT_DUPLICATE    = 8529,
+    WTF_CLIENT_INTERRUPTED  = 8530,
+    WTF_CLIENT_CLUSTER_JUMP = 8531,
+    WTF_CLIENT_COORD_LOGGED = 8532,
+    WTF_CLIENT_BACKOFF      = 8533,
 
     /* This should never happen.  It indicates a bug */
-    WTF_INTERNAL     = 8573,
-    WTF_EXCEPTION    = 8574,
-    WTF_GARBAGE      = 8575
+    WTF_CLIENT_INTERNAL     = 8573,
+    WTF_CLIENT_EXCEPTION    = 8574,
+    WTF_CLIENT_GARBAGE      = 8575
 };
 
 struct wtf_file_attrs
@@ -152,12 +160,34 @@ class wtf_client
         int64_t loop(int timeout, wtf_returncode* status);
         int64_t loop(int64_t id, int timeout, wtf_returncode* status);
         int64_t truncate(int fd, off_t length);
+        int64_t opendir(const char* path);
+        int64_t closedir(int fd);
+        int64_t readdir(int fd, char* entry);
 
     friend class wtf::tool_wrapper;
 
     private:
         class command;
         class file;
+
+    private:
+        struct pending_server_pair
+        {
+            pending_server_pair()
+                : si(), op() {}
+            pending_server_pair(const server_id& s,
+                                const e::intrusiv_ptr<pending>& o)
+                : si(s), op(o) {}
+            ~pending_server_pair() throw () {}
+            server_id si;
+            e::intrusive_ptr<pending> op;
+        };
+
+        typedef std::map<uint64_t, pending_server_pair> pending_map_t;
+        typedef std::list<pending_server_pair> pending_queue_t;
+        friend class pending_read;
+        friend class pending_readdir;
+        friend class pending_write;
 
     // these are the only private things that tool_wrapper should touch
     private:
@@ -217,21 +247,19 @@ class wtf_client
         wtf_client& operator = (const wtf_client& rhs);
 
     private:
+        wtf::coordinator_link m_coord;
         wtf::mapper m_busybee_mapper;
         busybee_st m_busybee;
-        wtf::coordinator_link m_coord;
-        uint64_t m_nonce;
-        uint64_t m_fileno;
-        bool m_have_seen_config;
-        command_map m_commands;
-        command_map m_complete;
-        command_map m_resend;
-        file_map m_fds;
-        const char* m_last_error_desc;
-        const char* m_last_error_file;
-        uint64_t m_last_error_line;
-        po6::net::location m_last_error_host;
+        int64_t m_next_client_id;
+        uint64_t m_next_server_nonce;
+        pending_map_t m_pending_ops;
+        pending_queue_t m_faiiled;
+        e::intrusive_ptr<pending> m_yielding;
+        e::intrusive_ptr<pending> m_yielded;
+        e::error m_last_error;
         hyperdex::Client m_hyperdex_client;
+        uint64_t m_next_fileno;
+        file_map_t m_fds;
         std::string m_cwd;
 };
 
