@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2012-2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,31 +25,43 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#ifndef wtf_client_pending_write_h_
+#define wtf_client_pending_write_h_
+
 // WTF
-#include <common/block_id.h>
+#include "client/pending_aggregation.h"
 
-using wtf::block_id;
-
-block_id :: block_id()
-    : m_sid(0)
-    , m_bid(0)
+class pending_write : public pending_aggregation
 {
-}
+    public:
+        pending_write(uint64_t client_visible_id,
+                          wtf_client_returncode* status,
+                          char* buf, size_t* buf_sz);
+        virtual ~pending_write() throw ();
 
-block_id :: block_id(uint64_t sid, uint64_t bid)
-    : m_sid(sid)
-    , m_bid(bid)
-{
-}
+    // return to client
+    public:
+        virtual bool can_yield();
+        virtual bool yield(wtf_client_returncode* status, e::error* error);
 
-block_id :: ~block_id() throw()
-{
-}
+    // events
+    public:
+        virtual void handle_failure(const server_id& si,)
+        virtual bool handle_message(client*,
+                                    const server_id& si,
+                                    network_msgtype mt,
+                                    std::auto_ptr<e::buffer> msg,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
 
-void 
-block_id :: pack(char* buf) const
-{
-    memmove(buf, &m_sid, sizeof(uint64_t));
-    buf += sizeof(uint64_t);
-    memmove(buf, &m_bid, sizeof(uint64_t));
-}
+    // noncopyable
+    private:
+        pending_write(const pending_write& other);
+        pending_write& operator = (const pending_write& rhs);
+
+    private:
+        bool m_done;
+};
+
+#endif // wtf_client_pending_write_h_

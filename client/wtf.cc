@@ -191,16 +191,47 @@ wtf_client :: send(network_msgtype mt,
     }
 }
 
+int64_t
+wtf_client :: loop(int64_t client_id, int timeout, wtf_client_returncode* status)
+{
+    return inner_loop(timeout, status, client_id)
+}
 
 int64_t
-client :: loop(int timeout, wtf_client_returncode* status)
+wtf_client :: loop(int timeout, wtf_client_returncode* status)
 {
+    return inner_loop(timeout, status, -1)
+}
+
+int64_t
+wtf_client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_for)
+{
+    /*
+     * This is for internal use only.  We loop for any operation to
+     * yield.  Client facing functions call op->handle_delivery()
+     * so that we can keep track of which op is actually delivered
+     * to the clients.  This mainly facilitates waiting for a specific
+     * op to yield.  In that case, we need to store the ops we do not
+     * care about in m_complete, to be delivered at another time.
+     *
+     * We could simply record the client_id and status, but in
+     * the case of readdir, the same op returns multiple times
+     * and assumes the client is storing the return location each
+     * time.  If we were to loop multiple times without giving it
+     * to the client, we'd miss some of the results.
+     * 
+     * In the readdir case, we simply make can_yeild() false until
+     * one of the client-facing functions has delivered the yielded
+     * result to the client, calling op->handle_delivered().
+     */
+
     *status = WTF_CLIENT_SUCCESS;
     m_last_error = e::error();
 
     while (m_yielding ||
            !m_failed.empty() ||
-           !m_pending_ops.empty())
+           !m_pending_ops.empty() ||
+           !m_yieldable.empty())
     {
         /* Handle currently yielding operation first. */
         if (m_yielding)
@@ -223,7 +254,11 @@ client :: loop(int timeout, wtf_client_returncode* status)
             {
                 /* m_yielded is never read.  Its purpose is to
                    delay the destruction of the yielding operation
-                   until at least the next loop call. */
+                   until at least the next loop call. 
+                   
+                   If the op can still yield more, we leave m_yielding
+                   alone and process more on the next call to loop
+                   */
                 m_yielded = m_yielding;
                 m_yielding = NULL;
             }
@@ -235,15 +270,45 @@ client :: loop(int timeout, wtf_client_returncode* status)
         else if (!m_failed.empty())
         {
             const pending_server_pair& psp(m_failed.front());
-            psp.op->handle_failure(psp.si);
-            m_yielding = psp.op;
+            e::intrusive_ptr<pending> op = psp.op;
+            op->handle_failure(psp.si);
+            
+            if (wait_for > 0 && wait_for != op->client_visible_id())
+            {
+                m_yieldable.insert(std::make_pair(op->client_visible_id(), op)); 
+            }
+            else
+            {
+                m_yielding = op;
+            }
+
             m_failed.pop_front();
             continue;
         }
 
-        /* the previously yileded operation can be destroyed now
+        /* the previously yielded operation can be destroyed now
            if no one else is referring to it. */
         m_yielded = NULL;
+
+
+        if (!m_yieldable.empty() && wait_for > 0)
+        {
+            yieldable_map_t ::iterator it = m_yieldable.find(wait_for);
+            if (it != m_yieldable.end())
+            {
+                m_yielding = it->second;
+                m_yieldable.erase(it);
+                continue;
+            }
+        }
+        else if(!m_yieldable().empty())
+        {
+            yieldable_map_t::iterator it = m_yieldable.begin();
+            m_yielding = it->second;
+            m_yieldable.erase(it);
+            continue
+        }
+
 
         /* Handle a new pending op. */
         assert(!m_pending_ops.empty());
@@ -324,7 +389,15 @@ client :: loop(int timeout, wtf_client_returncode* status)
                 return -1;
             }
 
-            m_yielding = psp.op;
+            if (wait_for > 0 && wait_for != op->client_visible_id())
+            {
+                m_yieldable.insert(std::make_pair(op->client_visible_id(), op)); 
+            }
+            else
+            {
+                m_yielding = op;
+            }
+                
         }
         else if(id != psp.si)
         {
@@ -386,31 +459,6 @@ wtf_client :: maintain_coord_connection(wtf_returncode* status)
     std::cout << m_coord.config()->dump() << std::endl;
 
     return true;
-}
-
-wtf_returncode
-wtf_client :: show_config(std::ostream& out)
-{
-    wtf_returncode status;
-
-    if (maintain_coord_connection(&status) < 0)
-    {
-        return status;
-    }
-
-    out << m_coord.config()->dump();
-    return WTF_SUCCESS;
-}
-
-
-#ifdef _MSC_VER
-fd_set*
-#else
-int
-#endif
-wtf_client :: poll_fd()
-{
-    return m_busybee.poll_fd();
 }
 
 int64_t
@@ -514,89 +562,6 @@ wtf_client :: perform_aggregation(const std::vector<server_id>& servers,
     }
 
     return op->client_visible_id();
-}
-
-int64_t
-wtf_client :: write(int64_t fd,
-                    const char* data,
-                    uint32_t data_sz,
-                    uint32_t replicas,
-                    wtf_returncode* status)
-{
-    std::cout << "WRITE FD " << fd << std::endl;
-    int64_t rid = 0;
-    int64_t lid = 0;
-    uint32_t rem = data_sz;
-
-    if (m_fds.find(fd) == m_fds.end())
-    {
-        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
-        return -1;
-    }
-
-    e::intrusive_ptr<file> f = m_fds[fd];
-
-    while(rem > 0)
-    {
-        uint64_t bid = f->offset()/CHUNKSIZE;
-        std::cout << "f->offset(): " << f->offset() << " CHUNKSIZE: " << CHUNKSIZE << std::endl;
-        std::cout << "bid " << bid << std::endl; 
-        uint64_t len = ROUNDUP(f->offset() + 1, CHUNKSIZE) - f->offset();
-        len = MIN(len, rem); 
-        uint64_t version = f->get_block_version(bid) + 1;
-        uint64_t block_off = f->offset() - f->offset()/CHUNKSIZE * CHUNKSIZE;
-
-        std::cout << "data_sz = " << data_sz << std::endl;
-        std::cout << "Len = " << len << std::endl;
-        std::cout << "Rem = " << rem << std::endl;
-        uint64_t bl = f->get_block_length(bid);
-
-        if ((bl > 0 && block_off > 0) || (len < bl))
-        {
-            //Overwrite a partial block.
-            typedef std::vector<wtf::block_id> block_map;
-            block_map::iterator it = f->lookup_block_begin(bid);
-
-            /* XXX: Need to handle cases where replicas != existing replica set */
-            for (block_map::iterator it = f->lookup_block_begin(bid);
-                 it != f->lookup_block_end(bid); ++it)
-            {
-                wtf::server node = *m_coord.config()->server_from_id(server_id(it->server()));
-                e::intrusive_ptr<command> cmd = new command(node,
-                                                it->block(),
-                                                fd, bid, block_off, version,
-                                                data, len, m_nonce, wtf::WTFNET_UPDATE,
-                                                NULL, 0);
-
-                rid = send(cmd, status);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < replicas; ++i)
-            {
-                //write new blocks or full-blocks.
-                e::intrusive_ptr<command> cmd = new command(wtf::server() /*send_to*/,
-                                                0 /*remote_bid*/,
-                                                fd, bid, block_off, version,
-                                                data, len, m_nonce, wtf::WTFNET_PUT,
-                                                NULL, 0);
-
-                rid = send(cmd, status);
-
-                if (rid < 0)
-                {
-                    return -1;
-                }
-            }
-        }
-
-        rem -= len;
-        data += len;
-        f->set_offset(f->offset() + len);
-    }
-
-    return rid;
 }
 
 int64_t
@@ -786,21 +751,6 @@ wtf_client :: prepare_read_op(e::intrusive_ptr<file> f,
 int64_t
 wtf_client :: close(int64_t fd, wtf_returncode* rc)
 {
-    int64_t ret = flush(fd, rc);
-
-    if (ret > 0)
-    {
-        m_fds.erase(fd);
-        return 0;
-    }
-
-    return -1;
-}
-
-int64_t
-wtf_client :: flush(int64_t fd, wtf_returncode* rc)
-{
-    int64_t rid = -1;
     if(m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -809,14 +759,37 @@ wtf_client :: flush(int64_t fd, wtf_returncode* rc)
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
-    if(f->commands_begin() == f->commands_end())
+    int64_t retval = 0;
+
+    while (!f->pending_ops().empty())
     {
-        return 0;
+        int64_t client_id = f->pending_ops().pop_front();
+
+        /*
+         * This will only return a positive number if the
+         * op was actually found and yielded successfully.
+         *
+         * We have to keep looping until we get NONPENDING
+         * to ensure that ops that have multiple returns
+         * complete.  If we timeout, we assume something
+         * has gone horribly wrong and return failure.
+         */
+
+        while (true)
+        {
+            int64_t ret = inner_loop(-1, status, client_id);
+
+            if (ret < 0 && status == WTF_CLIENT_NONEPENDING) 
+            {
+                break;
+            }
+            else if (ret < 0)
+            {
+                ERROR(IO) << "there was an IO error somewhere.";
+                reval = -1;
+            }
+        }
     }
-
-    //XXX: rewrite
-
-    return 0;
 }
 
 int64_t
@@ -1367,33 +1340,6 @@ wtf_client :: handle_disruption(const server_id& si)
     }
 
     m_busybee.drop(si.get());
-}
-
-uint64_t
-wtf_client :: generate_token()
-{
-    try
-    {
-        po6::io::fd sysrand(::open("/dev/urandom", O_RDONLY));
-
-        if (sysrand.get() < 0)
-        {
-            return e::time();
-        }
-
-        uint64_t token;
-
-        if (sysrand.read(&token, sizeof(token)) != sizeof(token))
-        {
-            return e::time();
-        }
-
-        return token;
-    }
-    catch (po6::error& e)
-    {
-        return e::time();
-    }
 }
 
 std::ostream&

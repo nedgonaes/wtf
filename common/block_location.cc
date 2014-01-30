@@ -26,68 +26,30 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // WTF
-#include <client/wtf.h>
-#include <common/block.h>
+#include <common/block_location.h>
 
-using wtf::block;
+using wtf::block_location;
 
-block :: block()
-   : m_ref(0)
-   , m_block_list()
-   , m_version(0)
-   , m_length(0)
-   , m_dirty(false)
+block_location :: block_location()
+    : m_si(0)
+    , m_bi(0)
 {
 }
 
-block :: ~block() throw()
+block_location :: block_location(uint64_t si, uint64_t bi)
+    : m_si(si)
+    , m_bi(bi)
 {
 }
 
-void
-block :: update(uint64_t version,
-                uint64_t len,
-                const wtf::block_location& bid,
-                bool dirty)
+block_location :: ~block_location() throw()
 {
-    if (dirty)
-    {
-        m_dirty = dirty;
-    }
-
-    if(version == 0 || m_version < version)
-    {
-        m_length = len;
-        m_version = version;
-        m_block_list.clear();
-    }
-
-    m_block_list.push_back(bid);
-}
-
-uint64_t
-block :: pack_size()
-{
-    uint64_t ret = 2 * sizeof(uint64_t);  /* length, size */
-    ret += m_block_list.size() * block_location::pack_size() ; /* server, block */
-    return ret;
 }
 
 void 
-block :: pack(char* buf) const
+block_location :: pack(char* buf) const
 {
-    uint64_t sz = m_block_list.size();
-
-    memmove(buf, &m_length, sizeof(uint64_t));  
+    memmove(buf, &m_si, sizeof(uint64_t));
     buf += sizeof(uint64_t);
-
-    memmove(buf, &sz, sizeof(uint64_t));  
-    buf += sizeof(uint64_t);
-
-    for (block::block_list::const_iterator it = m_block_list.begin();
-            it != m_block_list.end(); ++it)
-    {
-        it->pack(buf);
-        buf += block_location::pack_size();
-    }
+    memmove(buf, &m_bi, sizeof(uint64_t));
 }

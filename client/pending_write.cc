@@ -26,11 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // WTF
-#include "client/pending_read.h"
+#include "client/pending_write.h"
 
-using wtf::pending_read;
+using wtf::pending_write;
 
-pending_read :: pending_read(uint64_t id,
+pending_write :: pending_write(uint64_t id,
                                        wtf_client_returncode* status)
     : pending_aggregation(id, status)
     , m_done(false)
@@ -39,18 +39,18 @@ pending_read :: pending_read(uint64_t id,
     set_error(e::error());
 }
 
-pending_read :: ~pending_read() throw ()
+pending_write :: ~pending_write() throw ()
 {
 }
 
 bool
-pending_read :: can_yield()
+pending_write :: can_yield()
 {
     return this->aggregation_done() && !m_done;
 }
 
 bool
-pending_read :: yield(wtf_client_returncode* status, e::error* err)
+pending_write :: yield(wtf_client_returncode* status, e::error* err)
 {
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -60,7 +60,7 @@ pending_read :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_read :: handle_failure(const server_id& si,
+pending_write :: handle_failure(const server_id& si,
                                     const virtual_server_id& vsi)
 {
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
@@ -69,7 +69,7 @@ pending_read :: handle_failure(const server_id& si,
 }
 
 bool
-pending_read :: handle_message(client* cl,
+pending_write :: handle_message(client* cl,
                                     const server_id& si,
                                     const virtual_server_id& vsi,
                                     network_msgtype mt,
@@ -84,13 +84,13 @@ pending_read :: handle_message(client* cl,
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
 
-    if (mt != RESP_GET)
+    if (mt != RESP_PUT)
     {
         PENDING_ERROR(SERVERERROR) << "server " << vsi << " responded to GROUP DEL with " << mt;
         return true;
     }
 
-    //XXX: put the data in the buffer.
+    //XXX: put the data in the buffer
 
     return true;
 }

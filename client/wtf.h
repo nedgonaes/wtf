@@ -88,6 +88,7 @@ enum wtf_returncode
     WTF_CLIENT_CLUSTER_JUMP = 8531,
     WTF_CLIENT_COORD_LOGGED = 8532,
     WTF_CLIENT_BACKOFF      = 8533,
+    WTF_CLIENT_IO           = 8534,
 
     /* This should never happen.  It indicates a bug */
     WTF_CLIENT_INTERNAL     = 8573,
@@ -164,12 +165,6 @@ class wtf_client
         int64_t closedir(int fd);
         int64_t readdir(int fd, char* entry);
 
-    friend class wtf::tool_wrapper;
-
-    private:
-        class command;
-        class file;
-
     private:
         struct pending_server_pair
         {
@@ -183,68 +178,51 @@ class wtf_client
             e::intrusive_ptr<pending> op;
         };
 
-        typedef std::map<uint64_t, pending_server_pair> pending_map_t;
-        typedef std::list<pending_server_pair> pending_queue_t;
+        class file;
         friend class pending_read;
         friend class pending_readdir;
         friend class pending_write;
-
-    // these are the only private things that tool_wrapper should touch
-    private:
-        wtf_returncode initialize_cluster(uint64_t cluster, const char* path);
-        wtf_returncode show_config(std::ostream& out);
-        wtf_returncode kill(uint64_t server_id);
+        typedef std::map<uint64_t, pending_server_pair> pending_map_t;
+        typedef std::map<uint64_t, e::intrusive_ptr<pending> > yieldable_map_t;
+        typedef std::list<pending_server_pair> pending_queue_t;
+        typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
 
     private:
         int64_t maintain_coord_connection(wtf_returncode* status);
-#ifdef _MSC_VER
-        fd_set* poll_fd();
-#else
-        int poll_fd();
-#endif
         int64_t send(e::intrusive_ptr<command>& cmd,
                      wtf_returncode* status);
+        bool send(network_msgtype mt,
+                  const server_id& to,
+                  uint64_t nonce,
+                  std::auto_ptr<e::buffer> msg,
+                  e::intrusive_ptr<pending> op,
+                  wtf_client_returncode* status);
 
     private:
         friend e::unpacker 
             operator >> (e::unpacker up, wtf_client::file& rhs);
         friend e::buffer::packer 
             operator << (e::buffer::packer pa, const wtf_client::file& rhs);
-        typedef std::map<uint64_t, e::intrusive_ptr<command> > command_map;
-        typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
 
     private:
         wtf_client(const wtf_client& other);
+        wtf_client& operator = (const wtf_client& rhs);
 
     private:
-        int64_t inner_loop(wtf_returncode* status);
+        int64_t inner_loop(int timeout,
+                           wtf_returncode* status,
+                           int64_t wait_for);
 
-        // Send commands and receive responses
-        int64_t send_to_blockserver(e::intrusive_ptr<command> cmd,
-                                    wtf_returncode* status);
         void handle_disruption(const wtf::server& node,
                                wtf_returncode* status);
-        int64_t handle_command_response(const po6::net::location& from,
-                                        std::auto_ptr<e::buffer> msg,
-                                        e::unpacker up,
-                                        wtf_returncode* status);
-        void handle_update(e::intrusive_ptr<command>& cmd, 
-                        e::intrusive_ptr<file>& f);
-        void handle_put(e::intrusive_ptr<command>& cmd, 
-                        e::intrusive_ptr<file>& f);
-        void handle_get(e::intrusive_ptr<command>& cmd, 
-                        e::intrusive_ptr<file>& f);
+
         // Utilities
         uint64_t generate_token();
-        void reset_to_disconnected();
 
         //communicate with hyperdex
         int64_t update_hyperdex(e::intrusive_ptr<file>& f);
         int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
-
-    private:
-        wtf_client& operator = (const wtf_client& rhs);
 
     private:
         wtf::coordinator_link m_coord;
@@ -254,6 +232,7 @@ class wtf_client
         uint64_t m_next_server_nonce;
         pending_map_t m_pending_ops;
         pending_queue_t m_faiiled;
+        yieldable_map_t m_yieldable;
         e::intrusive_ptr<pending> m_yielding;
         e::intrusive_ptr<pending> m_yielded;
         e::error m_last_error;

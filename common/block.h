@@ -36,7 +36,7 @@
 
 //WTF
 #include <client/wtf.h>
-#include <common/block_id.h>
+#include <common/block_location.h>
 
 namespace wtf
 {
@@ -49,7 +49,7 @@ class block
 
     public:
         void update(uint64_t version, uint64_t len, 
-                    const wtf::block_id& bid, bool dirty);
+                    const wtf::block_location& bid, bool dirty);
         uint64_t size() { return m_block_list.size(); }
         uint64_t version() { return m_version; }
         uint64_t pack_size();
@@ -57,8 +57,8 @@ class block
         uint64_t resize(uint64_t sz) { m_length = sz; m_dirty = true; return m_length; }
         uint64_t length() { return m_length; }
         block_location first_location() { return m_block_list[0]; }
-        std::vector<wtf::block_id>::iterator blocks_begin() { return m_block_list.begin(); }
-        std::vector<wtf::block_id>::iterator blocks_end() { return m_block_list.end(); }
+        std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
+        std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
         bool dirty() { return m_dirty; }
 
     private:
@@ -82,7 +82,7 @@ class block
 
     private:
         block& operator = (const block&);
-        typedef std::vector<wtf::block_id> block_list;
+        typedef std::vector<wtf::block_location> block_list;
 
     private:
         size_t m_ref;
@@ -165,7 +165,7 @@ operator >> (e::unpacker up, block& rhs)
 
     for (uint64_t i = 0; i < size; ++i)
     {
-        block_id bid;
+        block_location bid;
         up = up >> bid;
         rhs.update(0, len, bid, false);
     }
@@ -188,7 +188,7 @@ operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs)
 
     for (uint64_t i = 0; i < size; ++i)
     {
-        block_id bid;
+        block_location bid;
         up = up >> bid;
         rhs->update(0, len, bid, false);
     }

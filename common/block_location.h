@@ -25,8 +25,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_common_block_id_h_
-#define wtf_common_block_id_h_
+#ifndef wtf_common_block_location_h_
+#define wtf_common_block_location_h_
 
 // C
 #include <stdint.h>
@@ -44,34 +44,34 @@ namespace wtf
 
 #define OPERATORDECL(OP) \
     bool \
-    operator OP (const block_id& lhs, const block_id& rhs)
+    operator OP (const block_location& lhs, const block_location& rhs)
 #define OPERATOR(OP) \
     inline OPERATORDECL(OP) \
     { \
-        return lhs.m_sid OP rhs.m_sid \
-                || (lhs.m_sid == rhs.m_sid \
-                && lhs.m_bid OP rhs.m_bid); \
+        return lhs.m_si OP rhs.m_si \
+                || (lhs.m_si == rhs.m_si \
+                && lhs.m_bi OP rhs.m_bi); \
     }
 
-    class block_id
+    class block_location
     { 
         public:
-            block_id();
-            explicit block_id(uint64_t sid, uint64_t bid);
-            ~block_id() throw();
+            block_location();
+            explicit block_location(uint64_t si, uint64_t bi);
+            ~block_location() throw();
 
         public:
-            uint64_t server() { return m_sid; }
-            uint64_t block() { return m_bid; }
+            uint64_t si;
+            uint64_t bi;
             static uint64_t pack_size() { return 2 * sizeof(uint64_t); }
             void pack(char* buf) const;
         private:
             friend std::ostream&
-                operator << (std::ostream& lhs, const block_id& rhs);
+                operator << (std::ostream& lhs, const block_location& rhs);
             friend e::buffer::packer
-                operator << (e::buffer::packer pa, const block_id& rhs);
+                operator << (e::buffer::packer pa, const block_location& rhs);
             friend e::unpacker
-                operator >> (e::unpacker up, block_id& rhs);
+                operator >> (e::unpacker up, block_location& rhs);
             friend OPERATORDECL(<);
             friend OPERATORDECL(<=);
             friend OPERATORDECL(==); 
@@ -80,28 +80,28 @@ namespace wtf
             friend OPERATORDECL(>);
 
         private: 
-            uint64_t m_sid; 
-            uint64_t m_bid; 
+            uint64_t m_si; 
+            uint64_t m_bi; 
     }; 
 
     inline std::ostream& 
-    operator << (std::ostream& lhs, const block_id& rhs) 
+    operator << (std::ostream& lhs, const block_location& rhs) 
     { 
-        return lhs << "block_id(server=" << rhs.m_sid << ", chunk=" << rhs.m_bid << ")"; 
+        return lhs << "block_location(server=" << rhs.m_si << ", chunk=" << rhs.m_bi << ")"; 
     } 
 
     inline e::buffer::packer 
-    operator << (e::buffer::packer pa, const block_id& rhs) 
+    operator << (e::buffer::packer pa, const block_location& rhs) 
     { 
-        return pa << rhs.m_sid << rhs.m_bid; 
+        return pa << rhs.m_si << rhs.m_bi; 
     } 
 
     inline e::unpacker 
-    operator >> (e::unpacker up, block_id& rhs) 
+    operator >> (e::unpacker up, block_location& rhs) 
     { 
-        up = up >> rhs.m_sid >> rhs.m_bid; 
-        e::unpack64be((uint8_t*)&rhs.m_sid, &rhs.m_sid);
-        e::unpack64be((uint8_t*)&rhs.m_bid, &rhs.m_bid);
+        up = up >> rhs.m_si >> rhs.m_bi; 
+        e::unpack64be((uint8_t*)&rhs.m_si, &rhs.m_si);
+        e::unpack64be((uint8_t*)&rhs.m_bi, &rhs.m_bi);
         return up; 
     } 
 
@@ -112,4 +112,4 @@ namespace wtf
     OPERATOR(>=) 
     OPERATOR(>)
 }
-#endif /* wtf_common_block_id_h_ */
+#endif /* wtf_common_block_location_h_ */
