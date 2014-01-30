@@ -9,7 +9,7 @@
 //     * Redistributions in binary form must reproduce the above copyright
 //       notice, this list of conditions and the following disclaimer in the
 //       documentation and/or other materials provided with the distribution.
-//     * Neither the name of HyperDex nor the names of its contributors may be
+//     * Neither the name of WTF nor the names of its contributors may be
 //       used to endorse or promote products derived from this software without
 //       specific prior written permission.
 //
@@ -25,13 +25,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-// HyperDex
+// WTF
 #include "client/pending_aggregation.h"
 
-using hyperdex::pending_aggregation;
+using wtf::pending_aggregation;
 
 pending_aggregation :: pending_aggregation(uint64_t id,
-                                           hyperdex_client_returncode* status)
+                                           wtf_client_returncode* status)
     : pending(id, status)
     , m_outstanding()
 {
@@ -65,7 +65,7 @@ pending_aggregation :: handle_message(client*,
                                       network_msgtype,
                                       std::auto_ptr<e::buffer>,
                                       e::unpacker,
-                                      hyperdex_client_returncode*,
+                                      wtf_client_returncode*,
                                       e::error*)
 {
     remove(si);

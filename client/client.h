@@ -46,63 +46,19 @@
 #include <e/buffer.h>
 #include <e/intrusive_ptr.h>
 
-// HyperDex
-#include <hyperdex/client.hpp>
+//WTF 
+#include <wtf/client.hpp>
 
 // busybee
 #include <busybee_st.h>
 
 //wtf
+#include <wtf/client.h>
 #include "common/configuration.h"
 #include "common/coordinator_link.h"
 #include "common/mapper.h"
 #include "client/pending.h"
 #include "client/pending_aggregation.h"
-
-enum wtf_returncode
-{
-    WTF_CLIENT_SUCCESS      = 8448,
-    WTF_CLIENT_NOTFOUND     = 8449,
-    WTF_CLIENT_INVALID      = 8450,
-    WTF_CLIENT_BADF         = 8451,
-    WTF_CLIENT_READONLY     = 8452,
-    WTF_CLIENT_NAMETOOLONG  = 8453,
-    WTF_CLIENT_EXIST        = 8454,
-    WTF_CLIENT_ISDIR        = 8455,
-    WTF_CLIENT_NOTDIR       = 8456,
-    
-
-    /* Error conditions */
-    WTF_CLIENT_UNKNOWNSPACE = 8512,
-    WTF_CLIENT_COORDFAIL    = 8513,
-    WTF_CLIENT_SERVERERROR  = 8514,
-    WTF_CLIENT_POLLFAILED   = 8515,
-    WTF_CLIENT_OVERFLOW     = 8516,
-    WTF_CLIENT_RECONFIGURE  = 8517,
-    WTF_CLIENT_TIMEOUT      = 8519,
-    WTF_CLIENT_NONEPENDING  = 8523,
-    WTF_CLIENT_NOMEM        = 8526,
-    WTF_CLIENT_BADCONFIG    = 8527,
-    WTF_CLIENT_DUPLICATE    = 8529,
-    WTF_CLIENT_INTERRUPTED  = 8530,
-    WTF_CLIENT_CLUSTER_JUMP = 8531,
-    WTF_CLIENT_COORD_LOGGED = 8532,
-    WTF_CLIENT_BACKOFF      = 8533,
-    WTF_CLIENT_IO           = 8534,
-
-    /* This should never happen.  It indicates a bug */
-    WTF_CLIENT_INTERNAL     = 8573,
-    WTF_CLIENT_EXCEPTION    = 8574,
-    WTF_CLIENT_GARBAGE      = 8575
-};
-
-struct wtf_file_attrs
-{
-    size_t size;
-    mode_t mode;
-    int flags;
-    int is_dir;
-};
 
 void
 wtf_destroy_output(const char* output, size_t output_sz);
@@ -124,12 +80,6 @@ class wtf_client
         ~wtf_client() throw ();
 
     public:
-        const char* last_error_desc() const { return m_last_error_desc; }
-        const char* last_error_file() const { return m_last_error_file; }
-        uint64_t last_error_line() const { return m_last_error_line; }
-
-    public:
-
         int64_t canon_path(char* rel, char* abspath, size_t abspath_sz);
         int64_t getcwd(char* c, size_t len);
         int64_t chdir(char* path);
@@ -152,18 +102,15 @@ class wtf_client
                      uint32_t *data_sz,
                      wtf_returncode* status);
         int64_t close(int64_t fd, wtf_returncode* status);
-        int64_t flush(int64_t fd,
-                      wtf_returncode* status);
-        int64_t wait(const char* object,
-                     const char* cond,
-                     uint64_t state,
-                     wtf_returncode* status);
         int64_t loop(int timeout, wtf_returncode* status);
         int64_t loop(int64_t id, int timeout, wtf_returncode* status);
         int64_t truncate(int fd, off_t length);
         int64_t opendir(const char* path);
         int64_t closedir(int fd);
         int64_t readdir(int fd, char* entry);
+        const char* error_message();
+        const char* error_location();
+        void set_error_message(const char* msg);
 
     private:
         struct pending_server_pair

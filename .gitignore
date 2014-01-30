@@ -36,7 +36,6 @@ Makefile.in
 missing
 writetestdata
 readtestdata
-wtf
 wtf-async-benchmark
 wtf-sync-benchmark
 wtf-hadoop-benchmark
