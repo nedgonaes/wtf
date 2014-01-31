@@ -106,5 +106,5 @@ AM_CONDITIONAL([ENABLE_GTEST], [test x"${enable_gtest}" = xyes])
 AC_CHECK_FUNCS([clock_gettime mach_absolute_time])
 
 AC_CONFIG_FILES([Makefile
-                 wtf.pc wtf-admin.pc])
+                 wtf-client.pc wtf-admin.pc])
 AC_OUTPUT

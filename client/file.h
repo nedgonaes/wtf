@@ -39,7 +39,6 @@
 #include <po6/pathname.h>
 
 //WTF
-#include <client/command.h>
 #include <client/wtf.h>
 #include <common/block.h>
 #include <common/block_id.h>
@@ -56,10 +55,8 @@ class wtf_client::file
         int64_t fd() { return m_fd; }
         void path(const char* path) { m_path = po6::pathname(path); }
         po6::pathname path() { return m_path; }
-        void add_command(e::intrusive_ptr<command>& c);
+        void add_command(int64_t op);
         int64_t gc_completed(wtf_returncode* rc);
-        command_map::iterator commands_begin();
-        command_map::iterator commands_end(); 
         void set_offset(uint64_t offset) { m_offset = offset; }
         uint64_t offset() { return m_offset; }
         void update_blocks(uint64_t block_index, uint64_t len, 
@@ -100,7 +97,7 @@ class wtf_client::file
         po6::pathname m_path;
         wtf_client* m_client;
         int64_t m_fd;
-        command_map m_commands;
+        std::list<int64_t> m_commands;
         block_map m_block_map;
         uint64_t m_offset;
 

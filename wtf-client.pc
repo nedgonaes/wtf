@@ -1,0 +1,12 @@
+prefix=/home/sean/src/install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: wtf-client 
+Description: Warp transactional filesystem client library.
+Version: 0.1.dev
+
+Requires: libpo6 >= 0.3.1 libe >= 0.3.2  busybee >= 0.3.0 replicant >= 0.2.dev
+Libs: -L${libdir} -lwtf-client
+Cflags: -I${includedir}
