@@ -3,10 +3,10 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: wtf 
-Description: High performance messaging layer
+Name: wtf-client 
+Description: Warp transactional filesystem client library.
 Version: @VERSION@
 
 Requires: libpo6 >= 0.3.1 libe >= 0.3.2  busybee >= 0.3.0 replicant >= 0.2.dev
-Libs: -L${libdir} -lwtf
+Libs: -L${libdir} -lwtf-client
 Cflags: -I${includedir}

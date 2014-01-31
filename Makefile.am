@@ -35,21 +35,18 @@ if ENABLE_DEBUG
 endif
 
 lib_LTLIBRARIES =
+wtfheader_HEADERS =
+bin_PROGRAMS =
+noinst_HEADERS = 
+noinst_PROGRAMS =
+pkgconfig_DATA =
+
 lib_LTLIBRARIES += libwtfblockstore.la
 lib_LTLIBRARIES += libwtf.la
 lib_LTLIBRARIES += libwtf-coordinator.la
 
-include_HEADERS = client/wtf.h
-
-noinst_HEADERS = 
 noinst_HEADERS += common/block.h
-noinst_HEADERS += client/pending.h
-noinst_HEADERS += client/pending_aggregation.h
-noinst_HEADERS += client/pending_pending_read.h
-noinst_HEADERS += client/pending_pending_write.h
-noinst_HEADERS += client/pending_pending_readdir.h
 noinst_HEADERS += common/coordinator_link.h
-noinst_HEADERS += client/file.h
 noinst_HEADERS += common/block_location.h
 noinst_HEADERS += common/server.h
 noinst_HEADERS += common/serialization.h
@@ -73,10 +70,8 @@ noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += tools/fusewtf.h
 
-bin_PROGRAMS =
 bin_PROGRAMS += wtf
 
-noinst_PROGRAMS =
 noinst_PROGRAMS += wtf-writetest 
 noinst_PROGRAMS += wtf-readtest
 noinst_PROGRAMS += wtf-readwritetest
@@ -164,6 +159,24 @@ wtf_coordinator_LDADD += -lpopt
 ################################## Client ######################################
 ################################################################################
 
+wtfheaderdir = $(includedir)/wtf
+
+lib_LTLIBRARIES += libwtf-client.la
+
+wtfheader_HEADERS += include/wtf/client.h
+wtfheader_HEADERS += include/wtf/client.hpp
+
+pkgconfig_DATA += wtf-client.pc
+
+noinst_HEADERS += include/wtf/client.h
+noinst_HEADERS += include/wtf/client.hpp
+noinst_HEADERS += client/file.h
+noinst_HEADERS += client/pending.h
+noinst_HEADERS += client/pending_aggregation.h
+noinst_HEADERS += client/pending_pending_read.h
+noinst_HEADERS += client/pending_pending_write.h
+noinst_HEADERS += client/pending_pending_readdir.h
+
 libwtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 libwtf_la_SOURCES =
@@ -183,21 +196,25 @@ libwtf_la_SOURCES += client/pending_pending_write.cc
 libwtf_la_SOURCES += client/pending_pending_readdir.cc
 libwtf_la_SOURCES += common/coordinator_link.cc
 libwtf_la_SOURCES += client/file.cc
-libwtf_la_SOURCES += client/wtf.cc
+libwtf_la_SOURCES += client/client.cc
 
-libwtf_la_LIBADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) -lglog
+libwtf_la_LIBADD = 
+libwtf_la_LIBADD += $(E_LIBS) 
+libwtf_la_LIBADD += $(BUSYBEE_LIBS) 
+libwtf_la_LIBADD += $(REPLICANT_LIBS) 
+libwtf_la_LIBADD += $(HYPERCLIENT_LIBS) -lglog
 
 ################################################################################
 ##################################### Admin ####################################
 ################################################################################
 
-wtfheaderdir = $(includedir)/wtf
 
 lib_LTLIBRARIES += libwtf-admin.la
 
-wtfheader_HEADERS =
 wtfheader_HEADERS += include/wtf/admin.h
 wtfheader_HEADERS += include/wtf/admin.hpp
+
+pkgconfig_DATA += wtf-admin.pc
 
 noinst_HEADERS += include/wtf/admin.h
 noinst_HEADERS += include/wtf/admin.hpp
@@ -302,7 +319,3 @@ wtf_server_kill_LDADD = libwtf-admin.la -lpopt
 
 
 pkgconfigdir = $(libdir)/pkgconfig
-
-pkgconfig_DATA =
-pkgconfig_DATA += wtf.pc
-pkgconfig_DATA += wtf-admin.pc

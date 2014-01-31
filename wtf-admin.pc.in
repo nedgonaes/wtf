@@ -7,5 +7,5 @@ Name: wtf-admin
 Description: Admin library for WTF
 Version: @VERSION@
 
-Libs: -L${libdir} -lwtf-client
+Libs: -L${libdir} -lwtf-admin
 Cflags: -I${includedir}
