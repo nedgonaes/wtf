@@ -35,7 +35,7 @@
 #include <vector>
 
 //WTF
-#include <client/wtf.h>
+#include <client/client.h>
 #include <common/block_location.h>
 
 namespace wtf

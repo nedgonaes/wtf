@@ -36,12 +36,17 @@ namespace wtf
 
 enum wtf_network_msgtype
 {
-    WTFNET_NOP,
-    WTFNET_GET,
-    WTFNET_PUT,
-    WTFNET_UPDATE,
-    WTFNET_COMMAND_RESPONSE,
-    WTFNET_CONFIG_MISMATCH
+    REQ_GET = 8,
+    RESP_GET = 9,
+
+    REQ_PUT = 16,
+    RESP_PUT = 17,
+
+    REQ_UPDATE = 32,
+    RESP_UPDATE = 33,
+
+    PACKET_NOP = 254,
+    CONFIGMISMATCH = 255
 };
 
 std::ostream&

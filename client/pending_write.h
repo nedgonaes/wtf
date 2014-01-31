@@ -31,12 +31,13 @@
 // WTF
 #include "client/pending_aggregation.h"
 
+namespace wtf
+{
 class pending_write : public pending_aggregation
 {
     public:
         pending_write(uint64_t client_visible_id,
-                          wtf_client_returncode* status,
-                          char* buf, size_t* buf_sz);
+                          wtf_client_returncode* status);
         virtual ~pending_write() throw ();
 
     // return to client
@@ -46,10 +47,10 @@ class pending_write : public pending_aggregation
 
     // events
     public:
-        virtual void handle_failure(const server_id& si,)
+        virtual void handle_failure(const server_id& si);
         virtual bool handle_message(client*,
                                     const server_id& si,
-                                    network_msgtype mt,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
@@ -63,5 +64,7 @@ class pending_write : public pending_aggregation
     private:
         bool m_done;
 };
+
+}
 
 #endif // wtf_client_pending_write_h_

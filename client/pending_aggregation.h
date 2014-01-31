@@ -58,7 +58,7 @@ class pending_aggregation : public pending
         // pass NULL for msg; we don't need it
         virtual bool handle_message(client*,
                                     const server_id& si,
-                                    network_msgtype mt,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
                                     wtf_client_returncode* status,

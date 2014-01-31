@@ -36,7 +36,9 @@
 // WTF
 #include "client/file.h"
 
-wtf_client :: file :: file(const char* path)
+using wtf::file;
+
+file :: file(const char* path)
     : m_ref(0)
     , m_path(path)
     , m_commands()
@@ -48,55 +50,12 @@ wtf_client :: file :: file(const char* path)
 {
 }
 
-wtf_client :: file :: ~file() throw ()
+file :: ~file() throw ()
 {
-}
-
-wtf_client::command_map::iterator
-wtf_client :: file :: commands_begin()
-{
-    return m_commands.begin();
-}
-
-wtf_client::command_map::iterator
-wtf_client :: file :: commands_end()
-{
-    return m_commands.end();
-}
-
-int64_t
-wtf_client :: file :: gc_completed(wtf_returncode* rc)
-{
-    std::vector<int64_t> complete;
-
-    for (command_map::iterator it = m_commands.begin();
-         it != m_commands.end(); ++it)
-    {
-        if (it->second->status() == WTF_SUCCESS)
-        {
-            complete.push_back(it->first);
-        }
-    }
-
-    for (std::vector<int64_t>::iterator it = complete.begin();
-         it != complete.end(); ++it)
-    {
-        m_commands.erase(*it);
-    }
-
-    *rc = WTF_SUCCESS;
-    return 0;
 }
 
 void
-wtf_client :: file :: add_command(e::intrusive_ptr<command>& cmd)
-{
-    //std::cout << "Adding cmd " << cmd->nonce() << std::endl;
-    m_commands[cmd->nonce()] = cmd;
-}
-
-void
-wtf_client :: file :: update_blocks(uint64_t block_index, uint64_t len, 
+file :: update_blocks(uint64_t block_index, uint64_t len, 
                            uint64_t version, uint64_t sid,
                            uint64_t bid)
 {
@@ -106,21 +65,21 @@ wtf_client :: file :: update_blocks(uint64_t block_index, uint64_t len,
     if (m_block_map.find(block_index) == m_block_map.end())
     {
         //std::cout << "block didn't exist." << std::endl;
-        m_block_map[block_index] = new wtf::block();
+        m_block_map[block_index] = new block();
     }
 
-    m_block_map[block_index]->update(version, len, wtf::block_id(sid, bid), true); 
+    m_block_map[block_index]->update(version, len, block_location(sid, bid), true); 
 }
 
 void
-wtf_client :: file :: update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b)
+file :: update_blocks(uint64_t bid, e::intrusive_ptr<block>& b)
 {
     //std::cout << "Caching block " << bid << ": " << *b << std::endl;
     m_block_map[bid] = b;
 }
 
 uint64_t
-wtf_client :: file :: get_block_version(uint64_t bid)
+file :: get_block_version(uint64_t bid)
 {
     if (m_block_map.find(bid) == m_block_map.end())
     {
@@ -131,7 +90,7 @@ wtf_client :: file :: get_block_version(uint64_t bid)
 }
 
 uint64_t
-wtf_client :: file :: get_block_length(uint64_t bid)
+file :: get_block_length(uint64_t bid)
 {
     if (m_block_map.find(bid) == m_block_map.end())
     {
@@ -142,7 +101,7 @@ wtf_client :: file :: get_block_length(uint64_t bid)
 }
 
 uint64_t
-wtf_client :: file :: length()
+file :: length()
 {
     if (m_block_map.size() == 0)
     {
@@ -157,11 +116,11 @@ wtf_client :: file :: length()
 }
 
 uint64_t
-wtf_client :: file :: pack_size()
+file :: pack_size()
 {
     uint64_t ret = sizeof(uint64_t); /* number of blocks */
 
-    for (wtf_client::file::block_map::const_iterator it = m_block_map.begin();
+    for (file::block_map::const_iterator it = m_block_map.begin();
          it != m_block_map.end(); ++it)
     {
         ret += sizeof(uint64_t) + it->second->pack_size();
@@ -171,7 +130,7 @@ wtf_client :: file :: pack_size()
 }
 
 void
-wtf_client :: file :: truncate(off_t length)
+file :: truncate(off_t length)
 {
     uint64_t block_index = length/CHUNKSIZE;
     uint64_t sz = m_block_map.size();
@@ -184,7 +143,7 @@ wtf_client :: file :: truncate(off_t length)
         }
     }
 
-    e::intrusive_ptr<wtf::block> b = m_block_map[block_index];
+    e::intrusive_ptr<block> b = m_block_map[block_index];
     b->resize(length - block_index*CHUNKSIZE);
     m_block_map[block_index] = b;
     std::cout << "BLOCK " << block_index << " LEN: " << m_block_map[block_index]->length() << std::endl;
@@ -192,7 +151,7 @@ wtf_client :: file :: truncate(off_t length)
 }
 
 void
-wtf_client :: file :: truncate()
+file :: truncate()
 {
     uint64_t block_index = m_offset/CHUNKSIZE;
     uint64_t sz = m_block_map.size();

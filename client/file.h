@@ -39,11 +39,13 @@
 #include <po6/pathname.h>
 
 //WTF
-#include <client/wtf.h>
+#include <client/client.h>
 #include <common/block.h>
-#include <common/block_id.h>
+#include <common/block_location.h>
+namespace wtf
+{
 
-class wtf_client::file
+class file
 {
 
     public:
@@ -55,8 +57,18 @@ class wtf_client::file
         int64_t fd() { return m_fd; }
         void path(const char* path) { m_path = po6::pathname(path); }
         po6::pathname path() { return m_path; }
+
+        block_location current_block();
+        size_t bytes_left_in_block();
+        size_t current_block_length();
+        void copy_current_block_locations(std::vector<block_location>& bl);
+        void advance(size_t len);
+        size_t bytes_left_in_file(); 
+        bool pending_ops_empty();
+        int64_t pending_ops_pop_front();
+
+
         void add_command(int64_t op);
-        int64_t gc_completed(wtf_returncode* rc);
         void set_offset(uint64_t offset) { m_offset = offset; }
         uint64_t offset() { return m_offset; }
         void update_blocks(uint64_t block_index, uint64_t len, 
@@ -68,18 +80,15 @@ class wtf_client::file
         uint64_t pack_size();
         uint64_t size() { return m_block_map.size(); }
         uint64_t length();
-        wtf::block_id lookup_block(uint64_t index) { return m_block_map[index]->get_first_location(); }
-        std::vector<wtf::block_id>::iterator lookup_block_begin(uint64_t index) { return m_block_map[index]->blocks_begin(); }
-        std::vector<wtf::block_id>::iterator lookup_block_end(uint64_t index) { return m_block_map[index]->blocks_end(); }
         void truncate();
         void truncate(off_t length);
 
     private:
         friend class e::intrusive_ptr<file>;
         friend e::buffer::packer 
-            operator << (e::buffer::packer pa, const wtf_client::file& rhs);
+            operator << (e::buffer::packer pa, const file& rhs);
         friend e::unpacker 
-            operator >> (e::unpacker up, wtf_client::file& rhs);
+            operator >> (e::unpacker up, file& rhs);
 
     private:
         file(const file&);
@@ -112,11 +121,11 @@ class wtf_client::file
 };
 
 inline e::buffer::packer 
-operator << (e::buffer::packer pa, const wtf_client::file& rhs) 
+operator << (e::buffer::packer pa, const file& rhs) 
 { 
     pa = pa << rhs.m_block_map.size(); 
 
-    for (wtf_client::file::block_map::const_iterator it = rhs.m_block_map.begin();
+    for (file::block_map::const_iterator it = rhs.m_block_map.begin();
             it != rhs.m_block_map.end(); ++it)
     {
         pa = pa << it->first << *it->second;
@@ -126,7 +135,7 @@ operator << (e::buffer::packer pa, const wtf_client::file& rhs)
 } 
 
 inline e::unpacker 
-operator >> (e::unpacker up, wtf_client::file& rhs) 
+operator >> (e::unpacker up, file& rhs) 
 { 
     uint64_t sz;
     up = up >> sz; 
@@ -139,6 +148,8 @@ operator >> (e::unpacker up, wtf_client::file& rhs)
     }
 
     return up; 
+}
+
 }
 
 #endif // wtf_file_h_

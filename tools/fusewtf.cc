@@ -14,9 +14,9 @@
 
 // WTF 
 #include "client/file.h"
-#include "client/wtf.h"
+#include "client/client.h"
 
-#include "fusewtf.h"
+#include "fuseclient.h"
 
 #include <stdio.h>
 #include <unordered_set>

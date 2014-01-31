@@ -36,13 +36,15 @@
 #include <e/intrusive_ptr.h>
 
 //WTF  
-#include "client/wtf.h"
+#include <wtf/client.h>
 #include "common/configuration.h"
 #include "common/ids.h"
 #include "common/network_msgtype.h"
 
 namespace wtf
 {
+class client;
+    
 class pending
 {
     public:
@@ -66,7 +68,7 @@ class pending
         virtual void handle_failure(const server_id& si) = 0;
         virtual bool handle_message(client* cl,
                                     const server_id& si,
-                                    network_msgtype mt,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
                                     wtf_client_returncode* status,

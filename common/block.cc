@@ -26,7 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 // WTF
-#include <client/wtf.h>
+#include <client/client.h>
 #include <common/block.h>
 
 using wtf::block;

@@ -62,7 +62,7 @@ pending_aggregation :: handle_failure(const server_id& si)
 bool
 pending_aggregation :: handle_message(client*,
                                       const server_id& si,
-                                      network_msgtype,
+                                      wtf_network_msgtype,
                                       std::auto_ptr<e::buffer>,
                                       e::unpacker,
                                       wtf_client_returncode*,

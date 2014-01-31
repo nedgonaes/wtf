@@ -57,7 +57,7 @@ class Client
         int64_t getcwd(char* c, size_t len)
             { return wtf_client_getcwd(m_cl, c, len); }
         int64_t chdir(char* path)
-            { return wtf_client_getcwd(m_cl, path); }
+            { return wtf_client_chdir(m_cl, path); }
         int64_t open(const char* path, int flags, mode_t mode)
             { return wtf_client_open(m_cl, path, flags, mode); }
         int64_t getattr(const char* path, struct wtf_file_attrs* fa)
@@ -76,16 +76,16 @@ class Client
                       const char* data,
                       uint32_t data_sz,
                       uint32_t replicas,
-                      wtf_returncode* status)
+                      wtf_client_returncode* status)
             { return wtf_client_write(m_cl, fd, data, data_sz, replicas, status); }
         int64_t read(int64_t fd,
                      char* data,
                      uint32_t *data_sz,
-                     wtf_returncode* status)
+                     wtf_client_returncode* status)
             { return wtf_client_read(m_cl, fd, data, data_sz, status); }
-        int64_t close(int64_t fd, wtf_returncode* status)
+        int64_t close(int64_t fd, wtf_client_returncode* status)
             { return wtf_client_close(m_cl, fd, status); }
-        int64_t loop(int64_t id, int timeout, wtf_returncode* status)
+        int64_t loop(int64_t id, int timeout, wtf_client_returncode* status)
             { return wtf_client_loop(m_cl, id, timeout, status); }
         int64_t truncate(int fd, off_t length)
             { return wtf_client_truncate(m_cl, fd, length); }

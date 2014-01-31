@@ -28,9 +28,14 @@
 #ifndef wtf_client_pending_read_h_
 #define wtf_client_pending_read_h_
 
+//STL
+#include <map>
+
 // WTF
 #include "client/pending_aggregation.h"
 
+namespace wtf
+{
 class pending_read : public pending_aggregation
 {
     public:
@@ -46,14 +51,17 @@ class pending_read : public pending_aggregation
 
     // events
     public:
-        virtual void handle_failure(const server_id& si,)
+        virtual void handle_failure(const server_id& si);
         virtual bool handle_message(client*,
                                     const server_id& si,
-                                    network_msgtype mt,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* error);
+    
+    protected:
+        friend class e::intrusive_ptr<pending_read>;
     
     //populate offset mapping
     public:
@@ -68,13 +76,13 @@ class pending_read : public pending_aggregation
         {
             buffer_block_len()
                 : buf_offset(), block_offset(), len() {}
-            pending_server_pair(const size_t bu,
+            buffer_block_len(const size_t bu,
                                 const size_t bl,
                                 const size_t l)
                 : buf_offset(bu), block_offset(bl), len(l) {}
             ~buffer_block_len() throw () {}
-            const size_t buf_offset,   //offset in client buffer
-            const size_t block_offset, //offset from start of block
+            const size_t buf_offset;   //offset in client buffer
+            const size_t block_offset; //offset from start of block
             const size_t len;         //how many bytes to copy
         };
 
@@ -87,9 +95,11 @@ class pending_read : public pending_aggregation
 
     private:
         char* m_buf;
-        size_t* buf_sz;
+        size_t* m_buf_sz;
         offset_map_t m_offset_map;
         bool m_done;
 };
+
+}
 
 #endif // wtf_client_pending_read_h_

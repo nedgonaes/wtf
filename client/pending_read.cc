@@ -29,10 +29,15 @@
 #include "client/pending_read.h"
 
 using wtf::pending_read;
+using wtf::pending_aggregation;
 
 pending_read :: pending_read(uint64_t id,
-                                       wtf_client_returncode* status)
-    : pending_aggregation(id, status)
+                             wtf_client_returncode* status,
+                             char* buf,
+                             size_t* buf_sz)
+    : m_buf(buf)
+    , m_buf_sz(buf_sz)
+    , pending_aggregation(id, status)
     , m_done(false)
 {
     set_status(WTF_CLIENT_SUCCESS);
@@ -60,25 +65,23 @@ pending_read :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_read :: handle_failure(const server_id& si,
-                                    const virtual_server_id& vsi)
+pending_read :: handle_failure(const server_id& si)
 {
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
-                               << vsi << "/" << si;
-    return pending_aggregation::handle_failure(si, vsi);
+                               << "/" << si;
+    return pending_aggregation::handle_failure(si);
 }
 
 bool
 pending_read :: handle_message(client* cl,
                                     const server_id& si,
-                                    const virtual_server_id& vsi,
-                                    network_msgtype mt,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer>,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    bool handled = pending_aggregation::handle_message(cl, si, vsi, mt, std::auto_ptr<e::buffer>(), up, status, err);
+    bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
     *status = WTF_CLIENT_SUCCESS;
@@ -86,7 +89,7 @@ pending_read :: handle_message(client* cl,
 
     if (mt != RESP_GET)
     {
-        PENDING_ERROR(SERVERERROR) << "server " << vsi << " responded to GROUP DEL with " << mt;
+        PENDING_ERROR(SERVERERROR) << "server " <<  si << " responded to GET with " << mt;
         return true;
     }
 

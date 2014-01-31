@@ -9,7 +9,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <client/wtf.h>
+#include <client/client.h>
 
 #include <semaphore.h>
 

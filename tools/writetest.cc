@@ -42,7 +42,7 @@
 
 // WTF 
 #include "common/network_msgtype.h"
-#include "client/wtf.h"
+#include "client/client.h"
 #include "tools/common.h"
 #include "common/ids.h"
 

@@ -34,6 +34,8 @@
 namespace wtf
 {
 
+class block_location;
+
 class configuration
 {
     public:
@@ -58,6 +60,10 @@ class configuration
         po6::net::location get_address(const server_id& id) const;
         const server* server_from_id(server_id id) const;
         const server* get_random_server(uint64_t id) const;
+
+    public:
+        void copy_n_block_locations(int num_replicas, 
+                                    std::vector<block_location>& bl) const;
 
     // iterators
     public:

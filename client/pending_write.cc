@@ -60,25 +60,23 @@ pending_write :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_write :: handle_failure(const server_id& si,
-                                    const virtual_server_id& vsi)
+pending_write :: handle_failure(const server_id& si)
 {
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
-                               << vsi << "/" << si;
-    return pending_aggregation::handle_failure(si, vsi);
+                               << si;
+    return pending_aggregation::handle_failure(si);
 }
 
 bool
 pending_write :: handle_message(client* cl,
                                     const server_id& si,
-                                    const virtual_server_id& vsi,
-                                    network_msgtype mt,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer>,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    bool handled = pending_aggregation::handle_message(cl, si, vsi, mt, std::auto_ptr<e::buffer>(), up, status, err);
+    bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
     *status = WTF_CLIENT_SUCCESS;
@@ -86,7 +84,7 @@ pending_write :: handle_message(client* cl,
 
     if (mt != RESP_PUT)
     {
-        PENDING_ERROR(SERVERERROR) << "server " << vsi << " responded to GROUP DEL with " << mt;
+        PENDING_ERROR(SERVERERROR) << "server " << si << " responded to GROUP DEL with " << mt;
         return true;
     }
 

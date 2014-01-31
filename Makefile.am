@@ -42,8 +42,6 @@ noinst_PROGRAMS =
 pkgconfig_DATA =
 
 lib_LTLIBRARIES += libwtfblockstore.la
-lib_LTLIBRARIES += libwtf.la
-lib_LTLIBRARIES += libwtf-coordinator.la
 
 noinst_HEADERS += common/block.h
 noinst_HEADERS += common/coordinator_link.h
@@ -134,6 +132,8 @@ wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
 ################################## Coordinator #################################
 ################################################################################
 
+lib_LTLIBRARIES += libwtf-coordinator.la
+
 noinst_HEADERS += coordinator/coordinator.h
 noinst_HEADERS += coordinator/server_barrier.h
 noinst_HEADERS += coordinator/transitions.h
@@ -173,36 +173,36 @@ noinst_HEADERS += include/wtf/client.hpp
 noinst_HEADERS += client/file.h
 noinst_HEADERS += client/pending.h
 noinst_HEADERS += client/pending_aggregation.h
-noinst_HEADERS += client/pending_pending_read.h
-noinst_HEADERS += client/pending_pending_write.h
-noinst_HEADERS += client/pending_pending_readdir.h
+noinst_HEADERS += client/pending_read.h
+noinst_HEADERS += client/pending_write.h
+#noinst_HEADERS += client/pending_readdir.h
 
-libwtf_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
+libwtf_client_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
-libwtf_la_SOURCES =
-libwtf_la_SOURCES += common/server.cc
-libwtf_la_SOURCES += common/ids.cc
-libwtf_la_SOURCES += common/block_location.cc
-libwtf_la_SOURCES += common/configuration.cc
-libwtf_la_SOURCES += common/mapper.cc
-libwtf_la_SOURCES += common/network_msgtype.cc
-libwtf_la_SOURCES += common/packing.cc
-libwtf_la_SOURCES += common/response_returncode.cc
-libwtf_la_SOURCES += common/block.cc
-libwtf_la_SOURCES += client/pending.cc
-libwtf_la_SOURCES += client/pending_aggregation.cc
-libwtf_la_SOURCES += client/pending_pending_read.cc
-libwtf_la_SOURCES += client/pending_pending_write.cc
-libwtf_la_SOURCES += client/pending_pending_readdir.cc
-libwtf_la_SOURCES += common/coordinator_link.cc
-libwtf_la_SOURCES += client/file.cc
-libwtf_la_SOURCES += client/client.cc
+libwtf_client_la_SOURCES =
+libwtf_client_la_SOURCES += common/server.cc
+libwtf_client_la_SOURCES += common/ids.cc
+libwtf_client_la_SOURCES += common/block_location.cc
+libwtf_client_la_SOURCES += common/configuration.cc
+libwtf_client_la_SOURCES += common/mapper.cc
+libwtf_client_la_SOURCES += common/network_msgtype.cc
+libwtf_client_la_SOURCES += common/packing.cc
+libwtf_client_la_SOURCES += common/response_returncode.cc
+libwtf_client_la_SOURCES += common/block.cc
+libwtf_client_la_SOURCES += client/pending.cc
+libwtf_client_la_SOURCES += client/pending_aggregation.cc
+libwtf_client_la_SOURCES += client/pending_read.cc
+libwtf_client_la_SOURCES += client/pending_write.cc
+#libwtf_client_la_SOURCES += client/pending_readdir.cc
+libwtf_client_la_SOURCES += common/coordinator_link.cc
+libwtf_client_la_SOURCES += client/file.cc
+libwtf_client_la_SOURCES += client/client.cc
 
-libwtf_la_LIBADD = 
-libwtf_la_LIBADD += $(E_LIBS) 
-libwtf_la_LIBADD += $(BUSYBEE_LIBS) 
-libwtf_la_LIBADD += $(REPLICANT_LIBS) 
-libwtf_la_LIBADD += $(HYPERCLIENT_LIBS) -lglog
+libwtf_client_la_LIBADD = 
+libwtf_client_la_LIBADD += $(E_LIBS) 
+libwtf_client_la_LIBADD += $(BUSYBEE_LIBS) 
+libwtf_client_la_LIBADD += $(REPLICANT_LIBS) 
+libwtf_client_la_LIBADD += $(HYPERCLIENT_LIBS) -lglog
 
 ################################################################################
 ##################################### Admin ####################################
@@ -226,6 +226,8 @@ noinst_HEADERS += admin/multi_yieldable.h
 noinst_HEADERS += admin/pending.h
 noinst_HEADERS += admin/pending_string.h
 noinst_HEADERS += admin/yieldable.h
+
+libwtf_admin_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 libwtf_admin_la_SOURCES =
 libwtf_admin_la_SOURCES += common/configuration.cc

@@ -43,7 +43,7 @@
 
 // WTF 
 #include "common/network_msgtype.h"
-#include "client/wtf.h"
+#include "client/client.h"
 
 static long _done = 0;
 static long _number = 1000;

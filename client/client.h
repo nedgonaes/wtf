@@ -26,8 +26,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef wtf_h_
-#define wtf_h_
+#ifndef client_client_h_
+#define client_client_h_
 
 #define CHUNKSIZE (512)
 #define ROUNDUP(X,Y)   (((int)X + Y - 1) & ~(Y-1)) /* Y must be a power of 2 */
@@ -46,19 +46,22 @@
 #include <e/buffer.h>
 #include <e/intrusive_ptr.h>
 
-//WTF 
-#include <wtf/client.hpp>
-
 // busybee
 #include <busybee_st.h>
+
+//hyperdex
+#include <hyperdex/client.hpp>
 
 //wtf
 #include <wtf/client.h>
 #include "common/configuration.h"
 #include "common/coordinator_link.h"
+#include "common/ids.h"
 #include "common/mapper.h"
 #include "client/pending.h"
 #include "client/pending_aggregation.h"
+#include "client/file.h"
+#include "common/block_location.h"
 
 void
 wtf_destroy_output(const char* output, size_t output_sz);
@@ -69,15 +72,15 @@ class server;
 class configuration;
 class coordinator_link;
 class mapper;
-class tool_wrapper;
-} // namespace wtf
+class file;
+class pending_read;
 
-class wtf_client
+class client
 {
     public:
-        wtf_client(const char* host, in_port_t port,
+        client(const char* host, in_port_t port,
                    const char* hyper_host, in_port_t hyper_port);
-        ~wtf_client() throw ();
+        ~client() throw ();
 
     public:
         int64_t canon_path(char* rel, char* abspath, size_t abspath_sz);
@@ -93,17 +96,17 @@ class wtf_client
         int64_t mkdir(const char* path, mode_t mode); 
         int64_t chmod(const char* path, mode_t mode); 
         int64_t write(int64_t fd,
-                      const char* data,
-                      uint32_t data_sz,
-                      uint32_t replicas,
-                      wtf_returncode* status);
+                      const char* buf,
+                      size_t* buf_sz,
+                      int num_replicas,
+                      wtf_client_returncode* status);
         int64_t read(int64_t fd,
                      char* data,
-                     uint32_t *data_sz,
-                     wtf_returncode* status);
-        int64_t close(int64_t fd, wtf_returncode* status);
-        int64_t loop(int timeout, wtf_returncode* status);
-        int64_t loop(int64_t id, int timeout, wtf_returncode* status);
+                     size_t *data_sz,
+                     wtf_client_returncode* status);
+        int64_t close(int64_t fd, wtf_client_returncode* status);
+        int64_t loop(int timeout, wtf_client_returncode* status);
+        int64_t loop(int64_t id, int timeout, wtf_client_returncode* status);
         int64_t truncate(int fd, off_t length);
         int64_t opendir(const char* path);
         int64_t closedir(int fd);
@@ -118,50 +121,66 @@ class wtf_client
             pending_server_pair()
                 : si(), op() {}
             pending_server_pair(const server_id& s,
-                                const e::intrusiv_ptr<pending>& o)
+                                const e::intrusive_ptr<pending>& o)
                 : si(s), op(o) {}
             ~pending_server_pair() throw () {}
             server_id si;
             e::intrusive_ptr<pending> op;
         };
 
-        class file;
         friend class pending_read;
-        friend class pending_readdir;
         friend class pending_write;
+        friend class pending_readdir;
         typedef std::map<uint64_t, pending_server_pair> pending_map_t;
         typedef std::map<uint64_t, e::intrusive_ptr<pending> > yieldable_map_t;
         typedef std::list<pending_server_pair> pending_queue_t;
-        typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map;
+        typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map_t;
 
     private:
-        int64_t maintain_coord_connection(wtf_returncode* status);
-        int64_t send(e::intrusive_ptr<command>& cmd,
-                     wtf_returncode* status);
-        bool send(network_msgtype mt,
+        bool maintain_coord_connection(wtf_client_returncode* status);
+        bool send(wtf_network_msgtype mt,
                   const server_id& to,
                   uint64_t nonce,
                   std::auto_ptr<e::buffer> msg,
                   e::intrusive_ptr<pending> op,
                   wtf_client_returncode* status);
 
+        int64_t perform_aggregation(const std::vector<server_id>& servers,
+                              e::intrusive_ptr<pending_aggregation> _op,
+                              wtf_network_msgtype mt,
+                              std::auto_ptr<e::buffer> msg,
+                              wtf_client_returncode* status);
+
+        void prepare_write_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              std::vector<block_location>& bl,
+                              int num_replicas,
+                              wtf_network_msgtype& mt,
+                              size_t& buf_offset,
+                              uint32_t& block_offset,
+                              size_t& slice_len);
+        void prepare_read_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              size_t& buf_offset,
+                              block_location& bl, 
+                              e::intrusive_ptr<pending_read> op, 
+                              std::vector<server_id>& servers);
     private:
         friend e::unpacker 
-            operator >> (e::unpacker up, wtf_client::file& rhs);
+            operator >> (e::unpacker up, file& rhs);
         friend e::buffer::packer 
-            operator << (e::buffer::packer pa, const wtf_client::file& rhs);
+            operator << (e::buffer::packer pa, const file& rhs);
 
     private:
-        wtf_client(const wtf_client& other);
-        wtf_client& operator = (const wtf_client& rhs);
+        client(const client& other);
+        client& operator = (const client& rhs);
 
     private:
         int64_t inner_loop(int timeout,
-                           wtf_returncode* status,
+                           wtf_client_returncode* status,
                            int64_t wait_for);
 
-        void handle_disruption(const wtf::server& node,
-                               wtf_returncode* status);
+        void handle_disruption(const wtf::server_id& node);
 
         // Utilities
         uint64_t generate_token();
@@ -178,7 +197,7 @@ class wtf_client
         int64_t m_next_client_id;
         uint64_t m_next_server_nonce;
         pending_map_t m_pending_ops;
-        pending_queue_t m_faiiled;
+        pending_queue_t m_failed;
         yieldable_map_t m_yieldable;
         e::intrusive_ptr<pending> m_yielding;
         e::intrusive_ptr<pending> m_yielded;
@@ -190,6 +209,7 @@ class wtf_client
 };
 
 std::ostream&
-operator << (std::ostream& lhs, wtf_returncode rhs);
+operator << (std::ostream& lhs, wtf_client_returncode rhs);
 
-#endif /* wtf_h_ */
+} // namespace wtf
+#endif /* client_client_h_ */

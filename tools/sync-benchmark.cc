@@ -43,7 +43,7 @@
 
 // WTF 
 #include "common/network_msgtype.h"
-#include "client/wtf.h"
+#include "client/client.h"
 
 using namespace std;
 

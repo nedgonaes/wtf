@@ -38,6 +38,8 @@
 #include <busybee_utils.h>
 
 // WTF
+#include "client/client.h"
+#include "client/constants.h"
 #include "common/configuration.h"
 #include "common/coordinator_returncode.h"
 #include "common/macros.h"
@@ -45,13 +47,10 @@
 #include "common/network_msgtype.h"
 #include "common/response_returncode.h"
 #include "common/special_objects.h"
-#include "client/command.h"
 #include "client/file.h"
 #include "common/coordinator_link.h"
-#include "client/wtf.h"
-
-using namespace wtf;
-using namespace std;
+#include "client/pending_write.h"
+#include "client/pending_read.h"
 
 #define ERROR(CODE) \
     *status = WTF_CLIENT_ ## CODE; \
@@ -70,32 +69,33 @@ using namespace std;
     _BUSYBEE_ERROR(BBRC); \
     return false;
 
+using wtf::client;
 
-wtf_client :: wtf_client(const char* host, in_port_t port,
+client :: client(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
     : m_coord(host, port)
     , m_busybee_mapper(m_coord.config())
     , m_busybee(&m_busybee_mapper, busybee_generate_id())
-    , int64_t m_next_client_id(1)
-    , int64_t m_next_server_nonce(1)
+    , m_next_client_id(1)
+    , m_next_server_nonce(1)
     , m_pending_ops()
     , m_failed()
     , m_yielding()
     , m_yielded()
     , m_last_error()
     , m_hyperdex_client(hyper_host, hyper_port)
-    , m_fileno(1)
+    , m_next_fileno(1)
     , m_fds()
     , m_cwd("/")
 {
 }
 
-wtf_client :: ~wtf_client() throw ()
+client :: ~client() throw ()
 {
 }
 
 bool
-wtf_client :: maintain_coord_connection(wtf_client_returncode* status)
+client :: maintain_coord_connection(wtf_client_returncode* status)
 {
     replicant_returncode rc;
     uint64_t old_version = m_coord.config()->version();
@@ -132,9 +132,10 @@ wtf_client :: maintain_coord_connection(wtf_client_returncode* status)
 
         while (it != m_pending_ops.end())
         {
-            // If the mapping that was true when the operation started is no
-            // longer true, we fail the operation with a RECONFIGURE.
-            if (m_coord.config()->get_server_id(it->second.vsi) != it->second.si)
+            // If the server that was in configuration when the operation 
+            // started is no longer in configuration, we fail the operation 
+            // with a RECONFIGURE.
+            if (!m_coord.config()->exists(it->second.si))
             {
                 m_failed.push_back(it->second);
                 pending_map_t::iterator tmp = it;
@@ -153,7 +154,7 @@ wtf_client :: maintain_coord_connection(wtf_client_returncode* status)
 
 
 bool
-wtf_client :: send(network_msgtype mt,
+client :: send(wtf_network_msgtype mt,
                const server_id& to,
                uint64_t nonce,
                std::auto_ptr<e::buffer> msg,
@@ -166,7 +167,7 @@ wtf_client :: send(network_msgtype mt,
     msg->pack_at(BUSYBEE_HEADER_SIZE)
         << type << nonce;
     m_busybee.set_timeout(-1);
-    busybee_returncode rc = m_busybee.send(to, msg);
+    busybee_returncode rc = m_busybee.send(to.get(), msg);
 
     switch (rc)
     {
@@ -192,19 +193,19 @@ wtf_client :: send(network_msgtype mt,
 }
 
 int64_t
-wtf_client :: loop(int64_t client_id, int timeout, wtf_client_returncode* status)
+client :: loop(int64_t client_id, int timeout, wtf_client_returncode* status)
 {
-    return inner_loop(timeout, status, client_id)
+    return inner_loop(timeout, status, client_id);
 }
 
 int64_t
-wtf_client :: loop(int timeout, wtf_client_returncode* status)
+client :: loop(int timeout, wtf_client_returncode* status)
 {
-    return inner_loop(timeout, status, -1)
+    return inner_loop(timeout, status, -1);
 }
 
 int64_t
-wtf_client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_for)
+client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_for)
 {
     /*
      * This is for internal use only.  We loop for any operation to
@@ -301,12 +302,12 @@ wtf_client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wai
                 continue;
             }
         }
-        else if(!m_yieldable().empty())
+        else if(!m_yieldable.empty())
         {
             yieldable_map_t::iterator it = m_yieldable.begin();
             m_yielding = it->second;
             m_yieldable.erase(it);
-            continue
+            continue;
         }
 
 
@@ -362,7 +363,7 @@ wtf_client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wai
             return -1;
         }
 
-        network_msgtype msg_type = static_cast<network_msgtype>(mt);
+        wtf_network_msgtype msg_type = static_cast<wtf_network_msgtype>(mt);
         pending_map_t::iterator it = m_pending_ops.find(nonce);
 
         if (it == m_pending_ops.end())
@@ -420,53 +421,12 @@ wtf_client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wai
 }
 
 int64_t
-wtf_client :: maintain_coord_connection(wtf_returncode* status)
+client :: open(const char* path, int flags)
 {
-    replicant_returncode rc;
-    uint64_t old_version = m_coord.config()->version();
+    wtf_client_returncode lstatus;
+    wtf_client_returncode *status = &lstatus;
 
-    if (!m_coord.ensure_configuration(&rc))
-    {
-        if (rc == REPLICANT_INTERRUPTED)
-        {
-            WTFSETERROR(WTF_INTERRUPTED, "signal received");
-        }
-        else if (rc == REPLICANT_TIMEOUT)
-        {
-            WTFSETERROR(WTF_TIMEOUT, "operation timed out");
-        }
-        else
-        {
-            WTFSETERROR(WTF_COORDFAIL, m_coord.error().msg());
-        }
-
-        return false;
-    }
-
-    if (m_busybee.set_external_fd(m_coord.poll_fd()) != BUSYBEE_SUCCESS)
-    {
-        *status = WTF_POLLFAILED;
-        return false;
-    }
-
-    uint64_t new_version = m_coord.config()->version();
-
-    if (old_version < new_version)
-    {
-        //XXX: what do we do here?
-    }
-
-    std::cout << m_coord.config()->dump() << std::endl;
-
-    return true;
-}
-
-int64_t
-wtf_client :: open(const char* path, int flags)
-{
-    wtf_returncode status;
-
-    if (!maintain_coord_connection(&status))
+    if (!maintain_coord_connection(status))
     {
         return -1;
     }
@@ -489,20 +449,26 @@ wtf_client :: open(const char* path, int flags)
         return -1;
     }
 
-    m_fds[m_fileno] = f; 
+    m_fds[m_next_fileno] = f; 
     f->flags = flags;
 
 
-    return m_fileno++;
+    return m_next_fileno++;
 }
 
 int64_t
-wtf_client :: open(const char* path, int flags, mode_t mode)
+client :: open(const char* path, int flags, mode_t mode)
 {
-    wtf_returncode status;
-    MAINTAIN_COORD_CONNECTION(&status);
+    wtf_client_returncode lstatus;
+    wtf_client_returncode* status = &lstatus;
+
+    if (!maintain_coord_connection(status))
+    {
+        return -1;
+    }
+
     e::intrusive_ptr<file> f = new file(path);
-    m_fds[m_fileno] = f; 
+    m_fds[m_next_fileno] = f; 
     
     f->flags = flags;
     f->mode = mode;
@@ -519,31 +485,31 @@ wtf_client :: open(const char* path, int flags, mode_t mode)
     }
 
 
-    return m_fileno++;
+    return m_next_fileno++;
 }
 
 void
-wtf_client :: begin_tx()
+client :: begin_tx()
 {
     //proprietary HyperDex Warp code here.
 }
 
 int64_t
-wtf_client :: end_tx()
+client :: end_tx()
 {
     //proprietary HyperDex Warp code here.
 }
 
 void
-wtf_client :: lseek(int64_t fd, uint64_t offset)
+client :: lseek(int64_t fd, uint64_t offset)
 {
     m_fds[fd]->set_offset(offset);
 }
 
 int64_t
-wtf_client :: perform_aggregation(const std::vector<server_id>& servers,
+client :: perform_aggregation(const std::vector<server_id>& servers,
                               e::intrusive_ptr<pending_aggregation> _op,
-                              network_msgtype mt,
+                              wtf_network_msgtype mt,
                               std::auto_ptr<e::buffer> msg,
                               wtf_client_returncode* status)
 {
@@ -565,9 +531,9 @@ wtf_client :: perform_aggregation(const std::vector<server_id>& servers,
 }
 
 int64_t
-wtf_client :: write(int64_t fd, const char* buf,
+client :: write(int64_t fd, const char* buf,
                    size_t * buf_sz, int num_replicas,
-                   wtf_returncode* status)
+                   wtf_client_returncode* status)
 {
     if (m_fds.find(fd) == m_fds.end())
     {
@@ -592,7 +558,7 @@ wtf_client :: write(int64_t fd, const char* buf,
     
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_aggregation> op;
-    op = new pending_write(client_id, status)
+    op = new pending_write(client_id, status);
 
     size_t rem = *buf_sz;
     size_t next_buf_offset = 0;
@@ -604,7 +570,7 @@ wtf_client :: write(int64_t fd, const char* buf,
         size_t buf_offset = next_buf_offset;
         uint32_t block_offset;
         size_t slice_len;
-        networK_msgtype mt; // can be PUT or UPDATE
+        wtf_network_msgtype mt; // can be PUT or UPDATE
         prepare_write_op(f, rem, bl, num_replicas, mt, next_buf_offset, block_offset, slice_len);
         e::slice data = e::slice(buf + buf_offset, slice_len);
 
@@ -616,7 +582,7 @@ wtf_client :: write(int64_t fd, const char* buf,
                 + sizeof(uint64_t) // block_offset (remote block offset) 
                 + data.size();     // user data 
             std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ)
+            e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
                 pa = pa << client_id << bl[i].bi << block_offset;
             pa.copy(data);
 
@@ -625,7 +591,7 @@ wtf_client :: write(int64_t fd, const char* buf,
                 return -1;
             }
 
-            servers.push_back(bl[i].si);
+            servers.push_back(server_id(bl[i].si));
             perform_aggregation(servers, op, mt, msg, status);
         }
     }
@@ -634,16 +600,15 @@ wtf_client :: write(int64_t fd, const char* buf,
 }
 
 void
-wtf_client :: prepare_write_op(e::intrusive_ptr<file> f, 
+client :: prepare_write_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
                               std::vector<block_location>& bl,
                               int num_replicas,
-                              network_msgtype& mt,
-                              size_t buf_offset&,
-                              uint32_t block_offset&,
-                              size_t slice_len&)
+                              wtf_network_msgtype& mt,
+                              size_t& buf_offset,
+                              uint32_t& block_offset,
+                              size_t& slice_len)
 {
-    block_location bl = f->current_block();
     size_t bytes_left = f->bytes_left_in_block();
     size_t block_length = f->current_block_length();
     block_offset = bytes_left - block_length;
@@ -652,18 +617,16 @@ wtf_client :: prepare_write_op(e::intrusive_ptr<file> f,
     {
         //partial block update case.
         f->copy_current_block_locations(bl);
-        mt = wtf::WTFNET_UPDATE;
+        mt = REQ_UPDATE;
     }
     else
     {
         //full block write case
         m_coord.config()->copy_n_block_locations(num_replicas, bl);
-        mt = wtf::WTFNET_PUT;
+        mt = REQ_PUT;
     }
 
-    servers.push_back(server_id(bl.si));
-
-    size_t slice_len = std::min(bytes_left, rem);
+    slice_len = std::min(bytes_left, rem);
     f->advance(slice_len);
     buf_offset += slice_len;
     rem -= slice_len;
@@ -671,9 +634,9 @@ wtf_client :: prepare_write_op(e::intrusive_ptr<file> f,
 
 
 int64_t
-wtf_client :: read(int64_t fd, char* buf,
-                   uint32_t* buf_sz,
-                   wtf_returncode* status)
+client :: read(int64_t fd, char* buf,
+                   size_t* buf_sz,
+                   wtf_client_returncode* status)
 {
     if (m_fds.find(fd) == m_fds.end())
     {
@@ -697,15 +660,15 @@ wtf_client :: read(int64_t fd, char* buf,
      * client_id of the op. */
     
     int64_t client_id = m_next_client_id++;
-    e::intrusive_ptr<pending_aggregation> op;
-    op = new pending_read(client_id, status, buf, buf_sz)
+    e::intrusive_ptr<pending_read> op;
+    op = new pending_read(client_id, status, buf, buf_sz);
 
     size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
     size_t buf_offset = 0;
 
     while(rem > 0)
     {
-        e::intrusive_ptr<block_location> bl;
+        block_location bl;
         std::vector<server_id> servers;
         prepare_read_op(f, rem, buf_offset, bl, op, servers);
         size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
@@ -719,17 +682,17 @@ wtf_client :: read(int64_t fd, char* buf,
             return -1;
         }
 
-        perform_aggregation(servers, op, wtf::WTFNET_GET, msg, status);
+        perform_aggregation(servers, op.get(), REQ_GET, msg, status);
     }
 
     return client_id;
 }
 
 void
-wtf_client :: prepare_read_op(e::intrusive_ptr<file> f, 
+client :: prepare_read_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
                               size_t& buf_offset,
-                              e::intrusive_ptr<block_location>& bl, 
+                              block_location& bl, 
                               e::intrusive_ptr<pending_read> op, 
                               std::vector<server_id>& servers)
 {
@@ -749,7 +712,7 @@ wtf_client :: prepare_read_op(e::intrusive_ptr<file> f,
 }
 
 int64_t
-wtf_client :: close(int64_t fd, wtf_returncode* rc)
+client :: close(int64_t fd, wtf_client_returncode* status)
 {
     if(m_fds.find(fd) == m_fds.end())
     {
@@ -761,9 +724,9 @@ wtf_client :: close(int64_t fd, wtf_returncode* rc)
 
     int64_t retval = 0;
 
-    while (!f->pending_ops().empty())
+    while (!f->pending_ops_empty())
     {
-        int64_t client_id = f->pending_ops().pop_front();
+        int64_t client_id = f->pending_ops_pop_front();
 
         /*
          * This will only return a positive number if the
@@ -779,35 +742,39 @@ wtf_client :: close(int64_t fd, wtf_returncode* rc)
         {
             int64_t ret = inner_loop(-1, status, client_id);
 
-            if (ret < 0 && status == WTF_CLIENT_NONEPENDING) 
+            if (ret < 0 && *status == WTF_CLIENT_NONEPENDING) 
             {
                 break;
             }
             else if (ret < 0)
             {
                 ERROR(IO) << "there was an IO error somewhere.";
-                reval = -1;
+                retval = -1;
             }
         }
     }
+
+    return retval;
 }
 
 int64_t
-wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create)
+client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create)
 {
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
     int64_t ret = 0;
-    hyperdex_client_returncode status;
+    hyperdex_client_returncode hstatus;
+    wtf_client_returncode lstatus;
+    wtf_client_returncode* status = &lstatus;
 
-    ret = m_hyperdex_client.get("wtf", path, strlen(path), &status, &attrs, &attrs_sz);
+    ret = m_hyperdex_client.get("wtf", path, strlen(path), &hstatus, &attrs, &attrs_sz);
     if (ret == -1)
     {
         ERROR(INTERNAL) << " failed to update file cache.  HyperDex get failed with " << ret;
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
@@ -883,8 +850,9 @@ wtf_client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, boo
 }
 
 int64_t
-wtf_client :: truncate(int fd, off_t length)
+client :: truncate(int fd, off_t length)
 {
+    /*
     size_t sz;
     e::intrusive_ptr<file> f = m_fds[fd];
 
@@ -897,7 +865,7 @@ wtf_client :: truncate(int fd, off_t length)
     {
         sz = length - f->length();
         //cout << "expanding to sz " << sz << endl;
-        wtf_returncode status;
+        wtf_client_returncode status;
         char* data = new char[sz];
         memset(data, 0, sz);
         write(fd, data, sz, 3, &status);
@@ -911,13 +879,16 @@ wtf_client :: truncate(int fd, off_t length)
 
     update_hyperdex(f);
     cout << "updated" << endl;
-
+*/
     return 0;
 }
 
 int64_t
-wtf_client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
+client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
 {
+    wtf_client_returncode lstatus;
+    wtf_client_returncode* status = &lstatus;
+
     char* start = abspath;
     char* end = abspath + abspath_sz - 2;
     int rel_len = strnlen(rel, PATH_MAX);
@@ -1000,8 +971,11 @@ wtf_client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
 
 
 int64_t
-wtf_client :: getcwd(char* c, size_t len)
+client :: getcwd(char* c, size_t len)
 {
+    wtf_client_returncode lstatus;
+    wtf_client_returncode* status = &lstatus;
+
     if (len < m_cwd.size() + 1)
     {
         ERROR(NAMETOOLONG) << "buffer too small for cwd.";
@@ -1015,9 +989,9 @@ wtf_client :: getcwd(char* c, size_t len)
 }
 
 int64_t
-wtf_client :: getattr(const char* path, struct wtf_file_attrs* fa)
+client :: getattr(const char* path, struct wtf_file_attrs* fa)
 {
-    wtf_returncode status;
+    wtf_client_returncode status;
 
     int64_t fd = open(path, O_RDONLY);
     if (fd < 0)
@@ -1035,7 +1009,7 @@ wtf_client :: getattr(const char* path, struct wtf_file_attrs* fa)
 }
 
 int64_t
-wtf_client :: chdir(char* path)
+client :: chdir(char* path)
 {
     char *abspath = new char[PATH_MAX]; 
     if (canon_path(path, abspath, PATH_MAX) != 0)
@@ -1046,15 +1020,17 @@ wtf_client :: chdir(char* path)
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
     int64_t ret = 0;
-    hyperdex_client_returncode status;
+    hyperdex_client_returncode hstatus;
+    wtf_client_returncode lstatus;
+    wtf_client_returncode* status = &lstatus;
 
-    ret = m_hyperdex_client.get("wtf", abspath, strlen(abspath), &status, &attrs, &attrs_sz);
+    ret = m_hyperdex_client.get("wtf", abspath, strlen(abspath), &hstatus, &attrs, &attrs_sz);
     if (ret == -1)
     {
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
@@ -1095,7 +1071,7 @@ wtf_client :: chdir(char* path)
 }
 
 int64_t
-wtf_client :: chmod(const char* path, mode_t mode)
+client :: chmod(const char* path, mode_t mode)
 {
     hyperdex_client_returncode status;
     int64_t ret = -1;
@@ -1122,7 +1098,7 @@ wtf_client :: chmod(const char* path, mode_t mode)
 }
 
 int64_t
-wtf_client :: mkdir(const char* path, mode_t mode)
+client :: mkdir(const char* path, mode_t mode)
 {
     hyperdex_client_returncode status;
     int64_t ret = -1;
@@ -1154,27 +1130,27 @@ wtf_client :: mkdir(const char* path, mode_t mode)
 }
 
 int64_t 
-wtf_client :: opendir(const char* path)
+client :: opendir(const char* path)
 {
-    int64_t fd = m_fileno;
-    m_fileno;
-    m_fileno++;
+    int64_t fd = m_next_fileno;
+    m_next_fileno;
+    m_next_fileno++;
 }
 
 int64_t 
-wtf_client :: closedir(int fd)
+client :: closedir(int fd)
 {
 }
 
 int64_t 
-wtf_client :: readdir(int fd, char* entry)
+client :: readdir(int fd, char* entry)
 {
     return 0;
 }
 
 
 int64_t
-wtf_client :: update_hyperdex(e::intrusive_ptr<file>& f)
+client :: update_hyperdex(e::intrusive_ptr<file>& f)
 {
     std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
@@ -1295,7 +1271,7 @@ retry:
 }
 
 hyperdex_client_returncode
-wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status)
+client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status)
 {
     while(1)
     {
@@ -1320,7 +1296,7 @@ wtf_client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& 
 }
 
 void
-wtf_client :: handle_disruption(const server_id& si)
+client :: handle_disruption(const server_id& si)
 {
     pending_map_t::iterator it = m_pending_ops.begin();
 
@@ -1340,37 +1316,4 @@ wtf_client :: handle_disruption(const server_id& si)
     }
 
     m_busybee.drop(si.get());
-}
-
-std::ostream&
-operator << (std::ostream& lhs, wtf_returncode rhs)
-{
-    switch (rhs)
-    {
-        STRINGIFY(WTF_SUCCESS);
-        STRINGIFY(WTF_NOTFOUND);
-        STRINGIFY(WTF_READONLY);
-        STRINGIFY(WTF_UNKNOWNSPACE);
-        STRINGIFY(WTF_COORDFAIL);
-        STRINGIFY(WTF_SERVERERROR);
-        STRINGIFY(WTF_POLLFAILED);
-        STRINGIFY(WTF_OVERFLOW);
-        STRINGIFY(WTF_RECONFIGURE);
-        STRINGIFY(WTF_TIMEOUT);
-        STRINGIFY(WTF_NONEPENDING);
-        STRINGIFY(WTF_NOMEM);
-        STRINGIFY(WTF_BADCONFIG);
-        STRINGIFY(WTF_DUPLICATE);
-        STRINGIFY(WTF_INTERRUPTED);
-        STRINGIFY(WTF_CLUSTER_JUMP);
-        STRINGIFY(WTF_COORD_LOGGED);
-        STRINGIFY(WTF_BACKOFF);
-        STRINGIFY(WTF_INTERNAL);
-        STRINGIFY(WTF_EXCEPTION);
-        STRINGIFY(WTF_GARBAGE);
-        default:
-            lhs << "unknown returncode (" << static_cast<unsigned int>(rhs) << ")";
-    }
-
-    return lhs;
 }

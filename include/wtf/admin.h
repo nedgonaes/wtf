@@ -34,9 +34,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* WTF */
-#include <wtf.h>
-
 #ifdef __cplusplus
 extern "C"
 {

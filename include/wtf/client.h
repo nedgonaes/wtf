@@ -38,104 +38,98 @@ extern "C"
 {
 #endif /* __cplusplus */
 
-struct wtf_client;
+    struct wtf_client;
 
-enum wtf_client_returncode
-{
-    WTF_CLIENT_SUCCESS      = 8448,
-    WTF_CLIENT_NOTFOUND     = 8449,
-    WTF_CLIENT_INVALID      = 8450,
-    WTF_CLIENT_BADF         = 8451,
-    WTF_CLIENT_READONLY     = 8452,
-    WTF_CLIENT_NAMETOOLONG  = 8453,
-    WTF_CLIENT_EXIST        = 8454,
-    WTF_CLIENT_ISDIR        = 8455,
-    WTF_CLIENT_NOTDIR       = 8456,
-    
+    enum wtf_client_returncode
+    {
+        WTF_CLIENT_SUCCESS      = 8448,
+        WTF_CLIENT_NOTFOUND     = 8449,
+        WTF_CLIENT_INVALID      = 8450,
+        WTF_CLIENT_BADF         = 8451,
+        WTF_CLIENT_READONLY     = 8452,
+        WTF_CLIENT_NAMETOOLONG  = 8453,
+        WTF_CLIENT_EXIST        = 8454,
+        WTF_CLIENT_ISDIR        = 8455,
+        WTF_CLIENT_NOTDIR       = 8456,
 
-    /* Error conditions */
-    WTF_CLIENT_UNKNOWNSPACE = 8512,
-    WTF_CLIENT_COORDFAIL    = 8513,
-    WTF_CLIENT_SERVERERROR  = 8514,
-    WTF_CLIENT_POLLFAILED   = 8515,
-    WTF_CLIENT_OVERFLOW     = 8516,
-    WTF_CLIENT_RECONFIGURE  = 8517,
-    WTF_CLIENT_TIMEOUT      = 8519,
-    WTF_CLIENT_NONEPENDING  = 8523,
-    WTF_CLIENT_NOMEM        = 8526,
-    WTF_CLIENT_BADCONFIG    = 8527,
-    WTF_CLIENT_DUPLICATE    = 8529,
-    WTF_CLIENT_INTERRUPTED  = 8530,
-    WTF_CLIENT_CLUSTER_JUMP = 8531,
-    WTF_CLIENT_COORD_LOGGED = 8532,
-    WTF_CLIENT_BACKOFF      = 8533,
-    WTF_CLIENT_IO           = 8534,
 
-    /* This should never happen.  It indicates a bug */
-    WTF_CLIENT_INTERNAL     = 8573,
-    WTF_CLIENT_EXCEPTION    = 8574,
-    WTF_CLIENT_GARBAGE      = 8575
-};
+        /* Error conditions */
+        WTF_CLIENT_UNKNOWNSPACE = 8512,
+        WTF_CLIENT_COORDFAIL    = 8513,
+        WTF_CLIENT_SERVERERROR  = 8514,
+        WTF_CLIENT_POLLFAILED   = 8515,
+        WTF_CLIENT_OVERFLOW     = 8516,
+        WTF_CLIENT_RECONFIGURE  = 8517,
+        WTF_CLIENT_TIMEOUT      = 8519,
+        WTF_CLIENT_NONEPENDING  = 8523,
+        WTF_CLIENT_NOMEM        = 8526,
+        WTF_CLIENT_BADCONFIG    = 8527,
+        WTF_CLIENT_DUPLICATE    = 8529,
+        WTF_CLIENT_INTERRUPTED  = 8530,
+        WTF_CLIENT_CLUSTER_JUMP = 8531,
+        WTF_CLIENT_COORD_LOGGED = 8532,
+        WTF_CLIENT_BACKOFF      = 8533,
+        WTF_CLIENT_IO           = 8534,
 
-struct wtf_file_attrs
-{
-    size_t size;
-    mode_t mode;
-    int flags;
-    int is_dir;
-};
+        /* This should never happen.  It indicates a bug */
+        WTF_CLIENT_INTERNAL     = 8573,
+        WTF_CLIENT_EXCEPTION    = 8574,
+        WTF_CLIENT_GARBAGE      = 8575
+    };
 
-int64_t wtf_client_getcwd(struct wtf_client* struct wtf_client* m_cl, 
-                          char* c, size_t len);
-        int64_t wtf_client_getcwd(struct wtf_client* m_cl, 
-                                  char* path); }
-        int64_t wtf_client_open(struct wtf_client* m_cl, 
-                                char* path, int flags, mode_t mode);
-        int64_t wtf_client_getattr(struct wtf_client* m_cl, 
-                                   const char* path, 
-                                   struct wtf_file_attrs* fa);
-        void wtf_client_lseek(struct wtf_client* m_cl, 
-                              int64_t fd, size_t offset);
-        void wtf_client_begin_tx(struct wtf_client* m_cl);
-        int64_t wtf_client_end_tx(struct wtf_client* m_cl);
-        int64_t wtf_client_mkdir(struct wtf_client* m_cl, 
-                                 const char* path, mode_t mode);
-        int64_t wtf_client_chmod(struct wtf_client* m_cl, 
-                                 const char* path, mode_t mode);
-        int64_t write(int64_t fd,
-                      const char* data,
-                      uint32_t data_sz,
-                      uint32_t replicas,
-                      wtf_client_returncode* status)
-        int64_t wtf_client_write(struct wtf_client* m_cl, 
-                                 int64_t fd, const char* data, 
-                                 uint32_t data_sz, uint32_t replicas, 
-                                 wtf_client_returncode* status);
-        int64_t read(int64_t fd,
-                     char* data,
-                     uint32_t *data_sz,
-                     wtf_int64_tcode* status)
-        int64_t wtf_client_read(struct wtf_client* m_cl, 
-                                int64_t fd, char* data, 
-                                uint32_t* data_sz, 
-                                wtf_client_returncode* status);
-        int64_t close(int64_t fd, wtf_int64_tcode* status)
-        int64_t wtf_client_close(struct wtf_client* m_cl, 
-                                 int64_t fd, wtf_client_returncode* status);
-        int64_t wtf_client_loop(struct wtf_client* m_cl, int64_t id, 
-                                int timeout, wtf_client_returncode* status);
-        int64_t wtf_client_truncate(struct wtf_client* m_cl, 
-                                    int64_t fd, size_t length);
-        int64_t wtf_client_opendir(struct wtf_client* m_cl, 
-                                   const char* path);
-        int64_t wtf_client_closedir(struct wtf_client* m_cl, 
-                                    int64_t fd);
-        int64_t wtf_client_readdir(struct wtf_client* m_cl, 
-                                   int64_t fd, char* entry);
+    struct wtf_file_attrs
+    {
+        size_t size;
+        mode_t mode;
+        int flags;
+        int is_dir;
+    };
 
-    public:
-        const char* wtf_client_error_message(struct wtf_client* m_cl);
-        const char* wtf_client_error_location(struct wtf_client* m_cl);
+    struct wtf_client* wtf_client_create(const char* host,
+                                         uint16_t port,
+                                         const char* hyper_host,
+                                         uint16_t hyper_port);
+    void wtf_client_destroy(struct wtf_client* m_cl);
+    int64_t wtf_client_getcwd(struct wtf_client* m_cl, 
+            char* path, size_t len);
+    int64_t wtf_client_chdir(struct wtf_client* m_cl, 
+            char* path);
+    int64_t wtf_client_open(struct wtf_client* m_cl, 
+            const char* path, int flags, mode_t mode);
+    int64_t wtf_client_getattr(struct wtf_client* m_cl, 
+            const char* path, 
+            struct wtf_file_attrs* fa);
+    void wtf_client_lseek(struct wtf_client* m_cl, 
+            int64_t fd, size_t offset);
+    void wtf_client_begin_tx(struct wtf_client* m_cl);
+    int64_t wtf_client_end_tx(struct wtf_client* m_cl);
+    int64_t wtf_client_mkdir(struct wtf_client* m_cl, 
+            const char* path, mode_t mode);
+    int64_t wtf_client_chmod(struct wtf_client* m_cl, 
+            const char* path, mode_t mode);
+    int64_t wtf_client_write(struct wtf_client* m_cl, 
+            int64_t fd, const char* data, 
+            uint32_t data_sz, uint32_t replicas, 
+            wtf_client_returncode* status);
+    int64_t wtf_client_read(struct wtf_client* m_cl, 
+            int64_t fd, char* data, 
+            uint32_t* data_sz, 
+            wtf_client_returncode* status);
+    int64_t wtf_client_close(struct wtf_client* m_cl, 
+            int64_t fd, wtf_client_returncode* status);
+    int64_t wtf_client_loop(struct wtf_client* m_cl, int64_t id, 
+            int timeout, wtf_client_returncode* status);
+    int64_t wtf_client_truncate(struct wtf_client* m_cl, 
+            int64_t fd, size_t length);
+    int64_t wtf_client_opendir(struct wtf_client* m_cl, 
+            const char* path);
+    int64_t wtf_client_closedir(struct wtf_client* m_cl, 
+            int64_t fd);
+    int64_t wtf_client_readdir(struct wtf_client* m_cl, 
+            int64_t fd, char* entry);
+
+    const char* wtf_client_error_message(struct wtf_client* m_cl);
+    const char* wtf_client_error_location(struct wtf_client* m_cl);
 
 
 #ifdef __cplusplus
