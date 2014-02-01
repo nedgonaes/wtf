@@ -36,7 +36,7 @@
 #define MILLIS (1000ULL * MICROS)
 #define SECONDS (1000ULL * MILLIS)
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class settings
@@ -72,7 +72,7 @@ settings :: settings()
 {
 }
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #undef SECONDS
 #undef MILLIS

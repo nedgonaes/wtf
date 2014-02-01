@@ -30,7 +30,7 @@
 
 #include <iostream>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 // occupies [8832, 8960)
@@ -50,6 +50,6 @@ std::ostream&
 operator << (std::ostream& lhs, coordinator_returncode rhs);
 
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_common_coordinator_returncode_h_

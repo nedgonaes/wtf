@@ -55,7 +55,7 @@
 #include "daemon/connection.h"
 #include "daemon/block_storage_manager.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class daemon
@@ -136,6 +136,6 @@ class daemon
         configuration m_config;
 };
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_daemon_h_

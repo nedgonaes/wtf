@@ -34,7 +34,7 @@
 // WTF
 #include "common/ids.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class server_state
@@ -94,6 +94,6 @@ operator < (const server_state& lhs, const server_id& rhs)
     return lhs.id < rhs;
 }
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_coordinator_server_state_h_

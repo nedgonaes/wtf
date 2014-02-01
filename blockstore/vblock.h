@@ -36,7 +36,7 @@
 // STL
 #include <map>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class vblock

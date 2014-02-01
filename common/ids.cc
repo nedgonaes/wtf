@@ -47,14 +47,14 @@
         return up; \
     }
 
-namespace wtf
+namespace wtf 
 {
 
 CREATE_ID(cluster)
 CREATE_ID(version)
 CREATE_ID(server)
 
-} // namespace wtf
+} // namespace wtf 
 
 #undef OPERATOR
 #undef CREATE_ID

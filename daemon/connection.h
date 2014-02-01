@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class connection
@@ -44,6 +44,6 @@ class connection
         uint64_t token;
 };
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_daemon_connection_h_

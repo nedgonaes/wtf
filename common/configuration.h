@@ -31,7 +31,7 @@
 // WTF
 #include "common/server.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class block_location;
@@ -105,6 +105,6 @@ operator << (e::buffer::packer lhs, const configuration& rhs);
 e::unpacker
 operator >> (e::unpacker lhs, configuration& rhs);
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_configuration_h_

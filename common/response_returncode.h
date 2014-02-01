@@ -34,7 +34,7 @@
 // e
 #include <e/buffer.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 enum response_returncode
@@ -57,6 +57,6 @@ operator >> (e::unpacker lhs, response_returncode& rhs);
 size_t
 pack_size(const response_returncode& rhs);
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_common_response_flags_h_

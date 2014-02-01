@@ -37,7 +37,7 @@
 #include "common/ids.h"
 #include "common/serialization.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class server_barrier
 {

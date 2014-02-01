@@ -34,7 +34,7 @@
 // WTF 
 #include "common/configuration.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class mapper : public ::busybee_mapper
 {
@@ -53,6 +53,6 @@ class mapper : public ::busybee_mapper
         const configuration* m_config;
 };
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_common_mapper_h_

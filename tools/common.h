@@ -37,7 +37,7 @@
 // e
 #include <e/popt.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class connect_opts
 {

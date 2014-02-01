@@ -42,7 +42,7 @@
 #include <client/client.h>
 #include <common/block.h>
 #include <common/block_location.h>
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class file
@@ -108,6 +108,7 @@ class file
         int64_t m_fd;
         std::list<int64_t> m_commands;
         block_map m_block_map;
+        block_location m_current_block;
         uint64_t m_offset;
 
     public:

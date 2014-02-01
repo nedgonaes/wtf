@@ -97,3 +97,13 @@ pending_read :: handle_message(client* cl,
 
     return true;
 }
+
+void 
+pending_read :: set_offset(const uint64_t si,
+                const uint64_t bi,
+                const size_t buf_offset,   //offset in client buffer
+                const size_t block_offset, //offset from start of block
+                const size_t len)         //how many bytes to copy
+{
+    //XXX
+}

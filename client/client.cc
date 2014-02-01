@@ -51,6 +51,7 @@
 #include "common/coordinator_link.h"
 #include "client/pending_write.h"
 #include "client/pending_read.h"
+#include "visibility.h"
 
 #define ERROR(CODE) \
     *status = WTF_CLIENT_ ## CODE; \
@@ -1316,4 +1317,63 @@ client :: handle_disruption(const server_id& si)
     }
 
     m_busybee.drop(si.get());
+}
+
+const char*
+client :: error_message()
+{
+    return m_last_error.msg();
+}
+
+const char*
+client :: error_location()
+{
+    return m_last_error.loc();
+}
+
+void
+client :: set_error_message(const char* msg)
+{
+    m_last_error = e::error();
+    m_last_error.set_loc(__FILE__, __LINE__);
+    m_last_error.set_msg() << msg;
+}
+
+WTF_API std::ostream&
+operator << (std::ostream& lhs, wtf_client_returncode rhs)
+{
+    switch (rhs)
+    {
+        STRINGIFY(WTF_CLIENT_SUCCESS);
+        STRINGIFY(WTF_CLIENT_NOTFOUND);
+        STRINGIFY(WTF_CLIENT_INVALID);
+        STRINGIFY(WTF_CLIENT_BADF);
+        STRINGIFY(WTF_CLIENT_READONLY);
+        STRINGIFY(WTF_CLIENT_NAMETOOLONG);
+        STRINGIFY(WTF_CLIENT_EXIST);
+        STRINGIFY(WTF_CLIENT_ISDIR);
+        STRINGIFY(WTF_CLIENT_NOTDIR);
+        STRINGIFY(WTF_CLIENT_UNKNOWNSPACE);
+        STRINGIFY(WTF_CLIENT_COORDFAIL);
+        STRINGIFY(WTF_CLIENT_SERVERERROR);
+        STRINGIFY(WTF_CLIENT_POLLFAILED);
+        STRINGIFY(WTF_CLIENT_OVERFLOW);
+        STRINGIFY(WTF_CLIENT_RECONFIGURE);
+        STRINGIFY(WTF_CLIENT_TIMEOUT);
+        STRINGIFY(WTF_CLIENT_NONEPENDING);
+        STRINGIFY(WTF_CLIENT_NOMEM);
+        STRINGIFY(WTF_CLIENT_BADCONFIG);
+        STRINGIFY(WTF_CLIENT_DUPLICATE);
+        STRINGIFY(WTF_CLIENT_INTERRUPTED);
+        STRINGIFY(WTF_CLIENT_CLUSTER_JUMP);
+        STRINGIFY(WTF_CLIENT_COORD_LOGGED);
+        STRINGIFY(WTF_CLIENT_BACKOFF);
+        STRINGIFY(WTF_CLIENT_IO);
+        STRINGIFY(WTF_CLIENT_INTERNAL);
+        STRINGIFY(WTF_CLIENT_EXCEPTION);
+        STRINGIFY(WTF_CLIENT_GARBAGE);
+        default:
+            lhs << "unknown wtf_client_returncode";
+            return lhs;
+    }
 }

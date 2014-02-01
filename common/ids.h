@@ -77,14 +77,14 @@
     OPERATOR(TYPE, >=) \
     OPERATOR(TYPE, >)
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 CREATE_ID(cluster)
 CREATE_ID(version)
 CREATE_ID(server)
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #undef OPERATOR
 #undef CREATE_ID

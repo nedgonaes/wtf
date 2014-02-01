@@ -45,7 +45,7 @@
 // WTF
 #include "common/configuration.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class coordinator_link
 {

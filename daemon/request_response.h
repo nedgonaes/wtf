@@ -34,7 +34,7 @@
 // BusyBee
 #include <busybee_single.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 template<typename hostname>
@@ -78,6 +78,6 @@ request_response(hostname hn,
     return true;
 }
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_request_response_h_

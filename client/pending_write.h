@@ -31,7 +31,7 @@
 // WTF
 #include "client/pending_aggregation.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class pending_write : public pending_aggregation
 {

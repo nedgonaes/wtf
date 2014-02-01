@@ -438,7 +438,7 @@ admin :: loop(int timeout, wtf_admin_returncode* status)
         const pending_server_pair psp(it->second);
         e::intrusive_ptr<pending> op = psp.op;
 
-        if (msg_type == WTFNET_CONFIG_MISMATCH)
+        if (msg_type == CONFIGMISMATCH)
         {
             m_failed.push_back(psp);
             continue;

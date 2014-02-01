@@ -31,7 +31,7 @@
 // e
 #include <e/buffer.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 enum wtf_network_msgtype
@@ -61,6 +61,6 @@ operator >> (e::unpacker lhs, wtf_network_msgtype& rhs);
 size_t
 pack_size(const wtf_network_msgtype& rhs);
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_network_msgtype_h_

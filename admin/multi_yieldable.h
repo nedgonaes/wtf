@@ -41,7 +41,7 @@
 #include "common/network_msgtype.h"
 #include "admin/yieldable.h"
 
-namespace wtf {
+namespace wtf __attribute__ ((visibility("hidden"))) {
 class admin;
 
 class multi_yieldable : public yieldable

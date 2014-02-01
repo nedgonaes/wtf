@@ -31,7 +31,7 @@
 // WTF 
 #include "common/coordinator_returncode.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 static inline void
 generate_response(replicant_state_machine_context* ctx, coordinator_returncode x)

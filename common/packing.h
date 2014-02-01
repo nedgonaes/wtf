@@ -35,7 +35,7 @@
 // e
 #include <e/buffer.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 e::buffer::packer
@@ -56,6 +56,6 @@ operator >> (e::unpacker lhs, po6::net::location& rhs);
 size_t
 pack_size(const po6::net::location& rhs);
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_packing_h_

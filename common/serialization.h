@@ -36,9 +36,8 @@
 #include <e/buffer.h>
 
 // WTF
-#include "client/client.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 e::buffer::packer
@@ -83,6 +82,6 @@ pack_size(const std::vector<T>& v)
     return sz;
 }
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 
 #endif // wtf_common_serialization_h_

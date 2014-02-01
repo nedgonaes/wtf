@@ -38,12 +38,12 @@
 // e
 #include <e/guard.h>
 #include <e/time.h>
+#include <e/slice.h>
 #include <numbers.h>
 #include <armnod.h>
 
 // WTF 
-#include "common/network_msgtype.h"
-#include "client/client.h"
+#include <wtf/client.hpp>
 
 static long _done = 0;
 static long _number = 1000;
@@ -96,17 +96,18 @@ worker_thread( numbers::throughput_latency_logger* tll,
     try
     {
 
-        wtf_client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
+        wtf::Client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
         while (__sync_fetch_and_add(&_done, 1) < _number)
         {
             std::string v = val();
-            wtf_returncode status = WTF_GARBAGE;
+            wtf_client_returncode status = WTF_CLIENT_GARBAGE;
             std::string f = file();
             std::cout << "File: " << f << std::endl;
-            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
+            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), &status);
 
             tll->start(&ts, 1);
-            int64_t reqid = cl.write(fd, v.data(), v.size(), 1, &status);
+            size_t sz = v.size();
+            int64_t reqid = cl.write(fd, v.data(), &sz, 1, &status);
 
             if (reqid < 0)
             {
@@ -114,9 +115,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return;
             }
 
-            wtf_returncode rc = WTF_GARBAGE;
+            wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
 
-            reqid = cl.flush(fd, &rc);
             cl.close(fd, &rc);
 
             tll->finish(&ts);
@@ -130,8 +130,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
             //std::string d(v.size(), '0');
             char* dd = new char[v.size()];
             std::cout << "output pointer = " << (void*)dd << std::endl;
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
-            uint32_t sz = v.size();
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, &status);
+            sz = v.size();
             reqid = cl.read(fd, dd, &sz, &status);
 
 
@@ -140,8 +140,6 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 std::cerr << "wtf_client->read encountered " << rc << std::endl;
                 return; 
             }
-
-            reqid = cl.flush(fd, &rc);
 
             if (reqid < 0)
             {
@@ -166,10 +164,11 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             std::string v2 = v;
             v2.replace(0,3,"XXX");
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, &status);
 
             tll->start(&ts, 1);
-            reqid = cl.write(fd, "XXX", 3, 1, &status);
+            sz = 3;
+            reqid = cl.write(fd, "XXX", &sz, 1, &status);
 
             if (reqid < 0)
             {
@@ -177,9 +176,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return;
             }
 
-            rc = WTF_GARBAGE;
+            rc = WTF_CLIENT_GARBAGE;
 
-            reqid = cl.flush(fd, &rc);
             cl.close(fd, &rc);
 
             tll->finish(&ts);
@@ -190,10 +188,10 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
 
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 777);
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, &status);
 
             char* dd2 = new char[v.size()];
-            uint32_t sz2 = v2.size();
+            size_t sz2 = v2.size();
             reqid = cl.read(fd, dd2, &sz2, &status);
 
 
@@ -202,8 +200,6 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 std::cerr << "wtf_client->read encountered " << rc << std::endl;
                 return; 
             }
-
-            reqid = cl.flush(fd, &rc);
 
             if (reqid < 0)
             {
@@ -228,12 +224,12 @@ worker_thread( numbers::throughput_latency_logger* tll,
             delete [] dd;
             delete [] dd2;
 
-            if (cl.mkdir("/foo", 777) < 0)
+            if (cl.mkdir("/foo", 0777, &status) < 0)
             {
                 std::cerr << "Can't mkdir foo" << std::endl;
             }
 
-            if (cl.mkdir("/foo", 777) == 0)
+            if (cl.mkdir("/foo", 0777, &status) == 0)
             {
                 std::cerr << "Allows mkdir twice." << std::endl;
             }

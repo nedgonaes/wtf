@@ -31,7 +31,7 @@
 // WTF
 #include "admin/pending.h"
 
-namespace wtf {
+namespace wtf __attribute__ ((visibility("hidden"))) {
 class admin;
 
 class pending_string : public pending

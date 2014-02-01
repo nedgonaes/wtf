@@ -35,8 +35,10 @@
 
 // WTF
 #include "client/file.h"
+#include "common/block_location.h"
 
 using wtf::file;
+using wtf::block_location;
 
 file :: file(const char* path)
     : m_ref(0)
@@ -44,6 +46,7 @@ file :: file(const char* path)
     , m_commands()
     , m_fd(0)
     , m_block_map()
+    , m_current_block()
     , m_offset(0)
     , is_directory(false)
     , flags(0)
@@ -53,6 +56,70 @@ file :: file(const char* path)
 file :: ~file() throw ()
 {
 }
+
+
+block_location 
+file :: current_block()
+{
+    //XXX:
+    return m_current_block;
+}
+
+size_t 
+file :: bytes_left_in_block()
+{
+    //XXX:
+    return 0;
+}
+
+size_t 
+file :: current_block_length()
+{
+    //XXX:
+    return 0;
+}
+
+void 
+file :: copy_current_block_locations(std::vector<block_location>& bl)
+{
+    //XXX
+}
+
+void 
+file :: advance(size_t len)
+{
+    //XXX:
+}
+
+size_t 
+file :: bytes_left_in_file()
+{
+    //XXX
+    return 0;
+}
+
+bool 
+file :: pending_ops_empty()
+{
+    //XXX
+    return true;
+}
+
+int64_t 
+file :: pending_ops_pop_front()
+{
+    //XXX
+    return 0;
+}
+
+
+
+
+
+
+
+
+
 
 void
 file :: update_blocks(uint64_t block_index, uint64_t len, 

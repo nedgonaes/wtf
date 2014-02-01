@@ -43,7 +43,7 @@
 #include "common/ids.h"
 #include "blockstore/blockmap.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
     class block_map;
     class block_storage_manager

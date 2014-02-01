@@ -38,7 +38,7 @@
 #include <client/client.h>
 #include <common/block_location.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 class block

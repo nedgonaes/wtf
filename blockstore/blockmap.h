@@ -34,7 +34,7 @@
 #ifndef wtf_blockmap_h_
 #define wtf_blockmap_h_
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
     class blockmap
     {

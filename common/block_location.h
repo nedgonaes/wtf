@@ -39,7 +39,7 @@
 #include <e/buffer.h>
 #include <e/endian.h>
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 
 #define OPERATORDECL(OP) \

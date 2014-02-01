@@ -31,7 +31,7 @@
 // WTF
 #include "admin/coord_rpc.h"
 
-namespace wtf {
+namespace wtf __attribute__ ((visibility("hidden"))) {
 
 class coord_rpc_generic : public coord_rpc
 {

@@ -66,7 +66,7 @@
 void
 wtf_destroy_output(const char* output, size_t output_sz);
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class server;
 class configuration;
@@ -211,5 +211,5 @@ class client
 std::ostream&
 operator << (std::ostream& lhs, wtf_client_returncode rhs);
 
-} // namespace wtf
+} // namespace wtf __attribute__ ((visibility("hidden")))
 #endif /* client_client_h_ */

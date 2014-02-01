@@ -91,42 +91,42 @@ extern "C"
                                          uint16_t hyper_port);
     void wtf_client_destroy(struct wtf_client* m_cl);
     int64_t wtf_client_getcwd(struct wtf_client* m_cl, 
-            char* path, size_t len);
+            char* path, size_t len, wtf_client_returncode* status);
     int64_t wtf_client_chdir(struct wtf_client* m_cl, 
-            char* path);
+            char* path, wtf_client_returncode* status);
     int64_t wtf_client_open(struct wtf_client* m_cl, 
-            const char* path, int flags, mode_t mode);
+            const char* path, int flags, mode_t mode, wtf_client_returncode* status);
     int64_t wtf_client_getattr(struct wtf_client* m_cl, 
             const char* path, 
-            struct wtf_file_attrs* fa);
-    void wtf_client_lseek(struct wtf_client* m_cl, 
-            int64_t fd, size_t offset);
-    void wtf_client_begin_tx(struct wtf_client* m_cl);
-    int64_t wtf_client_end_tx(struct wtf_client* m_cl);
+            struct wtf_file_attrs* fa, wtf_client_returncode* status);
+    int64_t wtf_client_lseek(struct wtf_client* m_cl, 
+            int64_t fd, size_t offset, wtf_client_returncode* status);
+    int64_t wtf_client_begin_tx(struct wtf_client* m_cl, wtf_client_returncode* status);
+    int64_t wtf_client_end_tx(struct wtf_client* m_cl, wtf_client_returncode* status);
     int64_t wtf_client_mkdir(struct wtf_client* m_cl, 
-            const char* path, mode_t mode);
+            const char* path, mode_t mode, wtf_client_returncode* status);
     int64_t wtf_client_chmod(struct wtf_client* m_cl, 
-            const char* path, mode_t mode);
+            const char* path, mode_t mode, wtf_client_returncode* status);
     int64_t wtf_client_write(struct wtf_client* m_cl, 
             int64_t fd, const char* data, 
-            uint32_t data_sz, uint32_t replicas, 
+            size_t* data_sz, size_t replicas, 
             wtf_client_returncode* status);
     int64_t wtf_client_read(struct wtf_client* m_cl, 
             int64_t fd, char* data, 
-            uint32_t* data_sz, 
+            size_t* data_sz, 
             wtf_client_returncode* status);
     int64_t wtf_client_close(struct wtf_client* m_cl, 
             int64_t fd, wtf_client_returncode* status);
     int64_t wtf_client_loop(struct wtf_client* m_cl, int64_t id, 
             int timeout, wtf_client_returncode* status);
     int64_t wtf_client_truncate(struct wtf_client* m_cl, 
-            int64_t fd, size_t length);
+            int64_t fd, size_t length, wtf_client_returncode* status);
     int64_t wtf_client_opendir(struct wtf_client* m_cl, 
-            const char* path);
+            const char* path, wtf_client_returncode* status);
     int64_t wtf_client_closedir(struct wtf_client* m_cl, 
-            int64_t fd);
+            int64_t fd, wtf_client_returncode* status);
     int64_t wtf_client_readdir(struct wtf_client* m_cl, 
-            int64_t fd, char* entry);
+            int64_t fd, char* entry, wtf_client_returncode* status);
 
     const char* wtf_client_error_message(struct wtf_client* m_cl);
     const char* wtf_client_error_location(struct wtf_client* m_cl);

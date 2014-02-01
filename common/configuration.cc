@@ -165,6 +165,13 @@ configuration :: get_random_server(uint64_t sid) const
     return &m_servers[id];
 }
 
+void 
+configuration :: copy_n_block_locations(int num_replicas, 
+                                        std::vector<block_location>& bl) const
+{
+    //XXX
+}
+
 bool
 wtf :: operator == (const configuration& lhs, const configuration& rhs)
 {

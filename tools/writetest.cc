@@ -41,10 +41,8 @@
 #include <e/guard.h>
 
 // WTF 
-#include "common/network_msgtype.h"
-#include "client/client.h"
+#include <wtf/client.hpp>
 #include "tools/common.h"
-#include "common/ids.h"
 
 static const char* _file = "writetestdata";
 
@@ -71,19 +69,17 @@ main(int argc, const char* argv[])
 
     try
     {
-        wtf_client r(conn.coord_host(), conn.coord_port(), conn.hyper_host(), conn.hyper_port());
+        wtf::Client r(conn.coord_host(), conn.coord_port(), conn.hyper_host(), conn.hyper_port());
         std::string s;
         std::ifstream f(_file);
 
         while (std::getline(f, s))
         {
-            wtf_returncode re = WTF_GARBAGE;
-            wtf_returncode le = WTF_GARBAGE;
+            wtf_client_returncode re = WTF_CLIENT_GARBAGE;
+            wtf_client_returncode le = WTF_CLIENT_GARBAGE;
             int64_t rid = 0;
             int64_t lid = 0;
 
-            wtf::wtf_network_msgtype msgtype = wtf::WTFNET_NOP;
-            
             std::string *item = new std::string();
             std::string path;
 
@@ -123,7 +119,7 @@ main(int argc, const char* argv[])
                 return EXIT_FAILURE;
             }
 
-            if (re != WTF_SUCCESS)
+            if (re != WTF_CLIENT_SUCCESS)
             {
                 std::cerr << "could not process request: " << r.last_error_desc()
                           << " (" << re << ")" << std::endl;
@@ -136,7 +132,7 @@ main(int argc, const char* argv[])
         }
 
         std::cout << "Done flushing." << std::endl;
-        wtf_returncode e = WTF_SUCCESS; 
+        wtf_client_returncode e = WTF_CLIENT_SUCCESS; 
 
         return EXIT_SUCCESS;
     }

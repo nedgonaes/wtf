@@ -67,20 +67,15 @@ noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += tools/fusewtf.h
+noinst_HEADERS += visibility.h
 
 bin_PROGRAMS += wtf
 
-noinst_PROGRAMS += wtf-writetest 
-noinst_PROGRAMS += wtf-readtest
 noinst_PROGRAMS += wtf-readwritetest
-noinst_PROGRAMS += wtf-sync-benchmark
-noinst_PROGRAMS += wtf-async-benchmark
 #noinst_PROGRAMS += wtf-test-blockstore
 if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
 endif
-noinst_PROGRAMS += wtf-shelltest
-noinst_PROGRAMS += wtf-fusetest
 
 wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
@@ -189,6 +184,7 @@ libwtf_client_la_SOURCES += common/network_msgtype.cc
 libwtf_client_la_SOURCES += common/packing.cc
 libwtf_client_la_SOURCES += common/response_returncode.cc
 libwtf_client_la_SOURCES += common/block.cc
+libwtf_client_la_SOURCES += client/c.cc
 libwtf_client_la_SOURCES += client/pending.cc
 libwtf_client_la_SOURCES += client/pending_aggregation.cc
 libwtf_client_la_SOURCES += client/pending_read.cc
@@ -259,36 +255,14 @@ wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 wtf_SOURCES = wtf.cc
 wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 
-wtf_writetest_SOURCES = tools/writetest.cc
-wtf_writetest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
-
-wtf_shelltest_SOURCES = tools/shelltest.cc
-wtf_shelltest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
-
-wtf_fusetest_SOURCES = tools/fusetest.cc
-wtf_fusetest_LDADD = -lfuse libwtf.la
-wtf_fusetest_CPPFLAGS = -D_FILE_OFFSET_BITS=64
-
-wtf_readtest_SOURCES = tools/readtest.cc
-wtf_readtest_LDADD = libwtf.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
-
 if ENABLE_HDFS_BENCHMARKS
 wtf_hadoop_benchmark_SOURCES = tools/hadoop-benchmark.cc
 wtf_hadoop_benchmark_CPPFLAGS = -I${HADOOP_HOME}/src/c++/libhdfs -I${JAVA_HOME}/include -I${abs_top_srcdir}/client $(CPPFLAGS)
 wtf_hadoop_benchmark_LDADD =  -lpopt -lnumbers -larmnod -L${HADOOP_HOME}/build/c++/Linux-amd64-64/lib -L${JAVA_HOME}/jre/lib/amd64/server -lhdfs -ljvm
 endif
 
-wtf_sync_benchmark_SOURCES = tools/sync-benchmark.cc
-wtf_sync_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
-wtf_sync_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
-
 wtf_readwritetest_SOURCES = tools/readwritetest.cc
-wtf_readwritetest_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
-wtf_readwritetest_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
-
-wtf_async_benchmark_SOURCES = tools/async-benchmark.cc
-wtf_async_benchmark_CPPFLAGS = -I${abs_top_srcdir}/client $(CPPFLAGS)
-wtf_async_benchmark_LDADD = libwtf.la $(E_LIBS) $(HYPERCLIENT_LIBS) -lpopt -lnumbers -larmnod
+wtf_readwritetest_LDADD = libwtf-client.la -le -lpopt -lnumbers -larmnod
 
 wtf_mkfs_SOURCES = tools/mkfs.cc
 wtf_mkfs_CPPFLAGS = $(CPPFLAGS) 

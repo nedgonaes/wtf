@@ -456,7 +456,7 @@ daemon :: loop(size_t thread)
     {
         assert(msg.get());
         uint64_t nonce = 0;
-        wtf_network_msgtype mt = WTFNET_NOP;
+        wtf_network_msgtype mt = PACKET_NOP;
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
         up = up >> mt >> nonce;
 
@@ -464,15 +464,15 @@ daemon :: loop(size_t thread)
 
         switch (mt)
         {
-            case WTFNET_NOP:
+            case PACKET_NOP:
                 break;
-            case WTFNET_GET:
+            case REQ_GET:
                 process_get(conn, nonce, msg, up);
                 break;
-            case WTFNET_PUT:
+            case REQ_PUT:
                 process_put(conn, nonce, msg, up);
                 break;
-            case WTFNET_UPDATE:
+            case REQ_UPDATE:
                 process_update(conn, nonce, msg, up);
                 break;
             default:
@@ -592,7 +592,8 @@ daemon :: process_put(const wtf::connection& conn,
 
     LOG(INFO) << "PUT: " << data.hex();
 
-    ret = m_blockman.write_block(data, m_us.get(), bid); 
+    uint64_t us = m_us.get();
+    ret = m_blockman.write_block(data, us, bid); 
 
     if (ret < data.size())
     {

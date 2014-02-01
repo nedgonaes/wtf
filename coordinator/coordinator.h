@@ -43,7 +43,7 @@
 #include "common/server.h"
 #include "coordinator/server_barrier.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class coordinator
 {

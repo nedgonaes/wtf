@@ -34,7 +34,7 @@
 // WTF
 #include "common/ids.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class server
 {

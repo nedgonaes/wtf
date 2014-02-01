@@ -41,7 +41,7 @@
 #include "common/ids.h"
 #include "common/network_msgtype.h"
 
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
 class client;
     

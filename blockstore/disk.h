@@ -33,7 +33,7 @@
 #include <glog/raw_logging.h>
 
 #include <e/slice.h>
-namespace wtf
+namespace wtf __attribute__ ((visibility("hidden")))
 {
     class disk 
     {
