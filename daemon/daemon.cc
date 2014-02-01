@@ -89,7 +89,7 @@ bool s_debug = false;
     } while (0)
 
 #define COMMAND_HEADER_SIZE (BUSYBEE_HEADER_SIZE + \
-    pack_size(wtf::WTFNET_COMMAND_RESPONSE) + \
+    pack_size(wtf::RESP_GET) + \
     pack_size(wtf::RESPONSE_SUCCESS) + sizeof(uint64_t))
 
 static void
@@ -460,8 +460,6 @@ daemon :: loop(size_t thread)
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
         up = up >> mt >> nonce;
 
-        LOG(INFO) << "msgtype: " << mt << ", nonce: " << nonce;
-
         switch (mt)
         {
             case PACKET_NOP:
@@ -586,35 +584,30 @@ daemon :: process_put(const wtf::connection& conn,
 {
     wtf::response_returncode rc;
     uint64_t bid;
+    uint32_t block_offset;
     ssize_t ret = 0;
 
+    up = up >> bid >> block_offset;  // only used for UPDATE.. should be 0 for PUT.
     e::slice data = up.as_slice();
-
-    LOG(INFO) << "PUT: " << data.hex();
 
     uint64_t us = m_us.get();
     ret = m_blockman.write_block(data, us, bid); 
 
     if (ret < data.size())
     {
-        rc = wtf::RESPONSE_SERVER_ERROR;
+        rc = RESPONSE_SERVER_ERROR;
     }
     else
     {
-        rc = wtf::RESPONSE_SUCCESS;
+        rc = RESPONSE_SUCCESS;
     }
-
-    LOG(INFO) << "Returning " << rc << " to client.";
-    LOG(INFO) << "bid = " << bid;
-
 
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* token */
                 sizeof(uint64_t);  /* block id */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
-            << bid;
+    pa = pa << RESP_PUT << nonce << rc << bid;
     send(conn, resp);
 }
 
@@ -626,42 +619,31 @@ daemon :: process_get(const wtf::connection& conn,
 {
     wtf::response_returncode rc;
     uint64_t bid;
-    uint64_t len;
+    uint32_t len;
     ssize_t ret;
 
-    LOG(INFO) << "GET: " << msg->as_slice().hex();
-
     up = up >> bid >> len;
-
-    LOG(INFO) << "bid = " << bid;
-
     uint8_t* data = new uint8_t[len];
-    LOG(INFO) << "len: " << len;
     ret = m_blockman.read_block(m_us.get(), bid, data, len);
 
     if (ret < len)
     {
-        rc = wtf::RESPONSE_SERVER_ERROR;
-        LOG(INFO) << "ret = " << ret << " len = " << len;
-        len = ret;
+        rc = RESPONSE_SERVER_ERROR;
+        LOG(WARNING) << "block manager returned " << ret << " which is less than expected length " << len;
+        len = 0;
     }
     else
     {
-        rc = wtf::RESPONSE_SUCCESS;
+        rc = RESPONSE_SUCCESS;
     }
 
-    LOG(INFO) << "Returning " << rc << " to client.";
     size_t sz = COMMAND_HEADER_SIZE + 
                 len;
 
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc;
+    pa = pa << RESP_GET << nonce << rc;
 
-    LOG(INFO) << "pa.remain(): " << pa.remain(); 
-    LOG(INFO) << "len: " << len;
-    LOG(INFO) << "ret: " << ret;
-    fflush(stdout);
     if (len > 0) 
     {
         pa = pa.copy(e::slice(data,len));
@@ -669,7 +651,6 @@ daemon :: process_get(const wtf::connection& conn,
 
     delete [] data;
 
-    LOG(INFO) << "respons: " << resp->as_slice().hex();
     send(conn, resp);
 }
 
@@ -681,17 +662,17 @@ daemon :: process_update(const wtf::connection& conn,
                             e::unpacker up)
 {
     wtf::response_returncode rc;
+    uint64_t sid;
     uint64_t bid;
-    uint64_t offset;
+    uint32_t offset;
     ssize_t ret = 0;
 
 
     up = up >> bid >> offset;
-
     e::slice data = up.as_slice();
-    LOG(INFO) << "UPDATE: " << data.hex();
+    sid = m_us.get();
 
-    ret = m_blockman.update_block(data, offset, m_us.get(), bid); 
+    ret = m_blockman.update_block(data, offset, sid, bid); 
 
     if (ret < data.size())
     {
@@ -710,7 +691,7 @@ daemon :: process_update(const wtf::connection& conn,
                 sizeof(uint64_t);  /* block id */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << wtf::WTFNET_COMMAND_RESPONSE << nonce << rc 
+    pa = pa << RESP_UPDATE << nonce << rc 
             << bid;
     send(conn, resp);
 }

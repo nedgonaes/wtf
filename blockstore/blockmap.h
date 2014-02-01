@@ -27,14 +27,14 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "disk.h"
+#include "blockstore/disk.h"
 
-#include "vblock.h"
+#include "blockstore/vblock.h"
 
 #ifndef wtf_blockmap_h_
 #define wtf_blockmap_h_
 
-namespace wtf __attribute__ ((visibility("hidden")))
+namespace wtf __attribute__ ((visibility("default")))
 {
     class blockmap
     {

@@ -163,6 +163,7 @@ class client
                               size_t& rem, 
                               size_t& buf_offset,
                               block_location& bl, 
+                              uint32_t& block_size,
                               e::intrusive_ptr<pending_read> op, 
                               std::vector<server_id>& servers);
     private:

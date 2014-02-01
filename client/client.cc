@@ -567,7 +567,6 @@ client :: write(int64_t fd, const char* buf,
     while(rem > 0)
     {
         std::vector<block_location> bl;
-        std::vector<server_id> servers;
         size_t buf_offset = next_buf_offset;
         uint32_t block_offset;
         size_t slice_len;
@@ -578,13 +577,12 @@ client :: write(int64_t fd, const char* buf,
         for (size_t i = 0; i < bl.size(); ++i)
         {
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                + sizeof(uint64_t) // client_id
                 + sizeof(uint64_t) // bl.bi (remote block number) 
-                + sizeof(uint64_t) // block_offset (remote block offset) 
+                + sizeof(uint32_t) // block_offset (remote block offset) 
                 + data.size();     // user data 
             std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
             e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-                pa = pa << client_id << bl[i].bi << block_offset;
+                pa = pa << bl[i].bi << block_offset;
             pa.copy(data);
 
             if (!maintain_coord_connection(status))
@@ -592,6 +590,7 @@ client :: write(int64_t fd, const char* buf,
                 return -1;
             }
 
+            std::vector<server_id> servers;
             servers.push_back(server_id(bl[i].si));
             perform_aggregation(servers, op, mt, msg, status);
         }
@@ -670,13 +669,13 @@ client :: read(int64_t fd, char* buf,
     while(rem > 0)
     {
         block_location bl;
+        uint32_t block_length;
         std::vector<server_id> servers;
-        prepare_read_op(f, rem, buf_offset, bl, op, servers);
+        prepare_read_op(f, rem, buf_offset, bl, block_length, op, servers);
         size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                  + sizeof(uint64_t) // client_id
                   + sizeof(uint64_t); // bl.bi (local block number) 
         std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-        msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << client_id << bl.bi;
+        msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bl.bi << block_length;
 
         if (!maintain_coord_connection(status))
         {
@@ -694,11 +693,12 @@ client :: prepare_read_op(e::intrusive_ptr<file> f,
                               size_t& rem, 
                               size_t& buf_offset,
                               block_location& bl, 
+                              uint32_t& block_length,
                               e::intrusive_ptr<pending_read> op, 
                               std::vector<server_id>& servers)
 {
     size_t bytes_left = f->bytes_left_in_block();
-    size_t block_length = f->current_block_length();
+    block_length = f->current_block_length();
     size_t block_offset = bytes_left - block_length;
     
     bl = f->current_block();

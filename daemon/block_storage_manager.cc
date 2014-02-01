@@ -42,10 +42,12 @@
 
 // WTF
 #include "daemon/block_storage_manager.h"
+#include "blockstore/blockmap.h"
 
 using wtf::block_storage_manager;
+using wtf::blockmap;
 
-    block_storage_manager::block_storage_manager()
+block_storage_manager::block_storage_manager()
     : m_prefix()
     , m_last_block_num()
     , m_blockmap()
@@ -86,7 +88,7 @@ block_storage_manager::write_block(const e::slice& data,
 
 ssize_t
 block_storage_manager::update_block(const e::slice& data,
-        uint64_t offset,
+        uint32_t offset,
         uint64_t& sid,
         uint64_t& bid)
 {

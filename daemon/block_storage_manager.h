@@ -45,7 +45,6 @@
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-    class block_map;
     class block_storage_manager
     {
         public:
@@ -63,7 +62,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
                                  uint64_t& sid,
                                  uint64_t& bid);
             ssize_t update_block(const e::slice& data,
-                                 uint64_t offset,
+                                 uint32_t offset,
                                  uint64_t& sid,
                                  uint64_t& bid);
             ssize_t read_block(uint64_t sid,

@@ -1,4 +1,5 @@
-#include "blockmap.h"
+#include "blockstore/blockmap.h"
+
 #define BACKING_SIZE 2147483648
 #define ROUND_UP(X, Y) ((X + Y - 1) & (X))
 
@@ -9,7 +10,6 @@ blockmap::blockmap() : m_db()
                      , m_backing_size(ROUND_UP(BACKING_SIZE, getpagesize()))
                      , m_block_id(0)
 {
-    //LOG(INFO) << "m_backing_size = " << BACKING_SIZE << " + " << getpagesize();
 }
 
 blockmap::~blockmap() {}
