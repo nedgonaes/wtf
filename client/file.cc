@@ -37,13 +37,15 @@
 #include "client/file.h"
 #include "common/block_location.h"
 
+#define DEFAULT_BLOCK_SIZE 4096 
+
 using wtf::file;
 using wtf::block_location;
 
 file :: file(const char* path)
     : m_ref(0)
     , m_path(path)
-    , m_commands()
+    , m_pending()
     , m_fd(0)
     , m_block_map()
     , m_current_block()
@@ -59,24 +61,33 @@ file :: ~file() throw ()
 
 
 block_location 
-file :: current_block()
+file :: current_block_location()
 {
-    //XXX:
-    return m_current_block;
+    return m_current_block->first_location();
 }
 
 size_t 
 file :: bytes_left_in_block()
 {
-    //XXX:
-    return 0;
+    return m_bytes_left_in_block;
+}
+
+size_t
+file :: bytes_left_in_file()
+{
+    return m_file_length - m_offset;
 }
 
 size_t 
 file :: current_block_length()
 {
-    //XXX:
-    return 0;
+    return m_current_block_length;
+}
+
+size_t
+file :: current_block_offset()
+{
+    return m_bytes_left_in_block - m_current_block_length;
 }
 
 void 
@@ -85,17 +96,48 @@ file :: copy_current_block_locations(std::vector<block_location>& bl)
     //XXX
 }
 
-void 
-file :: advance(size_t len)
+size_t
+file :: advance_to_end_of_block(size_t len)
 {
-    //XXX:
+    size_t ret = 0;
+
+    if (m_bytes_left_in_block < len)
+    {
+        m_offset += len;
+        m_bytes_left_in_block -= len;
+        ret = len;
+    }
+    else
+    {
+        ret = m_bytes_left_in_block;
+        m_offset += m_bytes_left_in_block;
+
+        /* updates m_bytes_left_in_block, m_current_block
+           and m_current_block_length. creates new empty
+           blocks where necessary.*/
+        
+        move_to_next_block();
+    }
+
+    return ret;
 }
 
-size_t 
-file :: bytes_left_in_file()
+void
+file :: move_to_next_block()
 {
-    //XXX
-    return 0;
+    block_map::iterator it = m_block_map.find(m_offset);
+    if (it == m_block_map.end())
+    {
+        m_current_block = new block();
+        m_block_map[m_offset] = m_current_block;
+    }
+    else
+    {
+        m_current_block = it->second;
+    }
+
+    m_bytes_left_in_block = m_current_block->length();
+    m_current_block_length = m_bytes_left_in_block;
 }
 
 bool 

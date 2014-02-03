@@ -60,6 +60,7 @@ class block
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
         std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
         bool dirty() { return m_dirty; }
+        bool is_hole() { return m_is_hole; }
 
     private:
         friend class e::intrusive_ptr<block>;
@@ -89,6 +90,7 @@ class block
         block_list m_block_list;
         uint64_t m_version;
         uint64_t m_length;
+        bool m_is_hole;
         bool m_dirty;
 };
 

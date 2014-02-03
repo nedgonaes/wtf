@@ -609,25 +609,9 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
                               uint32_t& block_offset,
                               size_t& slice_len)
 {
-    size_t bytes_left = f->bytes_left_in_block();
-    size_t block_length = f->current_block_length();
-    block_offset = bytes_left - block_length;
-
-    if (block_offset != 0 || bytes_left < rem)
-    {
-        //partial block update case.
-        f->copy_current_block_locations(bl);
-        mt = REQ_UPDATE;
-    }
-    else
-    {
-        //full block write case
-        m_coord.config()->copy_n_block_locations(num_replicas, bl);
-        mt = REQ_PUT;
-    }
-
-    slice_len = std::min(bytes_left, rem);
-    f->advance(slice_len);
+    f->copy_current_block_locations(bl);
+    block_offset = f->current_block_offset();
+    slice_len = f->advance_to_end_of_block(rem);
     buf_offset += slice_len;
     rem -= slice_len;
 }
@@ -697,17 +681,14 @@ client :: prepare_read_op(e::intrusive_ptr<file> f,
                               e::intrusive_ptr<pending_read> op, 
                               std::vector<server_id>& servers)
 {
-    size_t bytes_left = f->bytes_left_in_block();
     block_length = f->current_block_length();
-    size_t block_offset = bytes_left - block_length;
-    
-    bl = f->current_block();
+    size_t block_offset = f->current_block_offset(); 
+    bl = f->current_block_location();
     servers.push_back(server_id(bl.si));
 
-    size_t advance = std::min(bytes_left, rem);
-
+    size_t advance = f->advance_to_end_of_block(rem);
     op->set_offset(bl.si, bl.bi, buf_offset, block_offset, advance);
-    f->advance(advance);
+
     buf_offset += advance;
     rem -= advance;
 }

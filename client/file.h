@@ -58,12 +58,14 @@ class file
         void path(const char* path) { m_path = po6::pathname(path); }
         po6::pathname path() { return m_path; }
 
-        block_location current_block();
+        block_location current_block_location();
         size_t bytes_left_in_block();
+        size_t bytes_left_in_file();
         size_t current_block_length();
+        size_t current_block_offset();
         void copy_current_block_locations(std::vector<block_location>& bl);
-        void advance(size_t len);
-        size_t bytes_left_in_file(); 
+        size_t advance_to_end_of_block(size_t len);
+        void move_to_next_block();
         bool pending_ops_empty();
         int64_t pending_ops_pop_front();
 
@@ -106,10 +108,15 @@ class file
         po6::pathname m_path;
         wtf_client* m_client;
         int64_t m_fd;
-        std::list<int64_t> m_commands;
+        std::list<int64_t> m_pending;
         block_map m_block_map;
-        block_location m_current_block;
-        uint64_t m_offset;
+        e::intrusive_ptr<block> m_current_block;
+        size_t m_bytes_left_in_block;
+        size_t m_bytes_left_in_file;
+        size_t m_current_block_length;
+        size_t m_offset;
+        size_t m_file_length;
+
 
     public:
         bool is_directory;

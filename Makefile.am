@@ -25,23 +25,41 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
+
 AM_CPPFLAGS  = -I${abs_top_srcdir}/include $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(HYPERLEVELDB_CFLAGS) $(REPLICANT_CFLAGS) $(SPARSEHASH_CFLAGS)
 AM_CFLAGS = $(WANAL_CFLAGS)
 AM_CXXFLAGS = $(WANAL_CXXFLAGS) $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(LRT_CFLAGS)
 AM_LDFLAGS = $(PO6_LDFLAGS) $(E_LDFLAGS) $(BUSYBEE_LDFLAGS) $(REPLICANT_FLAGS)
+
+TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh 
+#"${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
+wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
+wtfheaderdir = $(includedir)/wtf
+pkgconfigdir = $(libdir)/pkgconfig
 
 if ENABLE_DEBUG
     AM_CXXFLAGS += -ggdb -O0
 endif
 
 lib_LTLIBRARIES =
+wtfexec_LTLIBRARIES =
+
 wtfheader_HEADERS =
-bin_PROGRAMS =
 noinst_HEADERS = 
+
+bin_PROGRAMS =
+wtfexec_PROGRAMS =
 noinst_PROGRAMS =
+check_PROGRAMS =
+
 pkgconfig_DATA =
 
-lib_LTLIBRARIES += libwtfblockstore.la
+
+check_PROGRAMS += testprogram 
+check_PROGRAMS += testprogram2 
+TESTS = testprogram testprogram2
+testprogram_SOURCES = test/test.cc
+testprogram2_SOURCES = test/test.cc
 
 noinst_HEADERS += common/block.h
 noinst_HEADERS += common/coordinator_link.h
@@ -77,7 +95,6 @@ if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
 endif
 
-wtfexec_PROGRAMS =
 wtfexec_PROGRAMS += wtf-coordinator
 wtfexec_PROGRAMS += wtf-daemon 
 wtfexec_PROGRAMS += wtf-mkfs
@@ -92,6 +109,9 @@ wtfexec_PROGRAMS += wtf-coordinator
 ################################################################################
 ################################## Blockstore ##################################
 ################################################################################
+
+lib_LTLIBRARIES += libwtfblockstore.la
+
 libwtfblockstore_la_SOURCES = 
 libwtfblockstore_la_SOURCES += blockstore/vblock.cc
 libwtfblockstore_la_SOURCES += blockstore/disk.cc
@@ -127,7 +147,7 @@ wtf_daemon_LDADD = $(E_LIBS) $(BUSYBEE_LIBS) $(REPLICANT_LIBS) \
 ################################## Coordinator #################################
 ################################################################################
 
-lib_LTLIBRARIES += libwtf-coordinator.la
+wtfexec_LTLIBRARIES += libwtf-coordinator.la
 
 noinst_HEADERS += coordinator/coordinator.h
 noinst_HEADERS += coordinator/server_barrier.h
@@ -154,7 +174,6 @@ wtf_coordinator_LDADD += -lpopt
 ################################## Client ######################################
 ################################################################################
 
-wtfheaderdir = $(includedir)/wtf
 
 lib_LTLIBRARIES += libwtf-client.la
 
@@ -250,7 +269,6 @@ libwtf_admin_la_LIBADD += $(REPLICANT_LIBS)
 ################################## fusewtf #####################################
 ################################################################################
 
-wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 
 wtf_SOURCES = wtf.cc
 wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
@@ -294,4 +312,3 @@ wtf_server_kill_LDADD = libwtf-admin.la -lpopt
 #endif
 
 
-pkgconfigdir = $(libdir)/pkgconfig
