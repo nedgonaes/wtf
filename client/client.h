@@ -86,8 +86,7 @@ class client
         int64_t canon_path(char* rel, char* abspath, size_t abspath_sz);
         int64_t getcwd(char* c, size_t len);
         int64_t chdir(char* path);
-        int64_t open(const char* path, int flags);
-        int64_t open(const char* path, int flags, mode_t mode);
+        int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas);
         int64_t getattr(const char* path, struct wtf_file_attrs* fa);
 
         void lseek(int64_t fd, uint64_t offset);
@@ -98,7 +97,6 @@ class client
         int64_t write(int64_t fd,
                       const char* buf,
                       size_t* buf_sz,
-                      int num_replicas,
                       wtf_client_returncode* status);
         int64_t read(int64_t fd,
                      char* data,
@@ -154,8 +152,6 @@ class client
         void prepare_write_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
                               std::vector<block_location>& bl,
-                              int num_replicas,
-                              wtf_network_msgtype& mt,
                               size_t& buf_offset,
                               uint32_t& block_offset,
                               size_t& slice_len);

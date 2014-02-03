@@ -58,8 +58,9 @@ class Client
             { return wtf_client_getcwd(m_cl, c, len, status); }
         int64_t chdir(char* path, wtf_client_returncode* status)
             { return wtf_client_chdir(m_cl, path, status); }
-        int64_t open(const char* path, int flags, mode_t mode, wtf_client_returncode* status)
-            { return wtf_client_open(m_cl, path, flags, mode, status); }
+        int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, 
+                     wtf_client_returncode* status)
+            { return wtf_client_open(m_cl, path, flags, mode, num_replicas, status); }
         int64_t getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status)
             { return wtf_client_getattr(m_cl, path, fa, status); }
         int64_t lseek(int64_t fd, uint64_t offset, wtf_client_returncode* status)
@@ -77,7 +78,7 @@ class Client
                       size_t* data_sz,
                       size_t replicas,
                       wtf_client_returncode* status)
-            { return wtf_client_write(m_cl, fd, data, data_sz, replicas, status); }
+            { return wtf_client_write(m_cl, fd, data, data_sz, status); }
         int64_t read(int64_t fd,
                      char* data,
                      size_t *data_sz,

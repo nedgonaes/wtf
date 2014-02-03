@@ -161,10 +161,11 @@ WTF_API int64_t wtf_client_chdir(wtf_client* _cl,
 }
 
 WTF_API int64_t wtf_client_open(wtf_client* _cl, 
-            const char* path, int flags, mode_t mode, wtf_client_returncode* status)
+            const char* path, int flags, mode_t mode, size_t num_replicas, 
+            wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->open(path, flags, mode);
+        return cl->open(path, flags, mode, num_replicas);
     );
 
 }
@@ -227,11 +228,11 @@ WTF_API int64_t wtf_client_chmod(wtf_client* _cl,
 
 WTF_API int64_t wtf_client_write(wtf_client* _cl, 
             int64_t fd, const char* data, 
-            size_t* data_sz, size_t replicas, 
+            size_t* data_sz,
             wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->write(fd, data, data_sz, replicas, status);
+        return cl->write(fd, data, data_sz, status);
     );
 
 }

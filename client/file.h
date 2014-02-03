@@ -57,6 +57,8 @@ class file
         int64_t fd() { return m_fd; }
         void path(const char* path) { m_path = po6::pathname(path); }
         po6::pathname path() { return m_path; }
+        size_t replicas() { return m_replicas; }
+        void set_replicas(size_t num_replicas) { m_replicas = num_replicas; }
 
         block_location current_block_location();
         size_t bytes_left_in_block();
@@ -116,6 +118,7 @@ class file
         size_t m_current_block_length;
         size_t m_offset;
         size_t m_file_length;
+        size_t m_replicas;
 
 
     public:

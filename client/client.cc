@@ -422,43 +422,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 }
 
 int64_t
-client :: open(const char* path, int flags)
-{
-    wtf_client_returncode lstatus;
-    wtf_client_returncode *status = &lstatus;
-
-    if (!maintain_coord_connection(status))
-    {
-        return -1;
-    }
-
-    if (flags & (O_APPEND | O_ASYNC | O_CLOEXEC))
-    {
-        //XXX: we don't support these right now.
-    }
-
-    if (flags & O_CREAT)
-    {
-        ERROR(INVALID) << "O_CREAT flag specified for wrong open call.";
-        return -1;
-    }
-
-    e::intrusive_ptr<file> f = new file(path);
-    
-    if (update_file_cache(path, f, false) < 0)
-    {
-        return -1;
-    }
-
-    m_fds[m_next_fileno] = f; 
-    f->flags = flags;
-
-
-    return m_next_fileno++;
-}
-
-int64_t
-client :: open(const char* path, int flags, mode_t mode)
+client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
 {
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
@@ -477,6 +441,7 @@ client :: open(const char* path, int flags, mode_t mode)
 
     if (flags & O_CREAT)
     {
+        f->set_replicas(num_replicas);
         update_file_cache(path, f, true);
         update_hyperdex(f);
     }
@@ -533,7 +498,7 @@ client :: perform_aggregation(const std::vector<server_id>& servers,
 
 int64_t
 client :: write(int64_t fd, const char* buf,
-                   size_t * buf_sz, int num_replicas,
+                   size_t * buf_sz, 
                    wtf_client_returncode* status)
 {
     if (m_fds.find(fd) == m_fds.end())
@@ -570,8 +535,7 @@ client :: write(int64_t fd, const char* buf,
         size_t buf_offset = next_buf_offset;
         uint32_t block_offset;
         size_t slice_len;
-        wtf_network_msgtype mt; // can be PUT or UPDATE
-        prepare_write_op(f, rem, bl, num_replicas, mt, next_buf_offset, block_offset, slice_len);
+        prepare_write_op(f, rem, bl, next_buf_offset, block_offset, slice_len);
         e::slice data = e::slice(buf + buf_offset, slice_len);
 
         for (size_t i = 0; i < bl.size(); ++i)
@@ -592,7 +556,7 @@ client :: write(int64_t fd, const char* buf,
 
             std::vector<server_id> servers;
             servers.push_back(server_id(bl[i].si));
-            perform_aggregation(servers, op, mt, msg, status);
+            perform_aggregation(servers, op, REQ_UPDATE, msg, status);
         }
     }
 
@@ -603,8 +567,6 @@ void
 client :: prepare_write_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
                               std::vector<block_location>& bl,
-                              int num_replicas,
-                              wtf_network_msgtype& mt,
                               size_t& buf_offset,
                               uint32_t& block_offset,
                               size_t& slice_len)
@@ -975,7 +937,7 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa)
 {
     wtf_client_returncode status;
 
-    int64_t fd = open(path, O_RDONLY);
+    int64_t fd = open(path, O_RDONLY, 0, 0);
     if (fd < 0)
     {
         return -1;

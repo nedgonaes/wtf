@@ -103,7 +103,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             wtf_client_returncode status = WTF_CLIENT_GARBAGE;
             std::string f = file();
             std::cout << "File: " << f << std::endl;
-            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), &status);
+            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, &status);
 
             tll->start(&ts, 1);
             size_t sz = v.size();
@@ -130,7 +130,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
             //std::string d(v.size(), '0');
             char* dd = new char[v.size()];
             std::cout << "output pointer = " << (void*)dd << std::endl;
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, &status);
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, 3, &status);
             sz = v.size();
             reqid = cl.read(fd, dd, &sz, &status);
 
@@ -164,7 +164,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             std::string v2 = v;
             v2.replace(0,3,"XXX");
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, &status);
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, 3, &status);
 
             tll->start(&ts, 1);
             sz = 3;
@@ -188,7 +188,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
 
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, &status);
+            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, 3, &status);
 
             char* dd2 = new char[v.size()];
             size_t sz2 = v2.size();
