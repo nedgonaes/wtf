@@ -183,8 +183,8 @@ class client
         uint64_t generate_token();
 
         //communicate with hyperdex
-        int64_t update_hyperdex(e::intrusive_ptr<file>& f);
-        int64_t update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create);
+        int64_t put_file_metadata(e::intrusive_ptr<file> f);
+        int64_t get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
 
     private:

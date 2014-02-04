@@ -442,12 +442,12 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
     if (flags & O_CREAT)
     {
         f->set_replicas(num_replicas);
-        update_file_cache(path, f, true);
-        update_hyperdex(f);
+        get_file_metadata(path, f, true);
+        put_file_metadata(f);
     }
     else
     {
-        update_file_cache(path, f, false);
+        get_file_metadata(path, f, false);
     }
 
 
@@ -509,8 +509,7 @@ client :: write(int64_t fd, const char* buf,
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
-    //XXX
-    update_file_cache(f->path().get(), f, false);
+    get_file_metadata(f->path().get(), f, false);
 
     /* The op object here is created once and a reference to it
      * is inserted into the m_pending list for each send operation,
@@ -593,7 +592,7 @@ client :: read(int64_t fd, char* buf,
     e::intrusive_ptr<file> f = m_fds[fd];
 
     //XXX
-    update_file_cache(f->path().get(), f, false);
+    get_file_metadata(f->path().get(), f, false);
 
     /* The op object here is created once and a reference to it
      * is inserted into the m_pending list for each send operation,
@@ -702,7 +701,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 }
 
 int64_t
-client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool create)
+client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
 {
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
@@ -714,7 +713,7 @@ client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool cr
     ret = m_hyperdex_client.get("wtf", path, strlen(path), &hstatus, &attrs, &attrs_sz);
     if (ret == -1)
     {
-        ERROR(INTERNAL) << " failed to update file cache.  HyperDex get failed with " << ret;
+        ERROR(INTERNAL) << "failed to retrieve file metadata from HyperDex." << ret;
         return -1;
     }
 
@@ -727,11 +726,6 @@ client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool cr
             ERROR(NOTFOUND) << "path not found in HyperDex.";
             return -1;
         }
-
-        /* The file does not exist or was deleted, truncate it. */
-        f->set_offset(0);
-        f->truncate();
-
     }
     else
     {
@@ -756,7 +750,6 @@ client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool cr
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
             {
-                std::cout << "unpacking directory" << std::endl;
                 uint64_t is_dir;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
@@ -765,26 +758,20 @@ client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool cr
 
                 if (is_dir == 0)
                 {
-                    std::cout << path << " is not a dir " << std::endl;
                     f->is_directory = false;
                 }
                 else
                 {
-                    std::cout << path << " is a dir " << std::endl;
                     f->is_directory = true;
                 }
             }
             else if (strcmp(attrs[i].attr, "mode") == 0)
             {
-                std::cout << "unpacking mode" << std::endl;
                 uint64_t mode;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
                 up = up >> mode;
                 e::unpack64be((uint8_t*)&mode, &mode);
-
-                std::cout << "MODE: " << mode << std::endl;
-
                 f->mode = mode;
             }
         }
@@ -796,34 +783,7 @@ client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool cr
 int64_t
 client :: truncate(int fd, off_t length)
 {
-    /*
-    size_t sz;
-    e::intrusive_ptr<file> f = m_fds[fd];
-
-    if (length == f->length())
-    {
-        return 0;
-    }
-
-    if (length > f->length())
-    {
-        sz = length - f->length();
-        //cout << "expanding to sz " << sz << endl;
-        wtf_client_returncode status;
-        char* data = new char[sz];
-        memset(data, 0, sz);
-        write(fd, data, sz, 3, &status);
-        flush(fd, &status);
-    }
-    else
-    {
-        //cout << "truncating" << endl;
-        f->truncate(length); 
-    }
-
-    update_hyperdex(f);
-    cout << "updated" << endl;
-*/
+    //XXX: implement truncate.
     return 0;
 }
 
@@ -1094,7 +1054,7 @@ client :: readdir(int fd, char* entry)
 }
 
 int64_t
-client :: update_hyperdex(e::intrusive_ptr<file>& f)
+client :: put_file_metadata(e::intrusive_ptr<file> f)
 {
     //XXX: review update_hyperdex.
     std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
