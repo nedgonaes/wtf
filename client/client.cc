@@ -1089,19 +1089,22 @@ client :: closedir(int fd)
 int64_t 
 client :: readdir(int fd, char* entry)
 {
+    //XXX implement readdir.
     return 0;
 }
-
 
 int64_t
 client :: update_hyperdex(e::intrusive_ptr<file>& f)
 {
+    //XXX: review update_hyperdex.
     std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
     int i = 0;
 
     std::vector<struct hyperdex_client_map_attribute> attrs;
-    hyperdex_client_returncode status;
+    hyperdex_client_returncode hstatus;
+    wtf_client_returncode lstatus;
+    wtf_client_returncode *status = &lstatus;
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
@@ -1122,16 +1125,19 @@ client :: update_hyperdex(e::intrusive_ptr<file>& f)
     attr[1].value_sz = sizeof(directory);
     attr[1].datatype = HYPERDATATYPE_INT64;
 
-    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &status);
+    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &hstatus);
+
     if (ret < 0)
     {
+        ERROR(INTERNAL) << "HyperDex returned " << ret;
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
+        ERROR(INTERNAL) << "HyperDex returned " << ret;
         return -1;
     }
 
@@ -1164,32 +1170,33 @@ client :: update_hyperdex(e::intrusive_ptr<file>& f)
      * Update hyperdex to point to location of new blocks
      */
 retry:
-    ret = m_hyperdex_client.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &status);
+    ret = m_hyperdex_client.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &hstatus);
 
     /*
      * Wait for hyperdex to reply
      */
 
-    res = hyperdex_wait_for_result(ret, status);
+    res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
-        ret = m_hyperdex_client.put_if_not_exist("wtf", f->path().get(), strlen(f->path().get()), NULL, 0, &status);
-        res = hyperdex_wait_for_result(ret, status);
+        ret = m_hyperdex_client.put_if_not_exist("wtf", f->path().get(), strlen(f->path().get()), NULL, 0, &hstatus);
+        res = hyperdex_wait_for_result(ret, hstatus);
 
         if (res == HYPERDEX_CLIENT_SUCCESS || res == HYPERDEX_CLIENT_CMPFAIL)
         {
-            //GUN DID IT.
             goto retry;
         }
         else
         {
-            //std::cout << "ERROR: Hyperdex returned " << res << std::endl;
+            ERROR(INTERNAL) << "HyperDex returned " << res;
+            return -1;
         }
     }
     else
     {
-        //std::cout << "Hyperdex returned " << res << std::endl;
+            ERROR(INTERNAL) << "HyperDex returned " << res;
+            return -1;
     }
 
     for (std::vector<struct hyperdex_client_map_attribute>::iterator it = attrs.begin();
@@ -1217,12 +1224,10 @@ client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& stat
         }
 
         if (id != reqid){
-            //std::cout << "ERROR: Hyperdex returned id:" << id << " status:"<< lstatus << std::endl;
-            //std::cout << "expected id:" << reqid<< std::endl;
+            //XXX: handle concurrent hyperdex updates.
         }
         else
         {
-            //std::cout << "Hyperdex returned " << status << std::endl;
             return status;
         }
     } 
