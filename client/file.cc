@@ -143,70 +143,39 @@ file :: move_to_next_block()
 bool 
 file :: pending_ops_empty()
 {
-    //XXX
-    return true;
+    return m_pending.empty();
 }
 
 int64_t 
 file :: pending_ops_pop_front()
 {
-    //XXX
-    return 0;
-}
-
-
-
-
-
-
-
-
-
-
-void
-file :: update_blocks(uint64_t block_index, uint64_t len, 
-                           uint64_t version, uint64_t sid,
-                           uint64_t bid)
-{
-
-    //std::cout << "Updating block " << block_index << std::endl;
-
-    if (m_block_map.find(block_index) == m_block_map.end())
-    {
-        //std::cout << "block didn't exist." << std::endl;
-        m_block_map[block_index] = new block();
-    }
-
-    m_block_map[block_index]->update(version, len, block_location(sid, bid), true); 
+    int64_t client_id = m_pending.front();
+    m_pending.pop_front();
+    return client_id;
 }
 
 void
-file :: update_blocks(uint64_t bid, e::intrusive_ptr<block>& b)
+file :: add_pending_op(uint64_t client_id)
 {
-    //std::cout << "Caching block " << bid << ": " << *b << std::endl;
-    m_block_map[bid] = b;
+    m_pending.push_back(client_id);
 }
 
-uint64_t
-file :: get_block_version(uint64_t bid)
+void
+file :: insert_block(uint64_t offset, e::intrusive_ptr<block> bl)
 {
-    if (m_block_map.find(bid) == m_block_map.end())
+    //XXX: make sure block at this offset doesn't overlap with anything else.
+    m_block_map[offset] = bl;
+}
+
+size_t
+file :: get_block_length(size_t offset)
+{
+    if (m_block_map.find(offset) == m_block_map.end())
     {
         return 0;
     }
 
-    return m_block_map[bid]->version();
-}
-
-uint64_t
-file :: get_block_length(uint64_t bid)
-{
-    if (m_block_map.find(bid) == m_block_map.end())
-    {
-        return 0;
-    }
-
-    return m_block_map[bid]->length();
+    return m_block_map[offset]->length();
 }
 
 uint64_t
@@ -241,32 +210,11 @@ file :: pack_size()
 void
 file :: truncate(off_t length)
 {
-    uint64_t block_index = length/CHUNKSIZE;
-    uint64_t sz = m_block_map.size();
-
-    if (sz > block_index + 1)
-    {
-        for (int i = block_index + 1; i < sz; ++i)
-        {
-            m_block_map.erase(i);
-        }
-    }
-
-    e::intrusive_ptr<block> b = m_block_map[block_index];
-    b->resize(length - block_index*CHUNKSIZE);
-    m_block_map[block_index] = b;
-    std::cout << "BLOCK " << block_index << " LEN: " << m_block_map[block_index]->length() << std::endl;
-    std::cout << "FILE LENGTH IS NOW " << this->length() << std::endl;
+    //XXX: implement truncate 
 }
 
 void
 file :: truncate()
 {
-    uint64_t block_index = m_offset/CHUNKSIZE;
-    uint64_t sz = m_block_map.size();
-
-    for (int i = block_index + 1; i < sz; ++i)
-    {
-        m_block_map.erase(i);
-    }
+    //XXX: implement truncate
 }

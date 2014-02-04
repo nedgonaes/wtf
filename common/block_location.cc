@@ -31,14 +31,14 @@
 using wtf::block_location;
 
 block_location :: block_location()
-    : m_si(0)
-    , m_bi(0)
+    : si(0)
+    , bi(0)
 {
 }
 
 block_location :: block_location(uint64_t si, uint64_t bi)
-    : m_si(si)
-    , m_bi(bi)
+    : si(si)
+    , bi(bi)
 {
 }
 
@@ -49,7 +49,7 @@ block_location :: ~block_location() throw()
 void 
 block_location :: pack(char* buf) const
 {
-    memmove(buf, &m_si, sizeof(uint64_t));
+    memmove(buf, &si, sizeof(uint64_t));
     buf += sizeof(uint64_t);
-    memmove(buf, &m_bi, sizeof(uint64_t));
+    memmove(buf, &bi, sizeof(uint64_t));
 }

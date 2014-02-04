@@ -70,19 +70,15 @@ class file
         void move_to_next_block();
         bool pending_ops_empty();
         int64_t pending_ops_pop_front();
+        size_t get_block_length(size_t offset);
+        void add_pending_op(uint64_t client_id);
+        void insert_block(size_t offset, e::intrusive_ptr<block> b);
 
 
         void add_command(int64_t op);
         void set_offset(uint64_t offset) { m_offset = offset; }
         uint64_t offset() { return m_offset; }
-        void update_blocks(uint64_t block_index, uint64_t len, 
-                           uint64_t version, uint64_t sid,
-                           uint64_t bid);
-        void update_blocks(uint64_t bid, e::intrusive_ptr<wtf::block>& b);
-        uint64_t get_block_version(uint64_t bid);
-        uint64_t get_block_length(uint64_t bid);
         uint64_t pack_size();
-        uint64_t size() { return m_block_map.size(); }
         uint64_t length();
         void truncate();
         void truncate(off_t length);
@@ -108,7 +104,6 @@ class file
     private:
         size_t m_ref;
         po6::pathname m_path;
-        wtf_client* m_client;
         int64_t m_fd;
         std::list<int64_t> m_pending;
         block_map m_block_map;
@@ -155,7 +150,7 @@ operator >> (e::unpacker up, file& rhs)
     {
         e::intrusive_ptr<wtf::block> b = new wtf::block();
         up = up >> *b;
-        rhs.update_blocks(i, b); 
+        rhs.m_block_map[i] =  b; 
     }
 
     return up; 

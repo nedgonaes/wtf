@@ -743,15 +743,15 @@ client :: update_file_cache(const char* path, e::intrusive_ptr<file>& f, bool cr
 
                 while (!up.empty())
                 {
-                    uint32_t idlen;
-                    uint64_t id;
+                    uint32_t offset_len;
+                    uint64_t offset;
                     uint32_t valuelen;
-                    up = up >> idlen >> id >> valuelen;
-                    e::unpack64be((uint8_t*)&id, &id);
+                    up = up >> offset_len >> offset >> valuelen;
+                    e::unpack64be((uint8_t*)&offset, &offset);
                     e::unpack32be((uint8_t*)&valuelen, &valuelen);
                     e::intrusive_ptr<wtf::block> b = new wtf::block();
                     up = up >> b;
-                    f->update_blocks(id, b);
+                    f->insert_block(offset, b);
                 }
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
@@ -1125,7 +1125,6 @@ client :: update_hyperdex(e::intrusive_ptr<file>& f)
     ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &status);
     if (ret < 0)
     {
-        std::cout << "PUT FAILED: " << status << std::endl;
         return -1;
     }
 
@@ -1133,7 +1132,6 @@ client :: update_hyperdex(e::intrusive_ptr<file>& f)
 
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
-        std::cout << "UPDATE FAILED: " << res << std::endl;
         return -1;
     }
 
@@ -1144,10 +1142,6 @@ client :: update_hyperdex(e::intrusive_ptr<file>& f)
     for (block_map::const_iterator it = f->blocks_begin();
             it != f->blocks_end(); ++it)
     {
-        if (it->second->dirty())
-        {
-            std::cout << "UPDATING BLOCK " << it->first << " of " << f->path().get() << std::endl;
-            std::cout << "LEN: " << it->second->length() << std::endl;
             struct hyperdex_client_map_attribute attr;
             attrs.push_back(attr);
             attrs[i].attr = name;
@@ -1162,11 +1156,6 @@ client :: update_hyperdex(e::intrusive_ptr<file>& f)
             attrs[i].value_datatype = HYPERDATATYPE_STRING;
             attrs[i].value_sz = sz;
             ++i;
-        }
-        else
-        {
-            std::cout << "BLOCK " << it->first << " of " << f->path().get() << "NOT DIRTY" << std::endl;
-        }
     }
 
     //XXX; get rid of magic string.

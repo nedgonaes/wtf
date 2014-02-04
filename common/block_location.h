@@ -48,15 +48,16 @@ namespace wtf __attribute__ ((visibility("hidden")))
 #define OPERATOR(OP) \
     inline OPERATORDECL(OP) \
     { \
-        return lhs.m_si OP rhs.m_si \
-                || (lhs.m_si == rhs.m_si \
-                && lhs.m_bi OP rhs.m_bi); \
+        return lhs.si OP rhs.si \
+                || (lhs.si == rhs.si \
+                && lhs.bi OP rhs.bi); \
     }
 
     class block_location
     { 
         public:
             block_location();
+            block_location(const block_location& rhs) : si(rhs.si), bi(rhs.bi) {}
             explicit block_location(uint64_t si, uint64_t bi);
             ~block_location() throw();
 
@@ -78,30 +79,26 @@ namespace wtf __attribute__ ((visibility("hidden")))
             friend OPERATORDECL(!=); 
             friend OPERATORDECL(>=); 
             friend OPERATORDECL(>);
-
-        private: 
-            uint64_t m_si; 
-            uint64_t m_bi; 
     }; 
 
     inline std::ostream& 
     operator << (std::ostream& lhs, const block_location& rhs) 
     { 
-        return lhs << "block_location(server=" << rhs.m_si << ", chunk=" << rhs.m_bi << ")"; 
+        return lhs << "block_location(server=" << rhs.si << ", chunk=" << rhs.bi << ")"; 
     } 
 
     inline e::buffer::packer 
     operator << (e::buffer::packer pa, const block_location& rhs) 
     { 
-        return pa << rhs.m_si << rhs.m_bi; 
+        return pa << rhs.si << rhs.bi; 
     } 
 
     inline e::unpacker 
     operator >> (e::unpacker up, block_location& rhs) 
     { 
-        up = up >> rhs.m_si >> rhs.m_bi; 
-        e::unpack64be((uint8_t*)&rhs.m_si, &rhs.m_si);
-        e::unpack64be((uint8_t*)&rhs.m_bi, &rhs.m_bi);
+        up = up >> rhs.si >> rhs.bi; 
+        e::unpack64be((uint8_t*)&rhs.si, &rhs.si);
+        e::unpack64be((uint8_t*)&rhs.bi, &rhs.bi);
         return up; 
     } 
 

@@ -48,18 +48,14 @@ class block
         ~block() throw ();
 
     public:
-        void update(uint64_t version, uint64_t len, 
-                    const wtf::block_location& bid, bool dirty);
+        void add_replica(const wtf::block_location& bid);
         uint64_t size() { return m_block_list.size(); }
-        uint64_t version() { return m_version; }
         uint64_t pack_size();
         void pack(char* buf) const;
-        uint64_t resize(uint64_t sz) { m_length = sz; m_dirty = true; return m_length; }
         uint64_t length() { return m_length; }
-        block_location first_location() { return m_block_list[0]; }
+        block_location first_location();
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
         std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
-        bool dirty() { return m_dirty; }
         bool is_hole() { return m_is_hole; }
 
     private:
@@ -88,10 +84,8 @@ class block
     private:
         size_t m_ref;
         block_list m_block_list;
-        uint64_t m_version;
         uint64_t m_length;
         bool m_is_hole;
-        bool m_dirty;
 };
 
 template <typename T>
@@ -155,21 +149,22 @@ operator << (e::buffer::packer pa, const block& rhs)
 inline e::unpacker 
 operator >> (e::unpacker up, block& rhs) 
 { 
-    uint64_t size;
+    uint64_t replicas;
     uint64_t len;
 
-    up = up >> len >> size; 
+    up = up >> len >> replicas; 
 
     e::unpack64be((uint8_t *)&len, &len);
-    e::unpack64be((uint8_t *)&size, &size);
+    e::unpack64be((uint8_t *)&replicas, &replicas);
 
     //std::cout << "Unpacking block, len: " << len << " size:" << size << std::endl;
+    rhs.m_length = len;
 
-    for (uint64_t i = 0; i < size; ++i)
+    for (uint64_t i = 0; i < replicas; ++i)
     {
-        block_location bid;
-        up = up >> bid;
-        rhs.update(0, len, bid, false);
+        block_location bl;
+        up = up >> bl;
+        rhs.add_replica(bl);
     }
 
     return up; 
@@ -192,7 +187,7 @@ operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs)
     {
         block_location bid;
         up = up >> bid;
-        rhs->update(0, len, bid, false);
+        rhs->add_replica(bid);
     }
 
     return up; 

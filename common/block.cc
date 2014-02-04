@@ -30,13 +30,12 @@
 #include <common/block.h>
 
 using wtf::block;
+using wtf::block_location;
 
 block :: block()
    : m_ref(0)
    , m_block_list()
-   , m_version(0)
    , m_length(0)
-   , m_dirty(false)
 {
 }
 
@@ -45,24 +44,18 @@ block :: ~block() throw()
 }
 
 void
-block :: update(uint64_t version,
-                uint64_t len,
-                const wtf::block_location& bid,
-                bool dirty)
+block :: add_replica(const block_location& bl)
 {
-    if (dirty)
-    {
-        m_dirty = dirty;
-    }
+    m_block_list.push_back(bl);
+}
 
-    if(version == 0 || m_version < version)
+block_location
+block :: first_location()
+{
+    if (m_block_list.empty())
     {
-        m_length = len;
-        m_version = version;
-        m_block_list.clear();
+        return block_location();
     }
-
-    m_block_list.push_back(bid);
 }
 
 uint64_t
