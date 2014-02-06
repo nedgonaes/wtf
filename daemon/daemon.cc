@@ -467,9 +467,6 @@ daemon :: loop(size_t thread)
             case REQ_GET:
                 process_get(conn, nonce, msg, up);
                 break;
-            case REQ_PUT:
-                process_put(conn, nonce, msg, up);
-                break;
             case REQ_UPDATE:
                 process_update(conn, nonce, msg, up);
                 break;
@@ -577,41 +574,6 @@ daemon :: send_no_disruption(uint64_t token, std::auto_ptr<e::buffer> msg)
 }
 
 void
-daemon :: process_put(const wtf::connection& conn,
-                            uint64_t nonce,
-                            std::auto_ptr<e::buffer> msg,
-                            e::unpacker up)
-{
-    wtf::response_returncode rc;
-    uint64_t bid;
-    uint32_t block_offset;
-    ssize_t ret = 0;
-
-    up = up >> bid >> block_offset;  // only used for UPDATE.. should be 0 for PUT.
-    e::slice data = up.as_slice();
-
-    uint64_t us = m_us.get();
-    ret = m_blockman.write_block(data, us, bid); 
-
-    if (ret < data.size())
-    {
-        rc = RESPONSE_SERVER_ERROR;
-    }
-    else
-    {
-        rc = RESPONSE_SUCCESS;
-    }
-
-    size_t sz = COMMAND_HEADER_SIZE + 
-                sizeof(uint64_t) + /* token */
-                sizeof(uint64_t);  /* block id */
-    std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
-    e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << RESP_PUT << nonce << rc << bid;
-    send(conn, resp);
-}
-
-void
 daemon :: process_get(const wtf::connection& conn, 
                       uint64_t nonce,
                       std::auto_ptr<e::buffer> msg, 
@@ -638,6 +600,7 @@ daemon :: process_get(const wtf::connection& conn,
     }
 
     size_t sz = COMMAND_HEADER_SIZE + 
+                sizeof(uint64_t) + /* bid */
                 len;
 
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
@@ -664,15 +627,23 @@ daemon :: process_update(const wtf::connection& conn,
     wtf::response_returncode rc;
     uint64_t sid;
     uint64_t bid;
-    uint32_t offset;
+    uint32_t block_offset;
+    uint64_t file_offset;
     ssize_t ret = 0;
 
 
-    up = up >> bid >> offset;
+    up = up >> bid >> block_offset >> file_offset;
     e::slice data = up.as_slice();
     sid = m_us.get();
 
-    ret = m_blockman.update_block(data, offset, sid, bid); 
+    if (bid == UINT64_MAX)
+    {
+        ret = m_blockman.write_block(data, sid, bid); 
+    }
+    else
+    {
+        ret = m_blockman.update_block(data, block_offset, sid, bid); 
+    }
 
     if (ret < data.size())
     {
@@ -687,12 +658,12 @@ daemon :: process_update(const wtf::connection& conn,
 
 
     size_t sz = COMMAND_HEADER_SIZE + 
-                sizeof(uint64_t) + /* token */
-                sizeof(uint64_t);  /* block id */
+                sizeof(uint64_t) + /* block id */
+                sizeof(uint64_t);  /* file_offset */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << RESP_UPDATE << nonce << rc 
-            << bid;
+            << bid << file_offset;
     send(conn, resp);
 }
 

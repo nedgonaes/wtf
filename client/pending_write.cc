@@ -29,10 +29,12 @@
 #include "client/pending_write.h"
 
 using wtf::pending_write;
+using wtf::file;
 
-pending_write :: pending_write(uint64_t id,
+pending_write :: pending_write(uint64_t id, e::intrusive_ptr<file> f,
                                        wtf_client_returncode* status)
     : pending_aggregation(id, status)
+    , m_file(f)
     , m_done(false)
 {
     set_status(WTF_CLIENT_SUCCESS);
@@ -78,6 +80,9 @@ pending_write :: handle_message(client* cl,
 {
     bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
+
+    uint64_t bi;
+    up = up >> bi;
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();

@@ -30,13 +30,14 @@
 
 // WTF
 #include "client/pending_aggregation.h"
+#include "client/file.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
 class pending_write : public pending_aggregation
 {
     public:
-        pending_write(uint64_t client_visible_id,
+        pending_write(uint64_t client_visible_id, e::intrusive_ptr<file> f,
                           wtf_client_returncode* status);
         virtual ~pending_write() throw ();
 
@@ -62,6 +63,7 @@ class pending_write : public pending_aggregation
         pending_write& operator = (const pending_write& rhs);
 
     private:
+        e::intrusive_ptr<file> m_file;
         bool m_done;
 };
 
