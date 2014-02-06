@@ -42,8 +42,7 @@ wtf-hadoop-benchmark
 wtf-cli
 wtf-writetest
 wtf-test-blockstore
-wtf-readtest
-wtf-readwritetest
+wtf-test-readwrite
 wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster

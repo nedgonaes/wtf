@@ -84,12 +84,11 @@ noinst_HEADERS += daemon/coordinator_link_wrapper.h
 noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
-noinst_HEADERS += tools/fusewtf.h
 noinst_HEADERS += visibility.h
 
 bin_PROGRAMS += wtf
 
-noinst_PROGRAMS += wtf-readwritetest
+noinst_PROGRAMS += wtf-test-readwrite
 #noinst_PROGRAMS += wtf-test-blockstore
 if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
@@ -266,12 +265,15 @@ libwtf_admin_la_LIBADD += $(BUSYBEE_LIBS)
 libwtf_admin_la_LIBADD += $(REPLICANT_LIBS)
 
 ################################################################################
-################################## fusewtf #####################################
+################################## other   #####################################
 ################################################################################
-
 
 wtf_SOURCES = wtf.cc
 wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
+
+################################################################################
+################################## benchmarks ##################################
+################################################################################
 
 if ENABLE_HDFS_BENCHMARKS
 wtf_hadoop_benchmark_SOURCES = tools/hadoop-benchmark.cc
@@ -279,9 +281,25 @@ wtf_hadoop_benchmark_CPPFLAGS = -I${HADOOP_HOME}/src/c++/libhdfs -I${JAVA_HOME}/
 wtf_hadoop_benchmark_LDADD =  -lpopt -lnumbers -larmnod -L${HADOOP_HOME}/build/c++/Linux-amd64-64/lib -L${JAVA_HOME}/jre/lib/amd64/server -lhdfs -ljvm
 endif
 
-wtf_readwritetest_SOURCES = tools/readwritetest.cc
-wtf_readwritetest_LDADD = libwtf-client.la -le -lpopt -lnumbers -larmnod
+################################################################################
+################################## tests   #####################################
+################################################################################
 
+#wtf-test_readwrite
+wtf_test_readwrite_SOURCES = tests/test_readwrite.cc
+wtf_test_readwrite_LDADD = libwtf-client.la $(E_LIBS) -lpopt -lnumbers -larmnod
+
+#if ENABLE_GTEST
+#wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
+#wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
+#endif
+
+
+################################################################################
+################################## tools   #####################################
+################################################################################
+
+# wtf-mkfs
 wtf_mkfs_SOURCES = tools/mkfs.cc
 wtf_mkfs_CPPFLAGS = $(CPPFLAGS) 
 wtf_mkfs_LDADD = $(HYPERCLIENT_LIBS) -lpopt
@@ -306,9 +324,7 @@ wtf_server_forget_LDADD = libwtf-admin.la -lpopt
 wtf_server_kill_SOURCES = tools/server-kill.cc
 wtf_server_kill_LDADD = libwtf-admin.la -lpopt
 
-#if ENABLE_GTEST
-#wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
-#wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
-#endif
-
+################################################################################
+################################## bindings ####################################
+################################################################################
 
