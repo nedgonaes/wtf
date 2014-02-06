@@ -642,7 +642,7 @@ daemon :: process_get(const wtf::connection& conn,
 
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
-    pa = pa << RESP_GET << nonce << rc;
+    pa = pa << RESP_GET << nonce << rc << bid;
 
     if (len > 0) 
     {

@@ -82,13 +82,11 @@ pending_write :: handle_message(client* cl,
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
 
-    if (mt != RESP_PUT)
+    if (mt != RESP_UPDATE)
     {
-        PENDING_ERROR(SERVERERROR) << "server " << si << " responded to GROUP DEL with " << mt;
+        PENDING_ERROR(SERVERERROR) << "server " << si << " responded to UPDATE with " << mt;
         return true;
     }
-
-    //XXX: put the data in the buffer
 
     return true;
 }

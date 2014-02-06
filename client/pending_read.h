@@ -81,9 +81,9 @@ class pending_read : public pending_aggregation
                                 const size_t l)
                 : buf_offset(bu), block_offset(bl), len(l) {}
             ~buffer_block_len() throw () {}
-            const size_t buf_offset;   //offset in client buffer
-            const size_t block_offset; //offset from start of block
-            const size_t len;         //how many bytes to copy
+            size_t buf_offset;   //offset in client buffer
+            size_t block_offset; //offset from start of block
+            size_t len;         //how many bytes to copy
         };
 
         typedef std::map<std::pair<uint64_t, uint64_t>, struct buffer_block_len> offset_map_t;

@@ -153,6 +153,29 @@ client :: maintain_coord_connection(wtf_client_returncode* status)
     return true;
 }
 
+int64_t
+client :: perform_aggregation(const std::vector<server_id>& servers,
+                              e::intrusive_ptr<pending_aggregation> _op,
+                              wtf_network_msgtype mt,
+                              std::auto_ptr<e::buffer> msg,
+                              wtf_client_returncode* status)
+{
+    e::intrusive_ptr<pending> op(_op.get());
+
+    for (size_t i = 0; i < servers.size(); ++i)
+    {
+        uint64_t nonce = m_next_server_nonce++;
+        pending_server_pair psp(servers[i], op);
+        std::auto_ptr<e::buffer> msg_copy(msg->copy());
+
+        if (!send(mt, psp.si, nonce, msg_copy, op, status))
+        {
+            m_failed.push_back(psp);
+        }
+    }
+
+    return op->client_visible_id();
+}
 
 bool
 client :: send(wtf_network_msgtype mt,
@@ -473,30 +496,6 @@ client :: lseek(int64_t fd, uint64_t offset)
 }
 
 int64_t
-client :: perform_aggregation(const std::vector<server_id>& servers,
-                              e::intrusive_ptr<pending_aggregation> _op,
-                              wtf_network_msgtype mt,
-                              std::auto_ptr<e::buffer> msg,
-                              wtf_client_returncode* status)
-{
-    e::intrusive_ptr<pending> op(_op.get());
-
-    for (size_t i = 0; i < servers.size(); ++i)
-    {
-        uint64_t nonce = m_next_server_nonce++;
-        pending_server_pair psp(servers[i], op);
-        std::auto_ptr<e::buffer> msg_copy(msg->copy());
-
-        if (!send(mt, psp.si, nonce, msg_copy, op, status))
-        {
-            m_failed.push_back(psp);
-        }
-    }
-
-    return op->client_visible_id();
-}
-
-int64_t
 client :: write(int64_t fd, const char* buf,
                    size_t * buf_sz, 
                    wtf_client_returncode* status)
@@ -524,6 +523,7 @@ client :: write(int64_t fd, const char* buf,
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_aggregation> op;
     op = new pending_write(client_id, status);
+    f->add_pending_op(client_id);
 
     size_t rem = *buf_sz;
     size_t next_buf_offset = 0;
@@ -577,7 +577,6 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
     rem -= slice_len;
 }
 
-
 int64_t
 client :: read(int64_t fd, char* buf,
                    size_t* buf_sz,
@@ -607,6 +606,7 @@ client :: read(int64_t fd, char* buf,
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_read> op;
     op = new pending_read(client_id, status, buf, buf_sz);
+    f->add_pending_op(client_id);
 
     size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
     size_t buf_offset = 0;
@@ -698,86 +698,6 @@ client :: close(int64_t fd, wtf_client_returncode* status)
     }
 
     return retval;
-}
-
-int64_t
-client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
-{
-    const struct hyperdex_client_attribute* attrs;
-    size_t attrs_sz;
-    int64_t ret = 0;
-    hyperdex_client_returncode hstatus;
-    wtf_client_returncode lstatus;
-    wtf_client_returncode* status = &lstatus;
-
-    ret = m_hyperdex_client.get("wtf", path, strlen(path), &hstatus, &attrs, &attrs_sz);
-    if (ret == -1)
-    {
-        ERROR(INTERNAL) << "failed to retrieve file metadata from HyperDex." << ret;
-        return -1;
-    }
-
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
-    {
-        if (!create)
-        {
-            ERROR(NOTFOUND) << "path not found in HyperDex.";
-            return -1;
-        }
-    }
-    else
-    {
-        for (size_t i = 0; i < attrs_sz; ++i)
-        {
-            if (strcmp(attrs[i].attr, "blockmap") == 0)
-            {
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-
-                while (!up.empty())
-                {
-                    uint32_t offset_len;
-                    uint64_t offset;
-                    uint32_t valuelen;
-                    up = up >> offset_len >> offset >> valuelen;
-                    e::unpack64be((uint8_t*)&offset, &offset);
-                    e::unpack32be((uint8_t*)&valuelen, &valuelen);
-                    e::intrusive_ptr<wtf::block> b = new wtf::block();
-                    up = up >> b;
-                    f->insert_block(offset, b);
-                }
-            }
-            else if (strcmp(attrs[i].attr, "directory") == 0)
-            {
-                uint64_t is_dir;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> is_dir;
-                e::unpack64be((uint8_t*)&is_dir, &is_dir);
-
-                if (is_dir == 0)
-                {
-                    f->is_directory = false;
-                }
-                else
-                {
-                    f->is_directory = true;
-                }
-            }
-            else if (strcmp(attrs[i].attr, "mode") == 0)
-            {
-                uint64_t mode;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> mode;
-                e::unpack64be((uint8_t*)&mode, &mode);
-                f->mode = mode;
-            }
-        }
-    }
-    
-    return ret;
 }
 
 int64_t
@@ -1053,10 +973,91 @@ client :: readdir(int fd, char* entry)
     return 0;
 }
 
+
+/* HYPERDEX */
+int64_t
+client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
+{
+    const struct hyperdex_client_attribute* attrs;
+    size_t attrs_sz;
+    int64_t ret = 0;
+    hyperdex_client_returncode hstatus;
+    wtf_client_returncode lstatus;
+    wtf_client_returncode* status = &lstatus;
+
+    ret = m_hyperdex_client.get("wtf", path, strlen(path), &hstatus, &attrs, &attrs_sz);
+    if (ret == -1)
+    {
+        ERROR(INTERNAL) << "failed to retrieve file metadata from HyperDex." << ret;
+        return -1;
+    }
+
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+
+    if (res == HYPERDEX_CLIENT_NOTFOUND)
+    {
+        if (!create)
+        {
+            ERROR(NOTFOUND) << "path not found in HyperDex.";
+            return -1;
+        }
+    }
+    else
+    {
+        for (size_t i = 0; i < attrs_sz; ++i)
+        {
+            if (strcmp(attrs[i].attr, "blockmap") == 0)
+            {
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+
+                while (!up.empty())
+                {
+                    uint32_t offset_len;
+                    uint64_t offset;
+                    uint32_t valuelen;
+                    up = up >> offset_len >> offset >> valuelen;
+                    e::unpack64be((uint8_t*)&offset, &offset);
+                    e::unpack32be((uint8_t*)&valuelen, &valuelen);
+                    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                    up = up >> b;
+                    f->insert_block(offset, b);
+                }
+            }
+            else if (strcmp(attrs[i].attr, "directory") == 0)
+            {
+                uint64_t is_dir;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> is_dir;
+                e::unpack64be((uint8_t*)&is_dir, &is_dir);
+
+                if (is_dir == 0)
+                {
+                    f->is_directory = false;
+                }
+                else
+                {
+                    f->is_directory = true;
+                }
+            }
+            else if (strcmp(attrs[i].attr, "mode") == 0)
+            {
+                uint64_t mode;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> mode;
+                e::unpack64be((uint8_t*)&mode, &mode);
+                f->mode = mode;
+            }
+        }
+    }
+    
+    return ret;
+}
+
 int64_t
 client :: put_file_metadata(e::intrusive_ptr<file> f)
 {
-    //XXX: review update_hyperdex.
     std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
     int i = 0;
@@ -1068,7 +1069,6 @@ client :: put_file_metadata(e::intrusive_ptr<file> f)
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
-    //XXX; get rid of magic string.
     const char* name = "blockmap";
 
     uint64_t mode = f->mode;
@@ -1193,6 +1193,8 @@ client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& stat
     } 
 }
 
+
+/* BOILERPLATE */
 void
 client :: handle_disruption(const server_id& si)
 {

@@ -93,8 +93,12 @@ pending_read :: handle_message(client* cl,
         return true;
     }
 
-    //XXX: put the data in the buffer.
-
+    /* Put data in client's buffer. */
+    uint64_t bi;
+    up = up >> bi;
+    struct buffer_block_len bbl = m_offset_map[std::make_pair(si.get(), bi)];
+    e::slice data = up.as_slice();
+    memmove(m_buf + bbl.buf_offset, data.data(), data.size()); 
     return true;
 }
 
@@ -105,5 +109,6 @@ pending_read :: set_offset(const uint64_t si,
                 const size_t block_offset, //offset from start of block
                 const size_t len)         //how many bytes to copy
 {
-    //XXX
+    m_offset_map[std::make_pair(si, bi)] = buffer_block_len(buf_offset, block_offset, len);
 }
+
