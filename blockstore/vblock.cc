@@ -60,6 +60,22 @@ vblock :: slice :: ~slice() throw()
 {
 }
 
+uint64_t
+vblock :: length()
+{
+    if (m_slice_map.empty())
+    {
+        return 0;
+    }
+
+    slice_map::iterator end = m_slice_map.end();
+    end--;
+
+    uint64_t offset = end->first;
+    uint64_t len = end->second->length();
+    return offset + len;
+}
+
 void
 vblock :: update(size_t offset, size_t len, size_t disk_offset)
 {

@@ -28,6 +28,9 @@
 #ifndef wtf_client_pending_write_h_
 #define wtf_client_pending_write_h_
 
+// STL
+#include <map>
+
 // WTF
 #include "client/pending_aggregation.h"
 #include "client/file.h"
@@ -61,9 +64,11 @@ class pending_write : public pending_aggregation
     private:
         pending_write(const pending_write& other);
         pending_write& operator = (const pending_write& rhs);
+        typedef std::map<uint64_t, e::intrusive_ptr<block> > changeset_t;
 
     private:
         e::intrusive_ptr<file> m_file;
+        changeset_t m_changeset;
         bool m_done;
 };
 

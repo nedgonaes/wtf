@@ -57,6 +57,7 @@
 #include "common/configuration.h"
 #include "common/coordinator_link.h"
 #include "common/ids.h"
+#include "common/block.h"
 #include "common/mapper.h"
 #include "client/pending.h"
 #include "client/pending_aggregation.h"
@@ -184,6 +185,8 @@ class client
         uint64_t generate_token();
 
         //communicate with hyperdex
+        int64_t apply_changeset(e::intrusive_ptr<file> f, 
+            std::map<uint64_t, e::intrusive_ptr<block> >& changeset);
         int64_t put_file_metadata(e::intrusive_ptr<file> f);
         int64_t get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);

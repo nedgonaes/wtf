@@ -980,6 +980,13 @@ client :: readdir(int fd, char* entry)
 
 /* HYPERDEX */
 int64_t
+client :: apply_changeset(e::intrusive_ptr<file> f, std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
+{
+    //XXX: implement apply_changeset
+   return -1; 
+}
+
+int64_t
 client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
 {
     const struct hyperdex_client_attribute* attrs;
@@ -1014,17 +1021,14 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
             {
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
-                while (!up.empty())
+                uint64_t num_blocks;
+                up = up >> num_blocks;
+
+                for (uint64_t i = 0; i < num_blocks; ++i)
                 {
-                    uint32_t offset_len;
-                    uint64_t offset;
-                    uint32_t valuelen;
-                    up = up >> offset_len >> offset >> valuelen;
-                    e::unpack64be((uint8_t*)&offset, &offset);
-                    e::unpack32be((uint8_t*)&valuelen, &valuelen);
-                    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                    e::intrusive_ptr<block> b = new block();
                     up = up >> b;
-                    f->insert_block(offset, b);
+                    f->insert_block(b);
                 }
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
@@ -1077,7 +1081,8 @@ client :: put_file_metadata(e::intrusive_ptr<file> f)
 
     uint64_t mode = f->mode;
     uint64_t directory = f->is_directory;
-    struct hyperdex_client_attribute attr[2];
+    std::auto_ptr<e::buffer> blockmap = f->serialize_blockmap();
+    struct hyperdex_client_attribute attr[3];
 
     attr[0].attr = "mode";
     attr[0].value = (const char*)&mode;
@@ -1088,6 +1093,11 @@ client :: put_file_metadata(e::intrusive_ptr<file> f)
     attr[1].value = (const char*)&directory;
     attr[1].value_sz = sizeof(directory);
     attr[1].datatype = HYPERDATATYPE_INT64;
+
+    attr[2].attr = "blockmap";
+    attr[2].value = reinterpret_cast<const char*>(blockmap->data());
+    attr[2].value_sz = blockmap->size();
+    attr[2].datatype = HYPERDATATYPE_STRING;
 
     ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &hstatus);
 
@@ -1104,72 +1114,6 @@ client :: put_file_metadata(e::intrusive_ptr<file> f)
         ERROR(INTERNAL) << "HyperDex returned " << ret;
         return -1;
     }
-
-
-    /*
-     * construct a hyperdex attribute list for all dirty blocks
-     */
-    for (block_map::const_iterator it = f->blocks_begin();
-            it != f->blocks_end(); ++it)
-    {
-            struct hyperdex_client_map_attribute attr;
-            attrs.push_back(attr);
-            attrs[i].attr = name;
-            attrs[i].map_key = (const char*)malloc(sizeof(uint64_t));
-            memmove(const_cast<char*>(attrs[i].map_key), &it->first, sizeof(uint64_t));
-            attrs[i].map_key_sz = sizeof(uint64_t);
-            attrs[i].map_key_datatype = HYPERDATATYPE_STRING;
-
-            uint64_t sz = it->second->pack_size();
-            attrs[i].value = (const char*)malloc(sz);
-            it->second->pack(const_cast<char*>(attrs[i].value)); 
-            attrs[i].value_datatype = HYPERDATATYPE_STRING;
-            attrs[i].value_sz = sz;
-            ++i;
-    }
-
-    //XXX; get rid of magic string.
-    //XXX; atomic map add?
-    /*
-     * Update hyperdex to point to location of new blocks
-     */
-retry:
-    ret = m_hyperdex_client.map_add("wtf", f->path().get(), strlen(f->path().get()), &attrs[0], attrs.size(), &hstatus);
-
-    /*
-     * Wait for hyperdex to reply
-     */
-
-    res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
-    {
-        ret = m_hyperdex_client.put_if_not_exist("wtf", f->path().get(), strlen(f->path().get()), NULL, 0, &hstatus);
-        res = hyperdex_wait_for_result(ret, hstatus);
-
-        if (res == HYPERDEX_CLIENT_SUCCESS || res == HYPERDEX_CLIENT_CMPFAIL)
-        {
-            goto retry;
-        }
-        else
-        {
-            ERROR(INTERNAL) << "HyperDex returned " << res;
-            return -1;
-        }
-    }
-    else
-    {
-            ERROR(INTERNAL) << "HyperDex returned " << res;
-            return -1;
-    }
-
-    for (std::vector<struct hyperdex_client_map_attribute>::iterator it = attrs.begin();
-            it != attrs.end(); ++it)
-    {
-        free(const_cast<char*>(it->value));
-        free(const_cast<char*>(it->map_key));
-    }
-
 
     return ret;
 }

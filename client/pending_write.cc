@@ -29,7 +29,6 @@
 #include "client/pending_write.h"
 
 using wtf::pending_write;
-using wtf::file;
 
 pending_write :: pending_write(uint64_t id, e::intrusive_ptr<file> f,
                                        wtf_client_returncode* status)
@@ -82,7 +81,9 @@ pending_write :: handle_message(client* cl,
     assert(handled);
 
     uint64_t bi;
-    up = up >> bi;
+    uint64_t file_offset;
+    uint64_t block_length;
+    up = up >> bi >> file_offset >> block_length;
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -91,6 +92,28 @@ pending_write :: handle_message(client* cl,
     {
         PENDING_ERROR(SERVERERROR) << "server " << si << " responded to UPDATE with " << mt;
         return true;
+    }
+
+    changeset_t::iterator it = m_changeset.find(file_offset);
+    e::intrusive_ptr<block> bl;
+
+    if (it == m_changeset.end())
+    {
+        bl = new block();
+        bl->set_length(block_length);
+        bl->set_offset(file_offset);
+        m_changeset[file_offset] = bl;
+    }
+    else
+    {
+        bl = it->second;
+    }
+
+    bl->add_replica(block_location(si.get(), bi));
+
+    if (this->aggregation_done())
+    {
+        cl->apply_changeset(m_file, m_changeset);
     }
 
     return true;

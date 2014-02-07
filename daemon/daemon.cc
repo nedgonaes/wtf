@@ -629,6 +629,7 @@ daemon :: process_update(const wtf::connection& conn,
     uint64_t bid;
     uint32_t block_offset;
     uint64_t file_offset;
+    uint64_t block_len;
     ssize_t ret = 0;
 
 
@@ -639,10 +640,11 @@ daemon :: process_update(const wtf::connection& conn,
     if (bid == UINT64_MAX)
     {
         ret = m_blockman.write_block(data, sid, bid); 
+        block_len = ret; 
     }
     else
     {
-        ret = m_blockman.update_block(data, block_offset, sid, bid); 
+        ret = m_blockman.update_block(data, block_offset, sid, bid, block_len); 
     }
 
     if (ret < data.size())
@@ -659,11 +661,12 @@ daemon :: process_update(const wtf::connection& conn,
 
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */
-                sizeof(uint64_t);  /* file_offset */
+                sizeof(uint64_t) +  /* file_offset */
+                sizeof(uint64_t);  /* block_len */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << RESP_UPDATE << nonce << rc 
-            << bid << file_offset;
+            << bid << file_offset << block_len;
     send(conn, resp);
 }
 

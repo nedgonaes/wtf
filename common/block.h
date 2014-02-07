@@ -50,8 +50,10 @@ class block
     public:
         void add_replica(const wtf::block_location& bid);
         uint64_t size() { return m_block_list.size(); }
+        uint64_t offset() { return m_offset; }
+        void set_length(uint64_t len) { m_length = len; }
+        void set_offset(uint64_t offset) { m_offset = offset; }
         uint64_t pack_size();
-        void pack(char* buf) const;
         uint64_t length() { return m_length; }
         block_location first_location();
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
@@ -62,6 +64,8 @@ class block
         friend class e::intrusive_ptr<block>;
         friend std::ostream& 
             operator << (std::ostream& lhs, const block& rhs);
+        friend e::buffer::packer
+            operator << (e::buffer::packer pa, e::intrusive_ptr<block>& rhs);
         friend e::buffer::packer
             operator << (e::buffer::packer pa, const block& rhs);
         friend e::unpacker
@@ -84,6 +88,7 @@ class block
     private:
         size_t m_ref;
         block_list m_block_list;
+        uint64_t m_offset;
         uint64_t m_length;
         bool m_is_hole;
 };
@@ -132,10 +137,25 @@ operator << (std::ostream& lhs, const block& rhs)
 } 
 
 inline e::buffer::packer 
+operator << (e::buffer::packer pa, e::intrusive_ptr<block>& rhs) 
+{ 
+    uint64_t replicas = rhs->m_block_list.size();
+    pa = pa << rhs->m_offset << rhs->m_length << replicas; 
+
+    for (block::block_list::const_iterator it = rhs->m_block_list.begin();
+            it < rhs->m_block_list.end(); ++it)
+    {
+        pa = pa << *it;
+    }
+
+    return pa;
+} 
+
+inline e::buffer::packer 
 operator << (e::buffer::packer pa, const block& rhs) 
 { 
-    uint64_t sz = rhs.m_block_list.size();
-    pa = pa << rhs.m_length << sz; 
+    uint64_t replicas = rhs.m_block_list.size();
+    pa = pa << rhs.m_offset << rhs.m_length << replicas; 
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)
@@ -151,14 +171,13 @@ operator >> (e::unpacker up, block& rhs)
 { 
     uint64_t replicas;
     uint64_t len;
+    uint64_t offset;
 
-    up = up >> len >> replicas; 
-
-    e::unpack64be((uint8_t *)&len, &len);
-    e::unpack64be((uint8_t *)&replicas, &replicas);
+    up = up >> offset >> len >> replicas; 
 
     //std::cout << "Unpacking block, len: " << len << " size:" << size << std::endl;
     rhs.m_length = len;
+    rhs.m_offset = offset;
 
     for (uint64_t i = 0; i < replicas; ++i)
     {
@@ -173,21 +192,17 @@ operator >> (e::unpacker up, block& rhs)
 inline e::unpacker 
 operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs) 
 { 
-    uint64_t size;
+    uint64_t replicas;
     uint64_t len;
+    uint64_t offset;
 
-    up = up >> len >> size; 
+    up = up >> offset >> len >> replicas; 
 
-    e::unpack64be((uint8_t *)&len, &len);
-    e::unpack64be((uint8_t *)&size, &size);
-
-    //std::cout << ">>>>Unpacking block, len " << len << " size " << size << std::endl;
-
-    for (uint64_t i = 0; i < size; ++i)
+    for (uint64_t i = 0; i < replicas; ++i)
     {
-        block_location bid;
-        up = up >> bid;
-        rhs->add_replica(bid);
+        block_location bl;
+        up = up >> bl;
+        rhs->add_replica(bl);
     }
 
     return up; 

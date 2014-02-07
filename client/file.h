@@ -72,7 +72,7 @@ class file
         int64_t pending_ops_pop_front();
         size_t get_block_length(size_t offset);
         void add_pending_op(uint64_t client_id);
-        void insert_block(size_t offset, e::intrusive_ptr<block> b);
+        void insert_block(e::intrusive_ptr<block> b);
 
 
         void add_command(int64_t op);
@@ -80,6 +80,7 @@ class file
         uint64_t offset() { return m_offset; }
         uint64_t pack_size();
         uint64_t length();
+        std::auto_ptr<e::buffer> serialize_blockmap();
         void truncate();
         void truncate(off_t length);
 

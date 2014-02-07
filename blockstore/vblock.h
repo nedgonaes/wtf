@@ -48,6 +48,7 @@ class vblock
     public:
         void update(size_t offset, size_t len, size_t disk_offset);
         uint64_t size() { return m_slice_map.size(); }
+        uint64_t length();
         size_t pack_size(); 
 
     public:

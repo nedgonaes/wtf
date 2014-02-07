@@ -299,7 +299,8 @@ blockmap :: write(const e::slice& data,
 ssize_t
 blockmap :: update(const e::slice& data,
              size_t offset,
-             uint64_t& bid)
+             uint64_t& bid,
+             uint64_t& block_len)
 {
     ssize_t status = -1;
     size_t disk_offset;
@@ -321,6 +322,7 @@ blockmap :: update(const e::slice& data,
     bid = m_block_id++;
 
     vb.update(offset, data.size(), disk_offset);
+    block_len = vb.length();
 
 
     if (write_offset_map(bid, vb) < 0)

@@ -161,10 +161,10 @@ file :: add_pending_op(uint64_t client_id)
 }
 
 void
-file :: insert_block(uint64_t offset, e::intrusive_ptr<block> bl)
+file :: insert_block(e::intrusive_ptr<block> bl)
 {
     //XXX: make sure block at this offset doesn't overlap with anything else.
-    m_block_map[offset] = bl;
+    m_block_map[bl->offset()] = bl;
 }
 
 size_t
@@ -191,6 +191,30 @@ file :: length()
     uint64_t bid = it->first;
     uint64_t len = it->second->length();
     return CHUNKSIZE*bid + len;
+}
+
+std::auto_ptr<e::buffer>
+file :: serialize_blockmap()
+{
+    size_t sz = sizeof(uint64_t);
+
+    for (int i = 0; i < m_block_map.size(); ++i)
+    {
+        sz += m_block_map[i]->pack_size();
+    }
+
+    std::auto_ptr<e::buffer> blockmap(e::buffer::create(sz));
+    e::buffer::packer pa = blockmap->pack_at(0); 
+
+    uint64_t num_blocks = m_block_map.size();
+    pa = pa << num_blocks;
+
+    for (int i = 0; i < m_block_map.size(); ++i)
+    {
+        pa = pa << m_block_map[i];
+    }
+
+    return blockmap;
 }
 
 uint64_t

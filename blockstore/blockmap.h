@@ -48,7 +48,8 @@ namespace wtf __attribute__ ((visibility("default")))
                         uint64_t& bid);
             ssize_t update(const e::slice& data,
                         uint64_t offset,
-                        uint64_t& bid);
+                        uint64_t& bid,
+                        uint64_t& block_len);
             ssize_t read(uint64_t bid,
                         uint8_t* data, 
                         size_t data_offset,

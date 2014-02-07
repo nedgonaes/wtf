@@ -90,10 +90,11 @@ ssize_t
 block_storage_manager::update_block(const e::slice& data,
         uint32_t offset,
         uint64_t& sid,
-        uint64_t& bid)
+        uint64_t& bid,
+        uint64_t& block_len)
 {
 
-    return m_blockmap.update(data,offset,bid);
+    return m_blockmap.update(data,offset,bid, block_len);
 
 }
 

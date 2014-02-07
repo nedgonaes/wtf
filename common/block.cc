@@ -66,21 +66,3 @@ block :: pack_size()
     return ret;
 }
 
-void 
-block :: pack(char* buf) const
-{
-    uint64_t sz = m_block_list.size();
-
-    memmove(buf, &m_length, sizeof(uint64_t));  
-    buf += sizeof(uint64_t);
-
-    memmove(buf, &sz, sizeof(uint64_t));  
-    buf += sizeof(uint64_t);
-
-    for (block::block_list::const_iterator it = m_block_list.begin();
-            it != m_block_list.end(); ++it)
-    {
-        it->pack(buf);
-        buf += block_location::pack_size();
-    }
-}
