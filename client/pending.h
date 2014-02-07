@@ -101,5 +101,9 @@ class pending
     this->set_status(WTF_CLIENT_ ## CODE); \
     this->error(__FILE__, __LINE__)
 
+#define CLIENT_ERROR(CODE) \
+    this->set_status(CODE); \
+    this->set_error(cl->m_last_error)
+
 }
 #endif // wtf_client_pending_h_

@@ -113,7 +113,19 @@ pending_write :: handle_message(client* cl,
 
     if (this->aggregation_done())
     {
-        cl->apply_changeset(m_file, m_changeset);
+        /* This applying change set and putting file metadata
+           should be done atomically so that no other op
+           can modify the metadata after we apply our changes
+           but before we update hyperdex */ 
+           
+        m_file->apply_changeset(m_changeset);
+
+        wtf_client_returncode cstatus;
+        if (cl->put_file_metadata(m_file, &cstatus))
+        {
+            CLIENT_ERROR(cstatus);
+            return true;
+        }
     }
 
     return true;

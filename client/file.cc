@@ -93,7 +93,20 @@ file :: current_block_offset()
 void 
 file :: copy_current_block_locations(std::vector<block_location>& bl)
 {
-    //XXX
+    if (m_current_block->size() == 0)
+    {
+        for (size_t i = 0; i < m_replicas; ++i)
+        {
+            /* default block location causes send
+               to any server. */
+            bl.push_back(block_location());
+        }
+    }
+    else
+    {
+        bl = m_current_block->m_block_list;
+    }
+
 }
 
 size_t
@@ -163,8 +176,16 @@ file :: add_pending_op(uint64_t client_id)
 void
 file :: insert_block(e::intrusive_ptr<block> bl)
 {
-    //XXX: make sure block at this offset doesn't overlap with anything else.
     m_block_map[bl->offset()] = bl;
+}
+
+void
+file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
+{
+    block_map::iterator lbound = m_block_map.lower_bound(changeset.begin()->first);
+    block_map::iterator ubound = m_block_map.upper_bound(changeset[changeset.size()]->offset());
+    m_block_map.erase(lbound, ubound);
+    m_block_map.insert(changeset.begin(), changeset.end());
 }
 
 size_t

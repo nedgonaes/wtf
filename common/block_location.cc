@@ -25,14 +25,16 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#define __STDC_LIMIT_MACROS
+
 // WTF
-#include <common/block_location.h>
+#include "common/block_location.h"
 
 using wtf::block_location;
 
 block_location :: block_location()
-    : si(0)
-    , bi(0)
+    : si(UINT64_MAX)
+    , bi(UINT64_MAX)
 {
 }
 

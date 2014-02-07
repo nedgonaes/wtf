@@ -62,8 +62,7 @@ class configuration
         const server* get_random_server(uint64_t id) const;
 
     public:
-        void copy_n_block_locations(int num_replicas, 
-                                    std::vector<block_location>& bl) const;
+        void assign_random_block_locations(std::vector<block_location>& bl) const;
 
     // iterators
     public:

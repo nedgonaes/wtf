@@ -466,7 +466,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
     {
         f->set_replicas(num_replicas);
         get_file_metadata(path, f, true);
-        put_file_metadata(f);
+        put_file_metadata(f, status);
     }
     else
     {
@@ -574,6 +574,7 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
                               size_t& slice_len)
 {
     f->copy_current_block_locations(bl);
+    m_coord.config()->assign_random_block_locations(bl);
     block_offset = f->current_block_offset();
     file_offset = f->offset();
     slice_len = f->advance_to_end_of_block(rem);
@@ -977,15 +978,7 @@ client :: readdir(int fd, char* entry)
     return 0;
 }
 
-
 /* HYPERDEX */
-int64_t
-client :: apply_changeset(e::intrusive_ptr<file> f, std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
-{
-    //XXX: implement apply_changeset
-   return -1; 
-}
-
 int64_t
 client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
 {
@@ -1064,7 +1057,7 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
 }
 
 int64_t
-client :: put_file_metadata(e::intrusive_ptr<file> f)
+client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *status)
 {
     std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
@@ -1072,8 +1065,6 @@ client :: put_file_metadata(e::intrusive_ptr<file> f)
 
     std::vector<struct hyperdex_client_map_attribute> attrs;
     hyperdex_client_returncode hstatus;
-    wtf_client_returncode lstatus;
-    wtf_client_returncode *status = &lstatus;
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 

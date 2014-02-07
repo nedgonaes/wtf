@@ -34,6 +34,8 @@
 
 // WTF
 #include "common/configuration.h"
+#include "common/block_location.h"
+#include "common/server.h"
 
 using wtf::server;
 using wtf::configuration;
@@ -166,10 +168,25 @@ configuration :: get_random_server(uint64_t sid) const
 }
 
 void 
-configuration :: copy_n_block_locations(int num_replicas, 
-                                        std::vector<block_location>& bl) const
+configuration :: assign_random_block_locations(std::vector<block_location>& bl) const
 {
-    //XXX
+    static size_t last_server = 0;
+    for (size_t i = 0; i < bl.size(); ++i)
+    {
+        /* if this server could be any server */
+        if (bl[i] == block_location())
+        {
+            /* find the next available server and assign it to the block location. */
+            for (size_t j = 0; j < m_servers.size(); ++i)
+            {
+                server s = m_servers[last_server++ % m_servers.size()];
+                if (s.state == server::AVAILABLE)
+                {
+                    bl[i].si = s.id.get();
+                }
+            }
+        }
+    }
 }
 
 bool

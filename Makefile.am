@@ -125,6 +125,7 @@ libwtfblockstore_la_LIBADD = $(E_LIBS) $(HYPERLEVELDB_LIBS) -lglog -ldl
 wtf_daemon_SOURCES =
 wtf_daemon_SOURCES += common/server.cc
 wtf_daemon_SOURCES += common/ids.cc
+wtf_daemon_SOURCES += common/block_location.cc
 wtf_daemon_SOURCES += common/configuration.cc
 wtf_daemon_SOURCES += common/coordinator_link.cc
 wtf_daemon_SOURCES += common/coordinator_returncode.cc
@@ -244,6 +245,7 @@ noinst_HEADERS += admin/yieldable.h
 libwtf_admin_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 libwtf_admin_la_SOURCES =
+libwtf_admin_la_SOURCES += common/block_location.cc
 libwtf_admin_la_SOURCES += common/configuration.cc
 libwtf_admin_la_SOURCES += common/coordinator_link.cc
 libwtf_admin_la_SOURCES += common/ids.cc

@@ -61,6 +61,7 @@ class block
         bool is_hole() { return m_is_hole; }
 
     private:
+        friend class file;
         friend class e::intrusive_ptr<block>;
         friend std::ostream& 
             operator << (std::ostream& lhs, const block& rhs);

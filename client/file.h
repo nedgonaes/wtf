@@ -73,6 +73,7 @@ class file
         size_t get_block_length(size_t offset);
         void add_pending_op(uint64_t client_id);
         void insert_block(e::intrusive_ptr<block> b);
+        void apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset);
 
 
         void add_command(int64_t op);
