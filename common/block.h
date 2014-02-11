@@ -44,7 +44,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
 class block
 {
     public:
-        block();
+        block(size_t block_length, size_t file_offset, size_t reps);
         ~block() throw ();
 
     public:
@@ -116,23 +116,13 @@ operator << (std::ostream& lhs, const std::vector<T>& rhs)
 inline std::ostream& 
 operator << (std::ostream& lhs, const block& rhs) 
 { 
-    lhs << "block(len=" << rhs.m_length << ", chunks=[";
-
-    bool first = true;
+    lhs << "\t\t[" << rhs.m_offset << "," << rhs.m_offset+rhs.m_length << ")" << std::endl;
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)
     {
-        if(!first)
-        {
-            lhs << ",";
-            first = false;
-        }
-
-        lhs << *it;
+        lhs << "\t\t\t" << *it << std::endl;
     }
-
-    lhs << "])";
 
     return lhs;
 } 
@@ -141,7 +131,10 @@ inline e::buffer::packer
 operator << (e::buffer::packer pa, e::intrusive_ptr<block>& rhs) 
 { 
     uint64_t replicas = rhs->m_block_list.size();
-    pa = pa << rhs->m_offset << rhs->m_length << replicas; 
+    uint64_t offset = rhs->m_offset;
+    uint64_t length = rhs->m_length;
+
+    pa = pa << offset << length << replicas; 
 
     for (block::block_list::const_iterator it = rhs->m_block_list.begin();
             it < rhs->m_block_list.end(); ++it)
@@ -156,7 +149,10 @@ inline e::buffer::packer
 operator << (e::buffer::packer pa, const block& rhs) 
 { 
     uint64_t replicas = rhs.m_block_list.size();
-    pa = pa << rhs.m_offset << rhs.m_length << replicas; 
+    uint64_t offset = rhs.m_offset;
+    uint64_t length = rhs.m_length;
+
+    pa = pa << offset << length << replicas; 
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)

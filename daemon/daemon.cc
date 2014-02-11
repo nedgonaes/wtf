@@ -610,6 +610,7 @@ daemon :: process_get(const wtf::connection& conn,
     if (len > 0) 
     {
         pa = pa.copy(e::slice(data,len));
+        LOG(INFO) << "GET(" << bid << "): " << e::slice(data,len).hex();
     }
 
     delete [] data;

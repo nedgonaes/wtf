@@ -27,6 +27,7 @@
 
 // WTF
 #include "client/pending_read.h"
+#include "common/response_returncode.h"
 
 using wtf::pending_read;
 using wtf::pending_aggregation;
@@ -95,7 +96,8 @@ pending_read :: handle_message(client* cl,
 
     /* Put data in client's buffer. */
     uint64_t bi;
-    up = up >> bi;
+    response_returncode rc;
+    up = up >> rc >> bi;
     struct buffer_block_len bbl = m_offset_map[std::make_pair(si.get(), bi)];
     e::slice data = up.as_slice();
     memmove(m_buf + bbl.buf_offset, data.data(), data.size()); 

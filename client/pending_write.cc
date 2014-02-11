@@ -27,6 +27,7 @@
 
 // WTF
 #include "client/pending_write.h"
+#include "common/response_returncode.h"
 
 using wtf::pending_write;
 
@@ -83,7 +84,8 @@ pending_write :: handle_message(client* cl,
     uint64_t bi;
     uint64_t file_offset;
     uint64_t block_length;
-    up = up >> bi >> file_offset >> block_length;
+    response_returncode rc;
+    up = up >> rc >> bi >> file_offset >> block_length;
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -99,7 +101,7 @@ pending_write :: handle_message(client* cl,
 
     if (it == m_changeset.end())
     {
-        bl = new block();
+        bl = new block(block_length, file_offset, 0);
         bl->set_length(block_length);
         bl->set_offset(file_offset);
         m_changeset[file_offset] = bl;
@@ -121,6 +123,7 @@ pending_write :: handle_message(client* cl,
         m_file->apply_changeset(m_changeset);
 
         wtf_client_returncode cstatus;
+
         if (cl->put_file_metadata(m_file, &cstatus))
         {
             CLIENT_ERROR(cstatus);

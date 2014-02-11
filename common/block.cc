@@ -32,11 +32,16 @@
 using wtf::block;
 using wtf::block_location;
 
-block :: block()
+block :: block(size_t block_length, size_t file_offset, size_t replicas)
    : m_ref(0)
    , m_block_list()
-   , m_length(0)
+   , m_offset(file_offset)
+   , m_length(block_length)
 {
+    for (size_t i = 0; i < replicas; ++i)
+    {
+        m_block_list.push_back(block_location());
+    }
 }
 
 block :: ~block() throw()
@@ -56,12 +61,14 @@ block :: first_location()
     {
         return block_location();
     }
+
+    return m_block_list[0];
 }
 
 uint64_t
 block :: pack_size()
 {
-    uint64_t ret = 2 * sizeof(uint64_t);  /* length, size */
+    uint64_t ret = 3 * sizeof(uint64_t);  /* replicas, offset, length */
     ret += m_block_list.size() * block_location::pack_size() ; /* server, block */
     return ret;
 }

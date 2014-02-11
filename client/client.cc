@@ -70,6 +70,21 @@
     _BUSYBEE_ERROR(BBRC); \
     return false;
 
+#define TRACECALLS
+#define LOG_METADATA
+
+#ifdef TRACECALLS
+#define TRACE std::cerr << __FILE__ << ":" << __func__ << std::endl
+#else
+#define TRACE
+#endif
+
+#ifdef LOG_METADATA 
+#define LOGMETADATA std::cerr << "MESSAGE: " << up.as_slice().hex() << std::endl
+#else
+#define LOGMETADATA
+#endif
+
 using wtf::client;
 
 client :: client(const char* host, in_port_t port,
@@ -89,15 +104,18 @@ client :: client(const char* host, in_port_t port,
     , m_fds()
     , m_cwd("/")
 {
+	TRACE;
 }
 
 client :: ~client() throw ()
 {
+	TRACE;
 }
 
 bool
 client :: maintain_coord_connection(wtf_client_returncode* status)
 {
+	TRACE;
     replicant_returncode rc;
     uint64_t old_version = m_coord.config()->version();
 
@@ -160,6 +178,7 @@ client :: perform_aggregation(const std::vector<server_id>& servers,
                               std::auto_ptr<e::buffer> msg,
                               wtf_client_returncode* status)
 {
+	TRACE;
     e::intrusive_ptr<pending> op(_op.get());
 
     for (size_t i = 0; i < servers.size(); ++i)
@@ -185,12 +204,14 @@ client :: send(wtf_network_msgtype mt,
                e::intrusive_ptr<pending> op,
                wtf_client_returncode* status)
 {
+	TRACE;
     const uint8_t type = static_cast<uint8_t>(mt);
     const uint8_t flags = 0;
     const uint64_t version = m_coord.config()->version();
     msg->pack_at(BUSYBEE_HEADER_SIZE)
         << type << nonce;
     m_busybee.set_timeout(-1);
+    std::cerr << "sending to " << to << std::endl;
     busybee_returncode rc = m_busybee.send(to.get(), msg);
 
     switch (rc)
@@ -219,18 +240,21 @@ client :: send(wtf_network_msgtype mt,
 int64_t
 client :: loop(int64_t client_id, int timeout, wtf_client_returncode* status)
 {
+	TRACE;
     return inner_loop(timeout, status, client_id);
 }
 
 int64_t
 client :: loop(int timeout, wtf_client_returncode* status)
 {
+	TRACE;
     return inner_loop(timeout, status, -1);
 }
 
 int64_t
 client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_for)
 {
+	TRACE;
     /*
      * This is for internal use only.  We loop for any operation to
      * yield.  Client facing functions call op->handle_delivery()
@@ -447,6 +471,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 int64_t
 client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
 {
+	TRACE;
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
 
@@ -455,17 +480,14 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
         return -1;
     }
 
-    e::intrusive_ptr<file> f = new file(path);
+    e::intrusive_ptr<file> f = new file(path, num_replicas);
     m_fds[m_next_fileno] = f; 
     
     f->flags = flags;
     f->mode = mode;
-    std::cout << "OPEN MODE: " << mode << std::endl;
 
     if (flags & O_CREAT)
     {
-        f->set_replicas(num_replicas);
-        get_file_metadata(path, f, true);
         put_file_metadata(f, status);
     }
     else
@@ -473,25 +495,27 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
         get_file_metadata(path, f, false);
     }
 
-
     return m_next_fileno++;
 }
 
 void
 client :: begin_tx()
 {
+	TRACE;
     //proprietary HyperDex Warp code here.
 }
 
 int64_t
 client :: end_tx()
 {
+	TRACE;
     //proprietary HyperDex Warp code here.
 }
 
 void
 client :: lseek(int64_t fd, uint64_t offset)
 {
+	TRACE;
     m_fds[fd]->set_offset(offset);
 }
 
@@ -500,6 +524,7 @@ client :: write(int64_t fd, const char* buf,
                    size_t * buf_sz, 
                    wtf_client_returncode* status)
 {
+	TRACE;
     if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -573,6 +598,7 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
                               uint64_t& file_offset,
                               size_t& slice_len)
 {
+	TRACE;
     f->copy_current_block_locations(bl);
     m_coord.config()->assign_random_block_locations(bl);
     block_offset = f->current_block_offset();
@@ -587,6 +613,7 @@ client :: read(int64_t fd, char* buf,
                    size_t* buf_sz,
                    wtf_client_returncode* status)
 {
+	TRACE;
     if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -595,7 +622,6 @@ client :: read(int64_t fd, char* buf,
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
-    //XXX
     get_file_metadata(f->path().get(), f, false);
 
     /* The op object here is created once and a reference to it
@@ -623,7 +649,8 @@ client :: read(int64_t fd, char* buf,
         std::vector<server_id> servers;
         prepare_read_op(f, rem, buf_offset, bl, block_length, op, servers);
         size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                  + sizeof(uint64_t); // bl.bi (local block number) 
+                  + sizeof(uint64_t) // bl.bi (local block number) 
+                  + sizeof(uint32_t); //block_length
         std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
         msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bl.bi << block_length;
 
@@ -647,6 +674,7 @@ client :: prepare_read_op(e::intrusive_ptr<file> f,
                               e::intrusive_ptr<pending_read> op, 
                               std::vector<server_id>& servers)
 {
+	TRACE;
     block_length = f->current_block_length();
     size_t block_offset = f->current_block_offset(); 
     bl = f->current_block_location();
@@ -662,6 +690,7 @@ client :: prepare_read_op(e::intrusive_ptr<file> f,
 int64_t
 client :: close(int64_t fd, wtf_client_returncode* status)
 {
+	TRACE;
     if(m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -708,6 +737,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 int64_t
 client :: truncate(int fd, off_t length)
 {
+	TRACE;
     //XXX: implement truncate.
     return 0;
 }
@@ -715,6 +745,7 @@ client :: truncate(int fd, off_t length)
 int64_t
 client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
 {
+	TRACE;
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
 
@@ -798,10 +829,10 @@ client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
     return 0;
 }
 
-
 int64_t
 client :: getcwd(char* c, size_t len)
 {
+	TRACE;
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
 
@@ -820,6 +851,7 @@ client :: getcwd(char* c, size_t len)
 int64_t
 client :: getattr(const char* path, struct wtf_file_attrs* fa)
 {
+	TRACE;
     wtf_client_returncode status;
 
     int64_t fd = open(path, O_RDONLY, 0, 0);
@@ -840,6 +872,7 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa)
 int64_t
 client :: chdir(char* path)
 {
+	TRACE;
     char *abspath = new char[PATH_MAX]; 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
@@ -902,6 +935,7 @@ client :: chdir(char* path)
 int64_t
 client :: chmod(const char* path, mode_t mode)
 {
+	TRACE;
     hyperdex_client_returncode status;
     int64_t ret = -1;
     uint64_t val = mode;
@@ -929,6 +963,7 @@ client :: chmod(const char* path, mode_t mode)
 int64_t
 client :: mkdir(const char* path, mode_t mode)
 {
+	TRACE;
     hyperdex_client_returncode status;
     int64_t ret = -1;
     struct hyperdex_client_attribute attr[2];
@@ -961,6 +996,7 @@ client :: mkdir(const char* path, mode_t mode)
 int64_t 
 client :: opendir(const char* path)
 {
+	TRACE;
     int64_t fd = m_next_fileno;
     m_next_fileno;
     m_next_fileno++;
@@ -969,11 +1005,13 @@ client :: opendir(const char* path)
 int64_t 
 client :: closedir(int fd)
 {
+	TRACE;
 }
 
 int64_t 
 client :: readdir(int fd, char* entry)
 {
+	TRACE;
     //XXX implement readdir.
     return 0;
 }
@@ -982,6 +1020,7 @@ client :: readdir(int fd, char* entry)
 int64_t
 client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
 {
+	TRACE;
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
     int64_t ret = 0;
@@ -1013,16 +1052,14 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
             if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                LOGMETADATA;
 
-                uint64_t num_blocks;
-                up = up >> num_blocks;
-
-                for (uint64_t i = 0; i < num_blocks; ++i)
+                if (attrs[i].value_sz == 0)
                 {
-                    e::intrusive_ptr<block> b = new block();
-                    up = up >> b;
-                    f->insert_block(b);
+                    continue;
                 }
+
+                up = up >> f;
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
             {
@@ -1059,6 +1096,7 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
 int64_t
 client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *status)
 {
+	TRACE;
     std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
     int i = 0;
@@ -1090,7 +1128,9 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
     attr[2].value_sz = blockmap->size();
     attr[2].datatype = HYPERDATATYPE_STRING;
 
-    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 2, &hstatus);
+    std::cerr << "MESSAGE: " << blockmap->hex() << std::endl;
+
+    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 3, &hstatus);
 
     if (ret < 0)
     {
@@ -1112,6 +1152,7 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
 hyperdex_client_returncode
 client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status)
 {
+	TRACE;
     while(1)
     {
         hyperdex_client_returncode lstatus;
@@ -1121,9 +1162,9 @@ client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& stat
         {
             return lstatus;
         }
-
-        if (id != reqid){
-            //XXX: handle concurrent hyperdex updates.
+        else if (id != reqid)
+        {
+            abort();
         }
         else
         {
@@ -1137,6 +1178,7 @@ client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& stat
 void
 client :: handle_disruption(const server_id& si)
 {
+	TRACE;
     pending_map_t::iterator it = m_pending_ops.begin();
 
     while (it != m_pending_ops.end())
@@ -1160,18 +1202,21 @@ client :: handle_disruption(const server_id& si)
 const char*
 client :: error_message()
 {
+	TRACE;
     return m_last_error.msg();
 }
 
 const char*
 client :: error_location()
 {
+	TRACE;
     return m_last_error.loc();
 }
 
 void
 client :: set_error_message(const char* msg)
 {
+	TRACE;
     m_last_error = e::error();
     m_last_error.set_loc(__FILE__, __LINE__);
     m_last_error.set_msg() << msg;
@@ -1180,6 +1225,7 @@ client :: set_error_message(const char* msg)
 WTF_API std::ostream&
 operator << (std::ostream& lhs, wtf_client_returncode rhs)
 {
+	TRACE;
     switch (rhs)
     {
         STRINGIFY(WTF_CLIENT_SUCCESS);

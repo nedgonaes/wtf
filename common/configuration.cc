@@ -177,7 +177,7 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl) 
         if (bl[i] == block_location())
         {
             /* find the next available server and assign it to the block location. */
-            for (size_t j = 0; j < m_servers.size(); ++i)
+            for (size_t j = 0; j < m_servers.size(); ++j)
             {
                 server s = m_servers[last_server++ % m_servers.size()];
                 if (s.state == server::AVAILABLE)

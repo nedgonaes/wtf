@@ -49,6 +49,8 @@ class pending_write : public pending_aggregation
         virtual bool can_yield();
         virtual bool yield(wtf_client_returncode* status, e::error* error);
 
+    friend class file;
+
     // events
     public:
         virtual void handle_failure(const server_id& si);

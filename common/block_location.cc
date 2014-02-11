@@ -47,11 +47,3 @@ block_location :: block_location(uint64_t si, uint64_t bi)
 block_location :: ~block_location() throw()
 {
 }
-
-void 
-block_location :: pack(char* buf) const
-{
-    memmove(buf, &si, sizeof(uint64_t));
-    buf += sizeof(uint64_t);
-    memmove(buf, &bi, sizeof(uint64_t));
-}

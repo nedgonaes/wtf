@@ -65,7 +65,6 @@ namespace wtf __attribute__ ((visibility("hidden")))
             uint64_t si;
             uint64_t bi;
             static uint64_t pack_size() { return 2 * sizeof(uint64_t); }
-            void pack(char* buf) const;
         private:
             friend std::ostream&
                 operator << (std::ostream& lhs, const block_location& rhs);
@@ -97,8 +96,6 @@ namespace wtf __attribute__ ((visibility("hidden")))
     operator >> (e::unpacker up, block_location& rhs) 
     { 
         up = up >> rhs.si >> rhs.bi; 
-        e::unpack64be((uint8_t*)&rhs.si, &rhs.si);
-        e::unpack64be((uint8_t*)&rhs.bi, &rhs.bi);
         return up; 
     } 
 

@@ -59,6 +59,8 @@ static const char* _hyper_host = "127.0.0.1";
 
 #define BILLION (1000ULL * 1000ULL * 1000ULL)
 
+#define LOGERROR std::cerr << __FILE__ << ":" << __LINE__ << ": " << cl.error_message() << " at " << cl.error_location() << std::endl
+
 static uint64_t
 get_random()
 {
@@ -104,6 +106,12 @@ worker_thread( numbers::throughput_latency_logger* tll,
             std::string f = file();
             std::cout << "File: " << f << std::endl;
             int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, &status);
+            if (fd < 0)
+            {
+                LOGERROR;
+                abort();
+            }
+
 
             tll->start(&ts, 1);
             size_t sz = v.size();
@@ -111,8 +119,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             if (reqid < 0)
             {
-                std::cerr << "wtf_client->write encountered" << status << std::endl;
-                return;
+                LOGERROR;
+                abort();
             }
 
             wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
@@ -123,28 +131,36 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             if (reqid < 0)
             {
-                std::cerr << "wtf_loop encountered " << rc << std::endl;
-                return; 
+                LOGERROR;
+                abort(); 
             }
 
             //std::string d(v.size(), '0');
             char* dd = new char[v.size()];
             std::cout << "output pointer = " << (void*)dd << std::endl;
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, 3, &status);
+            fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
+
+            if (fd < 0)
+            {
+                LOGERROR;
+                abort();
+            }
+
             sz = v.size();
             reqid = cl.read(fd, dd, &sz, &status);
 
-
             if (reqid < 0)
             {
-                std::cerr << "wtf_client->read encountered " << rc << std::endl;
-                return; 
+                LOGERROR;
+                abort(); 
             }
 
+            reqid = cl.loop(reqid, -1, &status);
+
             if (reqid < 0)
             {
-                std::cerr << "wtf_loop encountered " << rc << std::endl;
-                return; 
+                LOGERROR;
+                abort(); 
             }
 
             std::string d(dd, sz);
@@ -164,7 +180,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             std::string v2 = v;
             v2.replace(0,3,"XXX");
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, 3, &status);
+            fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
 
             tll->start(&ts, 1);
             sz = 3;
@@ -188,7 +204,7 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 return; 
             }
 
-            fd = cl.open(f.data(), O_CREAT | O_RDWR, 0777, 3, &status);
+            fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
 
             char* dd2 = new char[v.size()];
             size_t sz2 = v2.size();
@@ -200,6 +216,8 @@ worker_thread( numbers::throughput_latency_logger* tll,
                 std::cerr << "wtf_client->read encountered " << rc << std::endl;
                 return; 
             }
+
+            reqid = cl.loop(reqid, -1, &status);
 
             if (reqid < 0)
             {

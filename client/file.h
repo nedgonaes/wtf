@@ -49,7 +49,7 @@ class file
 {
 
     public:
-        file(const char* path);
+        file(const char* path, size_t replicas);
         ~file() throw ();
 
     public:
@@ -57,7 +57,7 @@ class file
         int64_t fd() { return m_fd; }
         void path(const char* path) { m_path = po6::pathname(path); }
         po6::pathname path() { return m_path; }
-        size_t replicas() { return m_replicas; }
+        uint64_t replicas() { return m_replicas; }
         void set_replicas(size_t num_replicas) { m_replicas = num_replicas; }
 
         block_location current_block_location();
@@ -87,10 +87,12 @@ class file
 
     private:
         friend class e::intrusive_ptr<file>;
+        friend std::ostream& 
+            operator << (std::ostream& lhs, const file& rhs);
         friend e::buffer::packer 
             operator << (e::buffer::packer pa, const file& rhs);
         friend e::unpacker 
-            operator >> (e::unpacker up, file& rhs);
+            operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs);
 
     private:
         file(const file&);
@@ -128,10 +130,31 @@ class file
         block_map::const_iterator blocks_end() { return m_block_map.end(); }
 };
 
+inline std::ostream& 
+operator << (std::ostream& lhs, const file& rhs) 
+{ 
+    lhs << rhs.m_path << std::endl;
+    lhs << "\treplicas: " << rhs.m_replicas << std::endl;
+    lhs << "\tflags: " << rhs.flags << std::endl;
+    lhs << "\tmode: " << rhs.mode << std::endl;
+    lhs << "\tis_directory: " << rhs.is_directory << std::endl;
+    lhs << "\tblocks: " << std::endl;
+
+    for (file::block_map::const_iterator it = rhs.m_block_map.begin();
+            it != rhs.m_block_map.end(); ++it)
+    {
+        lhs << it->second.get() << std::endl;
+    }
+
+    return lhs;
+} 
+
+
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const file& rhs) 
 { 
-    pa = pa << rhs.m_block_map.size(); 
+    uint64_t sz = rhs.m_block_map.size();
+    pa = pa << sz;
 
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();
             it != rhs.m_block_map.end(); ++it)
@@ -143,17 +166,33 @@ operator << (e::buffer::packer pa, const file& rhs)
 } 
 
 inline e::unpacker 
-operator >> (e::unpacker up, file& rhs) 
+operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs) 
 { 
     uint64_t sz;
     up = up >> sz; 
 
+    rhs->m_file_length = 0;
+
     for (int i = 0; i < sz; ++i) 
     {
-        e::intrusive_ptr<wtf::block> b = new wtf::block();
+        e::intrusive_ptr<block> b = new block(0, 0, 0);
         up = up >> *b;
-        rhs.m_block_map[i] =  b; 
+        rhs->m_block_map[b->offset()] =  b; 
+        rhs->m_file_length += b->length();
     }
+
+    rhs->m_bytes_left_in_file = rhs->m_file_length - rhs->m_offset;
+    file::block_map::iterator it = rhs->m_block_map.lower_bound(rhs->m_offset);
+    
+    if (it == rhs->m_block_map.end())
+    {
+        it--;
+    }
+
+    e::intrusive_ptr<block> b = it->second;
+
+    rhs->m_bytes_left_in_block = b->offset() + b->length() - rhs->m_offset;
+    rhs->m_current_block = b;
 
     return up; 
 }

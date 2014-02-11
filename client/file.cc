@@ -35,6 +35,7 @@
 
 // WTF
 #include "client/file.h"
+#include "common/block.h"
 #include "common/block_location.h"
 
 #define DEFAULT_BLOCK_SIZE 4096 
@@ -42,17 +43,27 @@
 using wtf::file;
 using wtf::block_location;
 
-file :: file(const char* path)
+file :: file(const char* path, size_t replicas)
     : m_ref(0)
     , m_path(path)
     , m_pending()
     , m_fd(0)
     , m_block_map()
     , m_current_block()
+    , m_bytes_left_in_block(0)
+    , m_bytes_left_in_file(0)
+    , m_current_block_length(0)
     , m_offset(0)
+    , m_file_length(0)
+    , m_replicas(replicas)
     , is_directory(false)
     , flags(0)
+    , mode(0)
 {
+        m_current_block = new block(DEFAULT_BLOCK_SIZE, 0, replicas);
+        m_block_map[m_offset] = m_current_block;
+        m_bytes_left_in_block = m_current_block->length();
+        m_current_block_length = m_bytes_left_in_block;
 }
 
 file :: ~file() throw ()
@@ -114,7 +125,12 @@ file :: advance_to_end_of_block(size_t len)
 {
     size_t ret = 0;
 
-    if (m_bytes_left_in_block < len)
+    if (m_bytes_left_in_block == 0)
+    {
+        move_to_next_block();
+    }
+
+    if (len < m_bytes_left_in_block)
     {
         m_offset += len;
         m_bytes_left_in_block -= len;
@@ -141,7 +157,7 @@ file :: move_to_next_block()
     block_map::iterator it = m_block_map.find(m_offset);
     if (it == m_block_map.end())
     {
-        m_current_block = new block();
+        m_current_block = new block(DEFAULT_BLOCK_SIZE, m_offset, m_replicas);
         m_block_map[m_offset] = m_current_block;
     }
     else
@@ -182,8 +198,13 @@ file :: insert_block(e::intrusive_ptr<block> bl)
 void
 file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 {
-    block_map::iterator lbound = m_block_map.lower_bound(changeset.begin()->first);
-    block_map::iterator ubound = m_block_map.upper_bound(changeset[changeset.size()]->offset());
+    std::map<uint64_t, e::intrusive_ptr<block> >::iterator last = changeset.end();
+    last--;
+    uint64_t end = last->first;
+    uint64_t start = changeset.begin()->first;
+
+    block_map::iterator lbound = m_block_map.lower_bound(start);
+    block_map::iterator ubound = m_block_map.upper_bound(end);
     m_block_map.erase(lbound, ubound);
     m_block_map.insert(changeset.begin(), changeset.end());
 }
@@ -219,9 +240,9 @@ file :: serialize_blockmap()
 {
     size_t sz = sizeof(uint64_t);
 
-    for (int i = 0; i < m_block_map.size(); ++i)
+    for (file::block_map::iterator it = m_block_map.begin(); it != m_block_map.end(); ++it)
     {
-        sz += m_block_map[i]->pack_size();
+        sz += it->second->pack_size();
     }
 
     std::auto_ptr<e::buffer> blockmap(e::buffer::create(sz));
@@ -230,9 +251,9 @@ file :: serialize_blockmap()
     uint64_t num_blocks = m_block_map.size();
     pa = pa << num_blocks;
 
-    for (int i = 0; i < m_block_map.size(); ++i)
+    for (file::block_map::iterator it = m_block_map.begin(); it != m_block_map.end(); ++it)
     {
-        pa = pa << m_block_map[i];
+        pa = pa << it->second; 
     }
 
     return blockmap;

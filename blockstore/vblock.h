@@ -292,9 +292,8 @@ operator >> (e::unpacker up, vblock& rhs)
 inline e::unpacker 
 operator >> (e::unpacker up, e::intrusive_ptr<vblock>& rhs) 
 { 
-    size_t sz, size;
+    uint64_t sz;
     up = up >> sz; 
-    e::unpack64be((char*)&size,&sz);
 
     for (uint64_t i = 0; i < sz; ++i)
     {
