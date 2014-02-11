@@ -143,7 +143,7 @@ operator << (std::ostream& lhs, const file& rhs)
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();
             it != rhs.m_block_map.end(); ++it)
     {
-        lhs << it->second.get() << std::endl;
+        lhs << *it->second << std::endl;
     }
 
     return lhs;
@@ -192,6 +192,7 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
     e::intrusive_ptr<block> b = it->second;
 
     rhs->m_bytes_left_in_block = b->offset() + b->length() - rhs->m_offset;
+    rhs->m_current_block_length = b->length();
     rhs->m_current_block = b;
 
     return up; 

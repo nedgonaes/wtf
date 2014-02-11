@@ -195,6 +195,9 @@ operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs)
 
     up = up >> offset >> len >> replicas; 
 
+    rhs->m_length = len;
+    rhs->m_offset = offset;
+
     for (uint64_t i = 0; i < replicas; ++i)
     {
         block_location bl;

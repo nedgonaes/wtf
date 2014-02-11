@@ -64,13 +64,13 @@ reset_cluster()
     echo "ADDING WTF SPACE...\n"
     echo 'space wtf key path attributes string blockmap, int directory, int mode' | ${HYPERDEX} add-space -h ${HC} -p ${HYPERDEX_PORT}
     sleep 1
+    ./wtf-mkfs -H ${HC} -P ${HYPERDEX_PORT}
     echo "STARTING WTF COORDINATOR...\n"
     ${WTF} coordinator -D ${WTF_COORDINATOR_DATA_DIR} -l ${WC} -p ${WTF_PORT} -d
     sleep 1
     echo "STARTING WTF DAEMONS...\n"
-    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -d
-    ./wtf-mkfs -H ${HC} -P ${HYPERDEX_PORT}
-    #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
+    #${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -d
+    libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
 }
 #
 #run_iteration()

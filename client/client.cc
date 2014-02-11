@@ -1089,6 +1089,8 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
             }
         }
     }
+
+    std::cerr << *f << std::endl;
     
     return ret;
 }
@@ -1145,6 +1147,8 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
         ERROR(INTERNAL) << "HyperDex returned " << ret;
         return -1;
     }
+
+    std::cerr << *f << std::endl;
 
     return ret;
 }
