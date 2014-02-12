@@ -42,7 +42,7 @@ AC_PROG_CXX
 AC_PROG_CC
 AC_LANG(C++)
 
-ANAL_WARNINGS_CXX
+ANAL_WARNINGS
 
 # Checks for libraries.
 AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_ERROR([
@@ -64,17 +64,13 @@ PKG_CHECK_MODULES([BUSYBEE], [busybee >= 0.3.0])
 PKG_CHECK_MODULES([REPLICANT], [replicant >= 0.2.dev])
 PKG_CHECK_MODULES([HYPERLEVELDB], [libhyperleveldb])
 PKG_CHECK_MODULES([HYPERCLIENT], [hyperdex-client >= 1.0.dev])
+PKG_CHECK_MODULES([GLOG], [libglog >= 0.3.3])
 
 # Checks for header files.
 AC_CHECK_HEADER([popt.h],,[AC_MSG_ERROR([
 ---------------------------------------
 WTF relies upon the popt library.
 Please install popt to continue.
----------------------------------------])])
-AC_CHECK_HEADER([glog/logging.h],,[AC_MSG_ERROR([
----------------------------------------
-WTF relies upon the glog library.
-Please install glog to continue.
 ---------------------------------------])])
 
 # Checks for typedefs, structures, and compiler characteristics.

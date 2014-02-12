@@ -57,7 +57,13 @@ pkgconfig_DATA =
 EXTRA_DIST =
 TESTS = 
 
+noinst_HEADERS += daemon/settings.h
+noinst_HEADERS += tools/common.h
+noinst_HEADERS += client/constants.h
+noinst_HEADERS += common/configuration_flags.h
+noinst_HEADERS += client/client.h
 noinst_HEADERS += common/block.h
+noinst_HEADERS += blockstore/vblock.h
 noinst_HEADERS += common/coordinator_link.h
 noinst_HEADERS += common/block_location.h
 noinst_HEADERS += common/server.h
@@ -83,11 +89,6 @@ noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += visibility.h
 
 bin_PROGRAMS += wtf
-
-#noinst_PROGRAMS += wtf-test-blockstore
-if ENABLE_HDFS_BENCHMARKS
-noinst_PROGRAMS += wtf-hadoop-benchmark
-endif
 
 wtfexec_PROGRAMS += wtf-coordinator
 wtfexec_PROGRAMS += wtf-daemon 
@@ -271,12 +272,6 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 ################################################################################
 ################################## benchmarks ##################################
 ################################################################################
-
-if ENABLE_HDFS_BENCHMARKS
-wtf_hadoop_benchmark_SOURCES = tools/hadoop-benchmark.cc
-wtf_hadoop_benchmark_CPPFLAGS = -I${HADOOP_HOME}/src/c++/libhdfs -I${JAVA_HOME}/include -I${abs_top_srcdir}/client $(CPPFLAGS)
-wtf_hadoop_benchmark_LDADD =  -lpopt -lnumbers -larmnod -L${HADOOP_HOME}/build/c++/Linux-amd64-64/lib -L${JAVA_HOME}/jre/lib/amd64/server -lhdfs -ljvm
-endif
 
 ################################################################################
 ################################## tests   #####################################

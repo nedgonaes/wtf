@@ -58,7 +58,7 @@ class block
         block_location first_location();
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
         std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
-        bool is_hole() { return m_is_hole; }
+        bool is_hole() { return first_location() == block_location(); }
 
     private:
         friend class file;
