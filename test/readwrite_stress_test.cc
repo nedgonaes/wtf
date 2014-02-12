@@ -39,12 +39,12 @@
 #include <e/guard.h>
 #include <e/time.h>
 #include <e/slice.h>
-#include <numbers.h>
 #include <armnod.h>
 
 // WTF 
 #include <wtf/client.hpp>
 
+static bool _quiet = false;
 static long _done = 0;
 static long _number = 1000;
 static long _threads = 1;
@@ -59,7 +59,18 @@ static const char* _hyper_host = "127.0.0.1";
 
 #define BILLION (1000ULL * 1000ULL * 1000ULL)
 
-#define LOGERROR std::cerr << __FILE__ << ":" << __LINE__ << ": " << cl.error_message() << " at " << cl.error_location() << std::endl
+#define WTF_TEST_SUCCESS(TESTNO) \
+    do { \
+        if (!_quiet) std::cout << "Test " << TESTNO << ":  [\x1b[32mOK\x1b[0m]\n"; \
+    } while (0)
+
+#define WTF_TEST_FAIL(TESTNO, REASON) \
+    do { \
+        if (!_quiet) std::cout << "Test " << TESTNO << ":  [\x1b[31mFAIL\x1b[0m]\n" \
+                  << "location: " << __FILE__ << ":" << __LINE__ << "\n" \
+                  << "reason:  " << REASON << "\n"; \
+    abort(); \
+    } while (0)
 
 static uint64_t
 get_random()
@@ -84,16 +95,13 @@ get_random()
 }
 
 void 
-worker_thread( numbers::throughput_latency_logger* tll,
-        const armnod::argparser& _f,
+worker_thread(const armnod::argparser& _f,
         const armnod::argparser& _v)
 {
     armnod::generator file(armnod::argparser(_f).config());
     armnod::generator val(armnod::argparser(_v).config());
     file.seed(get_random());
     val.seed(get_random());
-    numbers::throughput_latency_logger::thread_state ts;
-    tll->initialize_thread(&ts);
 
     try
     {
@@ -104,46 +112,40 @@ worker_thread( numbers::throughput_latency_logger* tll,
             std::string v = val();
             wtf_client_returncode status = WTF_CLIENT_GARBAGE;
             std::string f = file();
-            std::cout << "File: " << f << std::endl;
             int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, &status);
             if (fd < 0)
             {
-                LOGERROR;
-                abort();
+                WTF_TEST_FAIL(0, "failed to open file");
             }
 
 
-            tll->start(&ts, 1);
             size_t sz = v.size();
             int64_t reqid = cl.write(fd, v.data(), &sz, 1, &status);
 
             if (reqid < 0)
             {
-                LOGERROR;
-                abort();
+                WTF_TEST_FAIL(0, "XXX");;
+                
             }
 
             wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
 
             cl.close(fd, &rc);
 
-            tll->finish(&ts);
 
             if (reqid < 0)
             {
-                LOGERROR;
-                abort(); 
+                WTF_TEST_FAIL(0, "XXX");;
+                 
             }
 
-            //std::string d(v.size(), '0');
             char* dd = new char[v.size()];
-            std::cout << "output pointer = " << (void*)dd << std::endl;
             fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
 
             if (fd < 0)
             {
-                LOGERROR;
-                abort();
+                WTF_TEST_FAIL(0, "XXX");;
+                
             }
 
             sz = v.size();
@@ -151,29 +153,28 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             if (reqid < 0)
             {
-                LOGERROR;
-                abort(); 
+                WTF_TEST_FAIL(0, "XXX");;
+                 
             }
 
             reqid = cl.loop(reqid, -1, &status);
 
             if (reqid < 0)
             {
-                LOGERROR;
-                abort(); 
+                WTF_TEST_FAIL(0, reqid);;
+                 
             }
 
             std::string d(dd, sz);
 
             if (v.compare(d) != 0)
             {
-                std::cerr << "Strings don't match" << std::endl;
                 e::slice slc1(v.data(), v.size());
                 e::slice slc2(d.data(), d.size());
-                std::cerr << slc1.hex() << std::endl;
-                std::cerr << " != " << std::endl;
-                std::cerr  << slc2.hex() << std::endl;
-                abort();
+                WTF_TEST_FAIL(0, "Strings don't match"
+                                  << slc1.hex() << std::endl
+                                  << " != " << std::endl
+                                  << slc2.hex());
             }
 
             cl.close(fd, &rc);
@@ -182,26 +183,21 @@ worker_thread( numbers::throughput_latency_logger* tll,
             v2.replace(0,3,"XXX");
             fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
 
-            tll->start(&ts, 1);
             sz = 3;
             reqid = cl.write(fd, "XXX", &sz, 1, &status);
 
             if (reqid < 0)
             {
-                std::cerr << "wtf_client->write encountered" << status << std::endl;
-                return;
+                WTF_TEST_FAIL(0, "wtf_client->write encountered" << status);
             }
 
             rc = WTF_CLIENT_GARBAGE;
 
             cl.close(fd, &rc);
 
-            tll->finish(&ts);
-
             if (reqid < 0)
             {
-                std::cerr << "wtf_loop encountered " << rc << std::endl;
-                return; 
+                WTF_TEST_FAIL(0, "wtf_loop encountered " << rc);
             }
 
             fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
@@ -213,57 +209,44 @@ worker_thread( numbers::throughput_latency_logger* tll,
 
             if (reqid < 0)
             {
-                std::cerr << "wtf_client->read encountered " << rc << std::endl;
-                return; 
+                WTF_TEST_FAIL(0, "wtf_client->read encountered " << rc);
             }
 
             reqid = cl.loop(reqid, -1, &status);
 
             if (reqid < 0)
             {
-                std::cerr << "wtf_loop encountered " << rc << std::endl;
-                return; 
+                WTF_TEST_FAIL(0, "wtf_loop encountered " << rc);
             }
 
             std::string d2(dd2, sz2);
 
             if (v2.compare(d2) != 0)
             {
-                std::cerr << "Strings don't match" << std::endl;
                 e::slice slc1(v2.data(), v2.size());
                 e::slice slc2(d2.data(), d2.size());
-                std::cerr << slc1.hex() << std::endl;
-                std::cerr << " != " << std::endl;
-                std::cerr  << slc2.hex() << std::endl;
-                abort();
+                WTF_TEST_FAIL(0, "Strings don't match: " << std::endl 
+                                 << slc1.hex() << std::endl
+                                 << " != " << std::endl
+                                 << slc2.hex());
+                
             }
 
             cl.close(fd, &rc);
             delete [] dd;
             delete [] dd2;
-
-            if (cl.mkdir("/foo", 0777, &status) < 0)
-            {
-                std::cerr << "Can't mkdir foo" << std::endl;
-            }
-
-            if (cl.mkdir("/foo", 0777, &status) == 0)
-            {
-                std::cerr << "Allows mkdir twice." << std::endl;
-            }
-           
+            
+            WTF_TEST_SUCCESS(0);      
         }
     }
     catch (po6::error& e)
     {
-        std::cerr << "system error: " << e.what() << std::endl;
+        WTF_TEST_FAIL(0, "system error: " << e.what());
     }
     catch (std::exception& e)
     {
-        std::cerr << "error: " << e.what() << std::endl;
+        WTF_TEST_FAIL(0, "error: " << e.what());
     }
-
-    tll->terminate_thread(&ts);
 }
 
 int
@@ -301,6 +284,9 @@ main(int argc, const char* argv[])
     ap.arg().name('c', "concurrent")
         .description("number of concurrent ops (default=50)")
         .as_long(&_concurrent);
+    ap.arg().name('q', "quiet")
+            .description("silence all output")
+            .set_true(&_quiet);
     armnod::argparser file_parser("file-");
     armnod::argparser value_parser("value-");
     ap.add("Filename Generation:", file_parser.parser());
@@ -314,16 +300,9 @@ main(int argc, const char* argv[])
     typedef std::tr1::shared_ptr<po6::threads::thread> thread_ptr;
     std::vector<thread_ptr> threads;
 
-    numbers::throughput_latency_logger tll;
-    if (!tll.open(_output))
-    {
-        std::cerr << "could not open log: " << strerror(errno) << std::endl;
-        return EXIT_FAILURE;
-    }
-
     for (size_t i = 0; i < _threads; ++i)
     {
-        thread_ptr t(new po6::threads::thread(std::tr1::bind(worker_thread, &tll, file_parser, value_parser)));
+        thread_ptr t(new po6::threads::thread(std::tr1::bind(worker_thread, file_parser, value_parser)));
         threads.push_back(t);
         t->start();
     }
@@ -331,12 +310,6 @@ main(int argc, const char* argv[])
     for (size_t i = 0; i < threads.size(); ++i)
     {
         threads[i]->join();
-    }
-
-    if (!tll.close())
-    {
-        std::cerr << "could not close log: " << strerror(errno) << std::endl;
-        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

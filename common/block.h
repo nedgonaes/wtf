@@ -172,7 +172,6 @@ operator >> (e::unpacker up, block& rhs)
 
     up = up >> offset >> len >> replicas; 
 
-    //std::cout << "Unpacking block, len: " << len << " size:" << size << std::endl;
     rhs.m_length = len;
     rhs.m_offset = offset;
 

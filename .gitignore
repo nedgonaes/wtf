@@ -39,10 +39,6 @@ readtestdata
 wtf-async-benchmark
 wtf-sync-benchmark
 wtf-hadoop-benchmark
-wtf-cli
-wtf-writetest
-wtf-test-blockstore
-wtf-test-readwrite
 wtf-coordinator
 wtf-daemon
 wtf-initialize-cluster
@@ -63,3 +59,4 @@ wtf-mkfs
 logfusetest
 wtf
 test-driver
+test/readwrite-stress-test

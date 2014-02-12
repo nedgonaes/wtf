@@ -31,7 +31,7 @@ AM_CFLAGS = $(WANAL_CFLAGS)
 AM_CXXFLAGS = $(WANAL_CXXFLAGS) $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(LRT_CFLAGS)
 AM_LDFLAGS = $(PO6_LDFLAGS) $(E_LDFLAGS) $(BUSYBEE_LDFLAGS) $(REPLICANT_FLAGS)
 
-TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh 
+TESTS_ENVIRONMENT = . $(abs_top_srcdir)/test/env.sh "${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
 #"${abs_top_srcdir}" "${abs_top_builddir}" "${VERSION}";
 wtfexecdir = $(exec_prefix)/libexec/$(PACKAGE)-$(VERSION)
 wtfheaderdir = $(includedir)/wtf
@@ -54,12 +54,8 @@ check_PROGRAMS =
 
 pkgconfig_DATA =
 
-
-check_PROGRAMS += testprogram 
-check_PROGRAMS += testprogram2 
-TESTS = testprogram testprogram2
-testprogram_SOURCES = test/test.cc
-testprogram2_SOURCES = test/test.cc
+EXTRA_DIST =
+TESTS = 
 
 noinst_HEADERS += common/block.h
 noinst_HEADERS += common/coordinator_link.h
@@ -88,7 +84,6 @@ noinst_HEADERS += visibility.h
 
 bin_PROGRAMS += wtf
 
-noinst_PROGRAMS += wtf-test-readwrite
 #noinst_PROGRAMS += wtf-test-blockstore
 if ENABLE_HDFS_BENCHMARKS
 noinst_PROGRAMS += wtf-hadoop-benchmark
@@ -286,13 +281,22 @@ endif
 ################################################################################
 ################################## tests   #####################################
 ################################################################################
+shell_wrappers =
+shell_wrappers += test/sh/readwrite.basic.sh
+
+TESTS += $(shell_wrappers)
+
+EXTRA_DIST += $(shell_wrappers)
+EXTRA_DIST += test/env.sh
+EXTRA_DIST += test/runner.py
 
 #wtf-test_readwrite
-wtf_test_readwrite_SOURCES = tests/test_readwrite.cc
-wtf_test_readwrite_LDADD = libwtf-client.la $(E_LIBS) -lpopt -lnumbers -larmnod
+check_PROGRAMS += test/readwrite-stress-test
+test_readwrite_stress_test_SOURCES = test/readwrite_stress_test.cc 
+test_readwrite_stress_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 #if ENABLE_GTEST
-#wtf_test_blockstore_SOURCES = tests/test_blockstore.cc
+#wtf_test_blockstore_SOURCES = test/test_blockstore.cc
 #wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
 #endif
 

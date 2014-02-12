@@ -95,8 +95,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
     inline e::unpacker 
     operator >> (e::unpacker up, block_location& rhs) 
     { 
-        up = up >> rhs.si >> rhs.bi; 
-        return up; 
+        return up >> rhs.si >> rhs.bi; 
     } 
 
     OPERATOR(<) 

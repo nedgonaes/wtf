@@ -45,8 +45,8 @@
 #include "daemon/daemon.h"
 
 static bool _daemonize = false;
-static const char* _data = "wtf-data/wtf-daemon/data";
-static const char* _metadata = "wtf-data/wtf-daemon/data/metadata";
+static const char* _data = "./data";
+static const char* _metadata = "./metadata";
 static const char* _listen_host = "auto";
 static unsigned long _listen_port = 2013;
 static po6::net::ipaddr _listen_ip;
@@ -66,10 +66,10 @@ static struct poptOption popts[] = {
     {"foreground", 'f', POPT_ARG_NONE, NULL, 'f',
      "run wtf in the foreground", 0},
     {"data", 'M', POPT_ARG_STRING, &_metadata, 'M',
-     "store persistent state in this directory (default: ./daemon-data/metadata)",
+     "store persistent state in this directory (default: ./metadata)",
      "dir"},
     {"data", 'D', POPT_ARG_STRING, &_data, 'D',
-     "store persistent state in this directory (default: ./daemon-data)",
+     "store persistent state in this directory (default: ./data)",
      "dir"},
     {"listen", 'l', POPT_ARG_STRING, &_listen_host, 'l',
      "listen on a specific IP address (default: auto)",

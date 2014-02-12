@@ -135,6 +135,7 @@ operator << (std::ostream& lhs, const file& rhs)
 { 
     lhs << rhs.m_path << std::endl;
     lhs << "\treplicas: " << rhs.m_replicas << std::endl;
+    lhs << "\tlength: " << rhs.m_file_length << std::endl;
     lhs << "\tflags: " << rhs.flags << std::endl;
     lhs << "\tmode: " << rhs.mode << std::endl;
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
@@ -153,8 +154,9 @@ operator << (std::ostream& lhs, const file& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const file& rhs) 
 { 
+    uint64_t length = rhs.m_file_length;
     uint64_t sz = rhs.m_block_map.size();
-    pa = pa << sz;
+    pa = pa << length << sz;
 
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();
             it != rhs.m_block_map.end(); ++it)
@@ -169,16 +171,16 @@ inline e::unpacker
 operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs) 
 { 
     uint64_t sz;
-    up = up >> sz; 
+    uint64_t length;
+    up = up >> length >> sz; 
 
-    rhs->m_file_length = 0;
+    rhs->m_file_length = length;
 
     for (int i = 0; i < sz; ++i) 
     {
         e::intrusive_ptr<block> b = new block(0, 0, 0);
         up = up >> *b;
         rhs->m_block_map[b->offset()] =  b; 
-        rhs->m_file_length += b->length();
     }
 
     rhs->m_bytes_left_in_file = rhs->m_file_length - rhs->m_offset;

@@ -207,6 +207,21 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
     block_map::iterator ubound = m_block_map.upper_bound(end);
     m_block_map.erase(lbound, ubound);
     m_block_map.insert(changeset.begin(), changeset.end());
+    
+    last = m_block_map.end();
+
+    m_file_length = 0;
+
+    do {
+        last--;
+
+        if (!last->second->is_hole())
+         {
+             m_file_length = last->first + last->second->length();
+             return;
+         }
+
+    } while (last != m_block_map.begin());
 }
 
 size_t
@@ -238,7 +253,8 @@ file :: length()
 std::auto_ptr<e::buffer>
 file :: serialize_blockmap()
 {
-    size_t sz = sizeof(uint64_t);
+    size_t sz = sizeof(uint64_t) //blockmap size
+              + sizeof(uint64_t); //file length
 
     for (file::block_map::iterator it = m_block_map.begin(); it != m_block_map.end(); ++it)
     {
@@ -249,7 +265,7 @@ file :: serialize_blockmap()
     e::buffer::packer pa = blockmap->pack_at(0); 
 
     uint64_t num_blocks = m_block_map.size();
-    pa = pa << num_blocks;
+    pa = pa << m_file_length << num_blocks;
 
     for (file::block_map::iterator it = m_block_map.begin(); it != m_block_map.end(); ++it)
     {

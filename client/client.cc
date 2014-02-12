@@ -640,6 +640,7 @@ client :: read(int64_t fd, char* buf,
     f->add_pending_op(client_id);
 
     size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
+    std::cout << "BYTES LEFT IS ZERO!!!!" << std::endl;
     size_t buf_offset = 0;
 
     while(rem > 0)
