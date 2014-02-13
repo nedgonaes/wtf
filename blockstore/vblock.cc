@@ -48,11 +48,11 @@ vblock :: slice :: slice()
 {
 }
 
-vblock :: slice :: slice(size_t offset, size_t length, size_t disk_offset)
+vblock :: slice :: slice(size_t off, size_t len, size_t disk_off)
     : m_ref(0)
-    , m_offset(offset)
-    , m_length(length)
-    , m_disk_offset(disk_offset)
+    , m_offset(off)
+    , m_length(len)
+    , m_disk_offset(disk_off)
 {
 }
 
@@ -77,13 +77,13 @@ vblock :: length()
 }
 
 void
-vblock :: update(size_t offset, size_t len, size_t disk_offset)
+vblock :: update(size_t off, size_t len, size_t disk_off)
 {
-    size_t new_start = offset;
-    size_t new_end = offset + len - 1;
+    size_t new_start = off;
+    size_t new_end = off+ len - 1;
 
     vblock::slice_map::iterator after = m_slice_map.lower_bound(new_start);
-    e::intrusive_ptr<vblock::slice> new_slice(new vblock::slice(new_start, len, disk_offset));
+    e::intrusive_ptr<vblock::slice> new_slice(new vblock::slice(new_start, len, disk_off));
 
     //new block
     if (m_slice_map.size() == 0)
@@ -241,11 +241,6 @@ vblock :: update(size_t offset, size_t len, size_t disk_offset)
                 after++;
                 m_slice_map[new_start] = new_slice;
 
-                e::intrusive_ptr<slice> old_slice = after->second;
-                size_t old_length = old_slice->m_length;
-                size_t old_start = old_slice->m_offset;
-                size_t old_end = old_start + old_length - 1;
-
                 //remove completely overwritten slices
                 while (old_end <= new_end)
                 {
@@ -346,9 +341,7 @@ vblock :: get_slices(size_t offset, size_t len, vblock::slice_map::const_iterato
         slices = after;
         return 0;
     }
-    else
-    {
-        return -1;
-    }
+
+    return -1;
 }
 

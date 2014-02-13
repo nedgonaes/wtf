@@ -70,6 +70,7 @@ class pending_write : public pending_aggregation
 
     private:
         e::intrusive_ptr<file> m_file;
+        std::auto_ptr<e::buffer> m_old_blockmap;
         changeset_t m_changeset;
         bool m_done;
 };

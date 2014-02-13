@@ -188,6 +188,10 @@ class client
         int64_t apply_changeset(e::intrusive_ptr<file> f, 
             std::map<uint64_t, e::intrusive_ptr<block> >& changeset);
         int64_t put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode* status);
+        int64_t update_file_metadata(e::intrusive_ptr<file> f, 
+                                     const char* old_blockmap, 
+                                     size_t old_blockmap_sz,
+                                     wtf_client_returncode* status);
         int64_t get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
 

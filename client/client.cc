@@ -640,7 +640,6 @@ client :: read(int64_t fd, char* buf,
     f->add_pending_op(client_id);
 
     size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
-    std::cout << "BYTES LEFT IS ZERO!!!!" << std::endl;
     size_t buf_offset = 0;
 
     while(rem > 0)
@@ -1097,6 +1096,77 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
 }
 
 int64_t
+client :: update_file_metadata(e::intrusive_ptr<file> f, 
+                               const char* old_blockmap,
+                               size_t old_blockmap_sz,
+                               wtf_client_returncode *status)
+{
+	TRACE;
+    std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
+    int64_t ret = -1;
+    int i = 0;
+
+    hyperdex_client_returncode hstatus;
+
+    typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
+
+    /* construct the attributes for the new metadata */
+    uint64_t mode = f->mode;
+    uint64_t directory = f->is_directory;
+    std::auto_ptr<e::buffer> blockmap_update = f->serialize_blockmap();
+    struct hyperdex_client_attribute update_attr[3];
+
+    update_attr[0].attr = "mode";
+    update_attr[0].value = (const char*)&mode;
+    update_attr[0].value_sz = sizeof(mode);
+    update_attr[0].datatype = HYPERDATATYPE_INT64;
+
+    update_attr[1].attr = "directory";
+    update_attr[1].value = (const char*)&directory;
+    update_attr[1].value_sz = sizeof(directory);
+    update_attr[1].datatype = HYPERDATATYPE_INT64;
+
+    update_attr[2].attr = "blockmap";
+    update_attr[2].value = reinterpret_cast<const char*>(blockmap_update->data());
+    update_attr[2].value_sz = blockmap_update->size();
+    update_attr[2].datatype = HYPERDATATYPE_STRING;
+
+    std::cerr << "MESSAGE: " << blockmap_update->hex() << std::endl;
+
+
+    /* construct the attributes for the cond_put condition */
+    struct hyperdex_client_attribute_check cond_attr;
+
+    cond_attr.attr = "blockmap";
+    cond_attr.value = old_blockmap; 
+    cond_attr.value_sz = old_blockmap_sz;
+    cond_attr.datatype = HYPERDATATYPE_STRING;
+    cond_attr.predicate = HYPERPREDICATE_EQUALS;
+
+    ret = m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
+                                     update_attr, 3, &hstatus);
+
+    if (ret < 0)
+    {
+        ERROR(INTERNAL) << "HyperDex returned " << ret;
+        return -1;
+    }
+
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+
+    if (res != HYPERDEX_CLIENT_SUCCESS)
+    {
+        ERROR(INTERNAL) << "HyperDex returned " << ret;
+        return -1;
+    }
+
+    std::cerr << *f << std::endl;
+
+    return ret;
+}
+
+
+int64_t
 client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *status)
 {
 	TRACE;
@@ -1104,36 +1174,33 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
     int64_t ret = -1;
     int i = 0;
 
-    std::vector<struct hyperdex_client_map_attribute> attrs;
     hyperdex_client_returncode hstatus;
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
-    const char* name = "blockmap";
-
     uint64_t mode = f->mode;
     uint64_t directory = f->is_directory;
-    std::auto_ptr<e::buffer> blockmap = f->serialize_blockmap();
-    struct hyperdex_client_attribute attr[3];
+    std::auto_ptr<e::buffer> blockmap_update = f->serialize_blockmap();
+    struct hyperdex_client_attribute update_attr[3];
 
-    attr[0].attr = "mode";
-    attr[0].value = (const char*)&mode;
-    attr[0].value_sz = sizeof(mode);
-    attr[0].datatype = HYPERDATATYPE_INT64;
+    update_attr[0].attr = "mode";
+    update_attr[0].value = (const char*)&mode;
+    update_attr[0].value_sz = sizeof(mode);
+    update_attr[0].datatype = HYPERDATATYPE_INT64;
 
-    attr[1].attr = "directory";
-    attr[1].value = (const char*)&directory;
-    attr[1].value_sz = sizeof(directory);
-    attr[1].datatype = HYPERDATATYPE_INT64;
+    update_attr[1].attr = "directory";
+    update_attr[1].value = (const char*)&directory;
+    update_attr[1].value_sz = sizeof(directory);
+    update_attr[1].datatype = HYPERDATATYPE_INT64;
 
-    attr[2].attr = "blockmap";
-    attr[2].value = reinterpret_cast<const char*>(blockmap->data());
-    attr[2].value_sz = blockmap->size();
-    attr[2].datatype = HYPERDATATYPE_STRING;
+    update_attr[2].attr = "blockmap";
+    update_attr[2].value = reinterpret_cast<const char*>(blockmap_update->data());
+    update_attr[2].value_sz = blockmap_update->size();
+    update_attr[2].datatype = HYPERDATATYPE_STRING;
 
-    std::cerr << "MESSAGE: " << blockmap->hex() << std::endl;
+    std::cerr << "MESSAGE: " << blockmap_update->hex() << std::endl;
 
-    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), attr, 3, &hstatus);
+    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), update_attr, 3, &hstatus);
 
     if (ret < 0)
     {

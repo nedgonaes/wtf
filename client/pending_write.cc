@@ -34,6 +34,7 @@ using wtf::pending_write;
 pending_write :: pending_write(uint64_t id, e::intrusive_ptr<file> f,
                                        wtf_client_returncode* status)
     : pending_aggregation(id, status)
+    , m_old_blockmap(f->serialize_blockmap())
     , m_file(f)
     , m_done(false)
 {
@@ -124,7 +125,8 @@ pending_write :: handle_message(client* cl,
 
         wtf_client_returncode cstatus;
 
-        if (cl->put_file_metadata(m_file, &cstatus))
+        if (cl->update_file_metadata(m_file, reinterpret_cast<const char*>(m_old_blockmap->data()), 
+                                     m_old_blockmap->size(), &cstatus))
         {
             CLIENT_ERROR(cstatus);
             return true;

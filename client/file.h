@@ -138,6 +138,7 @@ operator << (std::ostream& lhs, const file& rhs)
     lhs << "\tlength: " << rhs.m_file_length << std::endl;
     lhs << "\tflags: " << rhs.flags << std::endl;
     lhs << "\tmode: " << rhs.mode << std::endl;
+    lhs << "\toffset: " << rhs.m_offset<< std::endl;
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
     lhs << "\tblocks: " << std::endl;
 
