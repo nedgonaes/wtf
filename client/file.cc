@@ -43,7 +43,7 @@
 using wtf::file;
 using wtf::block_location;
 
-file :: file(const char* path, size_t replicas)
+file :: file(const char* path, size_t reps, size_t block_sz)
     : m_ref(0)
     , m_path(path)
     , m_pending()
@@ -55,12 +55,13 @@ file :: file(const char* path, size_t replicas)
     , m_current_block_length(0)
     , m_offset(0)
     , m_file_length(0)
-    , m_replicas(replicas)
+    , m_replicas(reps)
     , is_directory(false)
     , flags(0)
     , mode(0)
+    , m_block_size(block_sz)
 {
-        m_current_block = new block(DEFAULT_BLOCK_SIZE, 0, replicas);
+        m_current_block = new block(m_block_size, 0, reps);
         m_block_map[m_offset] = m_current_block;
         m_bytes_left_in_block = m_current_block->length();
         m_current_block_length = m_bytes_left_in_block;

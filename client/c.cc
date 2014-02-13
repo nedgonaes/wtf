@@ -161,11 +161,11 @@ WTF_API int64_t wtf_client_chdir(wtf_client* _cl,
 }
 
 WTF_API int64_t wtf_client_open(wtf_client* _cl, 
-            const char* path, int flags, mode_t mode, size_t num_replicas, 
+            const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size,
             wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->open(path, flags, mode, num_replicas);
+        return cl->open(path, flags, mode, num_replicas, block_size);
     );
 
 }

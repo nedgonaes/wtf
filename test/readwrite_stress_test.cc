@@ -52,6 +52,8 @@ static long _backup = 0;
 static long _connect_port = 1981;
 static long _hyper_port = 1982;
 static long _concurrent = 50;
+static long _block_size = 4096;
+static long _op_size = 4096;
 static const char* _output = "wtf-sync-benchmark.log";
 static const char* _dir = ".";
 static const char* _connect_host = "127.0.0.1";
@@ -112,7 +114,7 @@ worker_thread(const armnod::argparser& _f,
             std::string v = val();
             wtf_client_returncode status = WTF_CLIENT_GARBAGE;
             std::string f = file();
-            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, &status);
+            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, _block_size, &status);
             if (fd < 0)
             {
                 WTF_TEST_FAIL(0, "failed to open file");
@@ -140,7 +142,7 @@ worker_thread(const armnod::argparser& _f,
             }
 
             char* dd = new char[v.size()];
-            fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
+            fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
 
             if (fd < 0)
             {
@@ -181,7 +183,7 @@ worker_thread(const armnod::argparser& _f,
 
             std::string v2 = v;
             v2.replace(0,3,"XXX");
-            fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
+            fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
 
             sz = 3;
             reqid = cl.write(fd, "XXX", &sz, 1, &status);
@@ -200,7 +202,7 @@ worker_thread(const armnod::argparser& _f,
                 WTF_TEST_FAIL(0, "wtf_loop encountered " << rc);
             }
 
-            fd = cl.open(f.data(), O_RDWR, 0777, 3, &status);
+            fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
 
             char* dd2 = new char[v.size()];
             size_t sz2 = v2.size();
@@ -284,6 +286,12 @@ main(int argc, const char* argv[])
     ap.arg().name('c', "concurrent")
         .description("number of concurrent ops (default=50)")
         .as_long(&_concurrent);
+    ap.arg().name('b', "block-size")
+        .description("size of blocks")
+        .as_long(&_block_size);
+    ap.arg().name('o', "op-size")
+        .description("size of ops")
+        .as_long(&_op_size);
     ap.arg().name('q', "quiet")
             .description("silence all output")
             .set_true(&_quiet);

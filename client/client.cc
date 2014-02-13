@@ -469,7 +469,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 }
 
 int64_t
-client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
+client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size)
 {
 	TRACE;
     wtf_client_returncode lstatus;
@@ -480,18 +480,21 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas)
         return -1;
     }
 
-    e::intrusive_ptr<file> f = new file(path, num_replicas);
-    m_fds[m_next_fileno] = f; 
     
-    f->flags = flags;
-    f->mode = mode;
 
     if (flags & O_CREAT)
     {
+        e::intrusive_ptr<file> f = new file(path, num_replicas, block_size);
+        m_fds[m_next_fileno] = f; 
+        f->flags = flags;
+        f->mode = mode;
         put_file_metadata(f, status);
     }
     else
     {
+        e::intrusive_ptr<file> f = new file(path, num_replicas, block_size);
+        m_fds[m_next_fileno] = f; 
+        f->flags = flags;
         get_file_metadata(path, f, false);
     }
 
@@ -854,7 +857,8 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa)
 	TRACE;
     wtf_client_returncode status;
 
-    int64_t fd = open(path, O_RDONLY, 0, 0);
+    int64_t fd = open(path, O_RDONLY, 0, 0, 0);
+
     if (fd < 0)
     {
         return -1;

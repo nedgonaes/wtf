@@ -49,7 +49,7 @@ class file
 {
 
     public:
-        file(const char* path, size_t replicas);
+        file(const char* path, size_t replicas, size_t block_size);
         ~file() throw ();
 
     public:
@@ -118,6 +118,7 @@ class file
         size_t m_offset;
         size_t m_file_length;
         size_t m_replicas;
+        size_t m_block_size;
 
 
     public:
