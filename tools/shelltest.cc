@@ -1,22 +1,16 @@
-// e
-#include <e/endian.h>
-#include <e/unpacker.h>
-
-// HyperDex
-#include <hyperdex/client.hpp>
-#include "tools/common.h"
+// C
+#include <stdio.h>
 
 // WTF 
 #include "client/file.h"
-#include "client/client.h"
 
 using namespace std;
 
 hyperdex::Client* h;
-const char* space = "wtf";
+const char* WTF_SPACE = "wtf";
 bool verbose = true;
-const struct hyperdex_client_attribute* attr_got;
-size_t attr_size_got;
+const struct hyperdex_client_attribute* attrs;
+size_t attrs_sz;
 hyperdex_client_returncode status;
 int64_t retval;
 
@@ -27,7 +21,7 @@ print_return()
     if (verbose) cout << status << endl;
     retval = h->loop(-1, &status);
     if (verbose) printf("final retval %ld status %d:", retval, status);
-    if (verbose) cout << status << endl << endl;
+    if (verbose) cout << status << endl;
 }
 
 void
@@ -36,45 +30,51 @@ read()
     if (status == HYPERDEX_CLIENT_SEARCHDONE) return;
 
     // Reading
-    if (verbose) cout << "attr_size_got [" << attr_size_got << "]" << endl;
-    if (attr_got == NULL)
+    if (verbose) cout << "[" << attrs_sz << "] attributes" << endl;
+    if (attrs == NULL)
     {
-        cout << "attr_got is NULL" << endl;
+        cout << "attrs is NULL" << endl;
     }
     else
     {
-        for (int i = 0; i < attr_size_got; ++i)
+        for (size_t i = 0; i < attrs_sz; ++i)
         {
-            if (verbose) cout << "attribute " << i << ": " << attr_got[i].attr << endl;
-            if (strcmp(attr_got[i].attr, "path") == 0)
+            if (verbose) cout << "\t" << i << ". [" << attrs[i].attr << "]:\t";
+            if (strcmp(attrs[i].attr, "path") == 0)
             {
-                if (verbose) cout << "attr [" << attr_got[i].attr << "] value [" << std::string(attr_got[i].value, attr_got[i].value_sz) << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                else cout << std::string(attr_got[i].value, attr_got[i].value_sz) << endl;
-                //printf("value [%.5s]\n", attr_got[i].value);
+                cout << "[" << string(attrs[i].value, attrs[i].value_sz) << "]" << endl;
             }
-            else if (strcmp(attr_got[i].attr, "blockmap") == 0)
+            else if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
-                //if (verbose) cout << "attr [" << attr_got[i].attr << "] value_sz [" << attr_got[i].value_sz << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                //uint32_t keylen;
-                //uint64_t key;
-                //uint32_t vallen;
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                cout << "MESSAGE: " << up.as_slice().hex() << endl;
 
-                //e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
-                //while (!up.empty())
-                //{
-                //    up = up >> keylen >> key >> vallen;
+                if (attrs[i].value_sz == 0)
+                {
+                    continue;
+                }
+            }
+            else if (strcmp(attrs[i].attr, "directory") == 0)
+            {
+                uint64_t is_dir;
 
-                //    e::unpack32be((uint8_t *)&keylen, &keylen);
-                //    e::unpack64be((uint8_t *)&key, &key);
-                //    e::unpack32be((uint8_t *)&vallen, &vallen);
-                //    if (verbose) printf("keylen %x key %lx vallen %x\n", keylen, key, vallen);
-                //    e::intrusive_ptr<wtf::block> b = new wtf::block();
-                //    up = up >> b;
-                //}
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> is_dir;
+                e::unpack64be((uint8_t*)&is_dir, &is_dir);
+                cout << "[" << is_dir << "]" << endl;
+            }
+            else if (strcmp(attrs[i].attr, "mode") == 0)
+            {
+                uint64_t mode;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> mode;
+                e::unpack64be((uint8_t*)&mode, &mode);
+                cout << "[" << mode << "]" << endl;
             }
             else
             {
-                cout << "unexpected attribute" << endl;
+                cout << "<unexpected attribute>" << endl;
             }
         }
     }
@@ -87,7 +87,7 @@ put(const char* filename)
 {
     if (verbose) cout << ">>>>putting [" << filename << "]" << endl;
 
-    retval = h->put_if_not_exist(space, filename, strlen(filename), NULL, 0, &status);
+    retval = h->put_if_not_exist(WTF_SPACE, filename, strlen(filename), NULL, 0, &status);
     print_return();
     if (verbose) cout << endl;
 }
@@ -97,7 +97,7 @@ del(const char* filename)
 {
     if (verbose) cout << ">>>>deleting [" << filename << "]" << endl;
 
-    retval = h->del(space, filename, strlen(filename), &status);
+    retval = h->del(WTF_SPACE, filename, strlen(filename), &status);
     print_return();
     if (verbose) cout << endl;
 }
@@ -115,10 +115,10 @@ search(const char* attr, const char* value, hyperpredicate predicate)
 
     status = (hyperdex_client_returncode)NULL;
     // TODO max_int64 results
-    retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
+    retval = h->sorted_search(WTF_SPACE, &check, 1, "path", 100, false, &status, &attrs, &attrs_sz);
 
     int counter = 0;
-    while (status != HYPERDEX_CLIENT_NONEPENDING)
+    while (status != HYPERDEX_CLIENT_SEARCHDONE && status != HYPERDEX_CLIENT_NONEPENDING)
     {
         if (verbose) cout << ++counter << endl;
         print_return();
@@ -186,7 +186,7 @@ main(int argc, const char* argv[])
             check.predicate = HYPERPREDICATE_REGEX;
 
             status = (hyperdex_client_returncode)NULL;
-            retval = h->group_del(space, &check, 1, &status);
+            retval = h->group_del(WTF_SPACE, &check, 1, &status);
             print_return();
         }
         else

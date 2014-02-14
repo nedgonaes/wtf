@@ -328,7 +328,7 @@ wtf_server_kill_SOURCES = tools/server-kill.cc
 wtf_server_kill_LDADD = libwtf-admin.la -lpopt
 
 # shelltest
-wtf_shelltest_SOURCES = tools/shelltest.cc
+wtf_shelltest_SOURCES = common/block.cc common/block_location.cc client/file.cc tools/shelltest.cc
 wtf_shelltest_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 ################################################################################
