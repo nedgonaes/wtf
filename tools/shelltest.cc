@@ -1,7 +1,3 @@
-/*
- * Simple program to test using HyperDex as inode map for a filesystem
- */
-
 // e
 #include <e/endian.h>
 #include <e/unpacker.h>
@@ -58,23 +54,23 @@ read()
             }
             else if (strcmp(attr_got[i].attr, "blockmap") == 0)
             {
-                if (verbose) cout << "attr [" << attr_got[i].attr << "] value_sz [" << attr_got[i].value_sz << "] datatype [" << attr_got[i].datatype << "]" << endl;
-                uint32_t keylen;
-                uint64_t key;
-                uint32_t vallen;
+                //if (verbose) cout << "attr [" << attr_got[i].attr << "] value_sz [" << attr_got[i].value_sz << "] datatype [" << attr_got[i].datatype << "]" << endl;
+                //uint32_t keylen;
+                //uint64_t key;
+                //uint32_t vallen;
 
-                e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
-                while (!up.empty())
-                {
-                    up = up >> keylen >> key >> vallen;
+                //e::unpacker up (attr_got[i].value, attr_got[i].value_sz);
+                //while (!up.empty())
+                //{
+                //    up = up >> keylen >> key >> vallen;
 
-                    e::unpack32be((uint8_t *)&keylen, &keylen);
-                    e::unpack64be((uint8_t *)&key, &key);
-                    e::unpack32be((uint8_t *)&vallen, &vallen);
-                    if (verbose) printf("keylen %x key %lx vallen %x\n", keylen, key, vallen);
-                    e::intrusive_ptr<wtf::block> b = new wtf::block();
-                    up = up >> b;
-                }
+                //    e::unpack32be((uint8_t *)&keylen, &keylen);
+                //    e::unpack64be((uint8_t *)&key, &key);
+                //    e::unpack32be((uint8_t *)&vallen, &vallen);
+                //    if (verbose) printf("keylen %x key %lx vallen %x\n", keylen, key, vallen);
+                //    e::intrusive_ptr<wtf::block> b = new wtf::block();
+                //    up = up >> b;
+                //}
             }
             else
             {
@@ -118,10 +114,11 @@ search(const char* attr, const char* value, hyperpredicate predicate)
     check.predicate = predicate;
 
     status = (hyperdex_client_returncode)NULL;
+    // TODO max_int64 results
     retval = h->sorted_search(space, &check, 1, "path", 100, false, &status, &attr_got, &attr_size_got);
 
     int counter = 0;
-    while (status != HYPERDEX_CLIENT_SEARCHDONE)
+    while (status != HYPERDEX_CLIENT_NONEPENDING)
     {
         if (verbose) cout << ++counter << endl;
         print_return();
