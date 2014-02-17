@@ -47,12 +47,15 @@ read()
     }
     else
     {
+        e::intrusive_ptr<wtf::file> f = new wtf::file("", 0);
         for (size_t i = 0; i < attrs_sz; ++i)
         {
-            if (verbose) cout << "\t" << i << ". [" << attrs[i].attr << "]:\t";
+            if (verbose) cout << i << ". [" << attrs[i].attr << "]:";
             if (strcmp(attrs[i].attr, "path") == 0)
             {
-                cout << "[" << string(attrs[i].value, attrs[i].value_sz) << "]" << endl;
+                string path(attrs[i].value, attrs[i].value_sz);
+                cout << "[" << path << "]" << endl;
+                f->path(path.c_str());
             }
             else if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
@@ -64,23 +67,7 @@ read()
                 else
                 {
                     cout << "[" << up.as_slice().hex() << "]" << endl;
-
-                    cout << "\t\tblocks: " << endl;
-                    e::intrusive_ptr<wtf::file> f = new wtf::file("", 0);
                     up = up >> f;
-                    //wtf::file::block_map::const_iterator it;
-                    //for (it = f.m_block_map.begin(); it != f.m_block_map.end(); ++it)
-                    //{
-                    //    lhs << *it->second << std::endl;
-                    //}
-                    cout << *f << endl;
-                    //map<uint64_t, e::intrusive_ptr<wtf::block>> block_map;
-                    //file::block_map::const_iterator it;
-                    //for (it = rhs.m_block_map.begin(); it != rhs.m_block_map.end(); ++it)
-                    //{
-                    //    cout << *it->second << endl;
-                    //}
-
                 }
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
@@ -91,6 +78,7 @@ read()
                 up = up >> is_dir;
                 e::unpack64be((uint8_t*)&is_dir, &is_dir);
                 cout << "[" << is_dir << "]" << endl;
+                f->is_directory = is_dir == 0 ? false : true;
             }
             else if (strcmp(attrs[i].attr, "mode") == 0)
             {
@@ -100,15 +88,15 @@ read()
                 up = up >> mode;
                 e::unpack64be((uint8_t*)&mode, &mode);
                 cout << "[" << mode << "]" << endl;
+                f->mode = mode;
             }
             else
             {
                 cout << "<unexpected attribute>" << endl;
             }
         }
+        cout << *f << endl;
     }
-
-    if (verbose) cout << endl;
 }
 
 void
@@ -149,7 +137,7 @@ search(const char* attr, const char* value, hyperpredicate predicate)
     int counter = 0;
     while (status != HYPERDEX_CLIENT_SEARCHDONE && status != HYPERDEX_CLIENT_NONEPENDING)
     {
-        if (verbose) cout << ++counter << endl;
+        if (verbose) cout << "(" << ++counter << ")" << endl;
         print_return();
         read();
     }
