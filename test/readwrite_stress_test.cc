@@ -121,13 +121,29 @@ worker_thread(const armnod::argparser& _f,
             }
 
 
-            size_t sz = v.size();
-            int64_t reqid = cl.write(fd, v.data(), &sz, 1, &status);
-
-            if (reqid < 0)
+            ssize_t rem = v.size();
+            int64_t reqid = -1;
+            size_t sz = 0;
+            while (rem > 0)
             {
-                WTF_TEST_FAIL(0, "XXX");;
-                
+                sz = _op_size;
+                reqid = cl.write(fd, v.data() + v.size() - rem, &sz, 1, &status);
+
+                if (reqid < 0)
+                {
+                    WTF_TEST_FAIL(0, "XXX");;
+
+                }
+
+                reqid = cl.loop(reqid, -1, &status);
+
+                if (reqid < 0)
+                {
+                    WTF_TEST_FAIL(0, "XXX");;
+
+                }
+
+                rem -= sz;
             }
 
             wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
@@ -289,7 +305,7 @@ main(int argc, const char* argv[])
     ap.arg().name('b', "block-size")
         .description("size of blocks")
         .as_long(&_block_size);
-    ap.arg().name('o', "op-size")
+    ap.arg().name('O', "op-size")
         .description("size of ops")
         .as_long(&_op_size);
     ap.arg().name('q', "quiet")

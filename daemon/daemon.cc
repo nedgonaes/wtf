@@ -629,12 +629,15 @@ daemon :: process_update(const wtf::connection& conn,
     uint64_t sid;
     uint64_t bid;
     uint32_t block_offset;
+    uint32_t block_capacity;
     uint64_t file_offset;
     uint64_t block_len;
     ssize_t ret = 0;
 
 
-    up = up >> bid >> block_offset >> file_offset;
+    up = up >> bid >> block_offset >> block_capacity >> file_offset;
+    LOG(INFO) << "block_offset = " << block_offset;
+    LOG(INFO) << "block_capacity = " << block_capacity;
     e::slice data = up.as_slice();
     sid = m_us.get();
 
@@ -642,10 +645,12 @@ daemon :: process_update(const wtf::connection& conn,
     {
         ret = m_blockman.write_block(data, sid, bid); 
         block_len = ret; 
+        LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
     else
     {
         ret = m_blockman.update_block(data, block_offset, sid, bid, block_len); 
+        LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
 
     if (ret < data.size())
@@ -662,12 +667,13 @@ daemon :: process_update(const wtf::connection& conn,
 
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */
-                sizeof(uint64_t) +  /* file_offset */
+                sizeof(uint64_t) + /* file_offset */
+                sizeof(uint32_t) + /* block_capacity */
                 sizeof(uint64_t);  /* block_len */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << RESP_UPDATE << nonce << rc 
-            << bid << file_offset << block_len;
+            << bid << file_offset << block_capacity << block_len;
     send(conn, resp);
 }
 

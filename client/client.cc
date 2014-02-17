@@ -371,6 +371,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         std::auto_ptr<e::buffer> msg;
         m_busybee.set_timeout(timeout);
         busybee_returncode rc = m_busybee.recv(&sid_num, &msg);
+
         server_id id(sid_num);
 
         switch (rc)
@@ -561,9 +562,10 @@ client :: write(int64_t fd, const char* buf,
         std::vector<block_location> bl;
         size_t buf_offset = next_buf_offset;
         uint32_t block_offset;
+        uint32_t block_capacity;
         uint64_t file_offset;
         size_t slice_len;
-        prepare_write_op(f, rem, bl, next_buf_offset, block_offset, file_offset, slice_len);
+        prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
         e::slice data = e::slice(buf + buf_offset, slice_len);
 
         for (size_t i = 0; i < bl.size(); ++i)
@@ -571,11 +573,13 @@ client :: write(int64_t fd, const char* buf,
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                 + sizeof(uint64_t) // bl.bi (remote block number) 
                 + sizeof(uint32_t) // block_offset (remote block offset) 
+                + sizeof(uint32_t) // block_capacity 
                 + sizeof(uint64_t) // file_offset 
                 + data.size();     // user data 
             std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
             e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-                pa = pa << bl[i].bi << block_offset << file_offset;
+                pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
+            std::cerr << "sending " << msg->hex() << std::endl;
             pa.copy(data);
 
             if (!maintain_coord_connection(status))
@@ -598,6 +602,7 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
                               std::vector<block_location>& bl,
                               size_t& buf_offset,
                               uint32_t& block_offset,
+                              uint32_t& block_capacity,
                               uint64_t& file_offset,
                               size_t& slice_len)
 {
@@ -605,7 +610,8 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
     f->copy_current_block_locations(bl);
     m_coord.config()->assign_random_block_locations(bl);
     block_offset = f->current_block_offset();
-    file_offset = f->offset();
+    block_capacity = f->current_block_capacity();
+    file_offset = f->current_block_start();
     slice_len = f->advance_to_end_of_block(rem);
     buf_offset += slice_len;
     rem -= slice_len;

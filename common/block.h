@@ -55,6 +55,7 @@ class block
         void set_offset(uint64_t offset) { m_offset = offset; }
         uint64_t pack_size();
         uint64_t length() { return m_length; }
+        uint64_t capacity() { return m_capacity; }
         block_location first_location();
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
         std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
@@ -91,6 +92,7 @@ class block
         block_list m_block_list;
         uint64_t m_offset;
         uint64_t m_length;
+        uint64_t m_capacity;
         bool m_is_hole;
 };
 
@@ -133,8 +135,9 @@ operator << (e::buffer::packer pa, e::intrusive_ptr<block>& rhs)
     uint64_t replicas = rhs->m_block_list.size();
     uint64_t offset = rhs->m_offset;
     uint64_t length = rhs->m_length;
+    uint64_t capacity = rhs->m_capacity;
 
-    pa = pa << offset << length << replicas; 
+    pa = pa << offset << length << capacity << replicas; 
 
     for (block::block_list::const_iterator it = rhs->m_block_list.begin();
             it < rhs->m_block_list.end(); ++it)
@@ -151,8 +154,9 @@ operator << (e::buffer::packer pa, const block& rhs)
     uint64_t replicas = rhs.m_block_list.size();
     uint64_t offset = rhs.m_offset;
     uint64_t length = rhs.m_length;
+    uint64_t capacity = rhs.m_capacity;
 
-    pa = pa << offset << length << replicas; 
+    pa = pa << offset << length << capacity << replicas; 
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)
@@ -168,12 +172,14 @@ operator >> (e::unpacker up, block& rhs)
 { 
     uint64_t replicas;
     uint64_t len;
+    uint64_t capacity;
     uint64_t offset;
 
-    up = up >> offset >> len >> replicas; 
+    up = up >> offset >> len >> capacity >> replicas; 
 
     rhs.m_length = len;
     rhs.m_offset = offset;
+    rhs.m_capacity = capacity;
 
     for (uint64_t i = 0; i < replicas; ++i)
     {
@@ -190,12 +196,14 @@ operator >> (e::unpacker up, e::intrusive_ptr<block>& rhs)
 { 
     uint64_t replicas;
     uint64_t len;
+    uint64_t capacity;
     uint64_t offset;
 
-    up = up >> offset >> len >> replicas; 
+    up = up >> offset >> len >> capacity >> replicas; 
 
     rhs->m_length = len;
     rhs->m_offset = offset;
+    rhs->m_capacity = capacity;
 
     for (uint64_t i = 0; i < replicas; ++i)
     {

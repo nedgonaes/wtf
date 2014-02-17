@@ -84,9 +84,10 @@ pending_write :: handle_message(client* cl,
 
     uint64_t bi;
     uint64_t file_offset;
+    uint32_t block_capacity;
     uint64_t block_length;
     response_returncode rc;
-    up = up >> rc >> bi >> file_offset >> block_length;
+    up = up >> rc >> bi >> file_offset >> block_capacity >> block_length;
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -102,7 +103,7 @@ pending_write :: handle_message(client* cl,
 
     if (it == m_changeset.end())
     {
-        bl = new block(block_length, file_offset, 0);
+        bl = new block(block_capacity, file_offset, 0);
         bl->set_length(block_length);
         bl->set_offset(file_offset);
         m_changeset[file_offset] = bl;

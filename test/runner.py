@@ -177,6 +177,8 @@ class WTFCluster(object):
             for i in range(self.wtf_daemons):
                 log = os.path.join(self.base, 'wtf-daemon%i' % i, 'wtf-test-runner.log')
                 print('wtf-daemon', i)
+                print(open(log).read())
+                print
         if self.clean and self.base is not None:
             shutil.rmtree(self.base)
 

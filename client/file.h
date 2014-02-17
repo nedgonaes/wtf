@@ -64,7 +64,9 @@ class file
         size_t bytes_left_in_block();
         size_t bytes_left_in_file();
         size_t current_block_length();
+        size_t current_block_capacity();
         size_t current_block_offset();
+        size_t current_block_start();
         void copy_current_block_locations(std::vector<block_location>& bl);
         size_t advance_to_end_of_block(size_t len);
         void move_to_next_block();
@@ -141,6 +143,7 @@ operator << (std::ostream& lhs, const file& rhs)
     lhs << "\tmode: " << rhs.mode << std::endl;
     lhs << "\toffset: " << rhs.m_offset<< std::endl;
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
+    lhs << "\tblock_size: " << rhs.m_block_size << std::endl;
     lhs << "\tblocks: " << std::endl;
 
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();
@@ -195,9 +198,11 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
 
     e::intrusive_ptr<block> b = it->second;
 
-    rhs->m_bytes_left_in_block = b->offset() + b->length() - rhs->m_offset;
-    rhs->m_current_block_length = b->length();
+    rhs->m_bytes_left_in_block = b->offset() + b->capacity() - rhs->m_offset;
+    rhs->m_current_block_length = b->capacity();
     rhs->m_current_block = b;
+
+    std::cout << b->offset() << ", " << b->capacity() << ", " << rhs->m_offset << std::endl;
 
     return up; 
 }

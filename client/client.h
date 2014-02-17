@@ -155,6 +155,7 @@ class client
                               std::vector<block_location>& bl,
                               size_t& buf_offset,
                               uint32_t& block_offset,
+                              uint32_t& block_capacity,
                               uint64_t& file_offset,
                               size_t& slice_len);
         void prepare_read_op(e::intrusive_ptr<file> f, 

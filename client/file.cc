@@ -91,15 +91,27 @@ file :: bytes_left_in_file()
 }
 
 size_t 
+file :: current_block_capacity()
+{
+    return m_current_block->capacity();
+}
+
+size_t 
 file :: current_block_length()
 {
-    return m_current_block_length;
+    return m_current_block->length();
 }
 
 size_t
 file :: current_block_offset()
 {
-    return m_bytes_left_in_block - m_current_block_length;
+    return m_current_block_length - m_bytes_left_in_block;
+}
+
+size_t
+file :: current_block_start()
+{
+    return m_current_block->offset();
 }
 
 void 
@@ -133,6 +145,7 @@ file :: advance_to_end_of_block(size_t len)
 
     if (len < m_bytes_left_in_block)
     {
+        std::cerr << "len = " << len << ", m_bytes_left_in_block = " << m_bytes_left_in_block << std::endl;
         m_offset += len;
         m_bytes_left_in_block -= len;
         ret = len;
@@ -158,7 +171,7 @@ file :: move_to_next_block()
     block_map::iterator it = m_block_map.find(m_offset);
     if (it == m_block_map.end())
     {
-        m_current_block = new block(DEFAULT_BLOCK_SIZE, m_offset, m_replicas);
+        m_current_block = new block(m_block_size, m_offset, m_replicas);
         m_block_map[m_offset] = m_current_block;
     }
     else
@@ -166,8 +179,10 @@ file :: move_to_next_block()
         m_current_block = it->second;
     }
 
-    m_bytes_left_in_block = m_current_block->length();
+    m_bytes_left_in_block = m_current_block->capacity();
     m_current_block_length = m_bytes_left_in_block;
+
+    std::cerr << "m_bytes_left_in_block = " << m_bytes_left_in_block << std::endl;
 }
 
 bool 
@@ -199,6 +214,9 @@ file :: insert_block(e::intrusive_ptr<block> bl)
 void
 file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 {
+    std::cerr << "changing file from " << std::endl;
+    std::cerr << *this << std::endl << " to " << std::endl;
+    
     std::map<uint64_t, e::intrusive_ptr<block> >::iterator last = changeset.end();
     last--;
     uint64_t end = last->first;
@@ -223,6 +241,8 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
          }
 
     } while (last != m_block_map.begin());
+
+    std::cerr << *this << std::endl;
 }
 
 size_t
@@ -233,7 +253,7 @@ file :: get_block_length(size_t offset)
         return 0;
     }
 
-    return m_block_map[offset]->length();
+    return m_block_map[offset]->capacity();
 }
 
 uint64_t
