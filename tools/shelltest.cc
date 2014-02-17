@@ -1,5 +1,15 @@
-// C
+// C/C++
 #include <stdio.h>
+#include <string.h>
+#include <map>
+
+// E
+#include <e/endian.h>
+#include <e/unpacker.h>
+#include <e/intrusive_ptr.h>
+
+// HyperDex
+#include <hyperdex/client.hpp>
 
 // WTF 
 #include "client/file.h"
@@ -47,11 +57,30 @@ read()
             else if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                cout << "MESSAGE: " << up.as_slice().hex() << endl;
-
                 if (attrs[i].value_sz == 0)
                 {
-                    continue;
+                    cout << endl;
+                }
+                else
+                {
+                    cout << "[" << up.as_slice().hex() << "]" << endl;
+
+                    cout << "\t\tblocks: " << endl;
+                    e::intrusive_ptr<wtf::file> f = new wtf::file("", 0);
+                    up = up >> f;
+                    //wtf::file::block_map::const_iterator it;
+                    //for (it = f.m_block_map.begin(); it != f.m_block_map.end(); ++it)
+                    //{
+                    //    lhs << *it->second << std::endl;
+                    //}
+                    cout << *f << endl;
+                    //map<uint64_t, e::intrusive_ptr<wtf::block>> block_map;
+                    //file::block_map::const_iterator it;
+                    //for (it = rhs.m_block_map.begin(); it != rhs.m_block_map.end(); ++it)
+                    //{
+                    //    cout << *it->second << endl;
+                    //}
+
                 }
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
@@ -197,7 +226,7 @@ main(int argc, const char* argv[])
     else
     {
         cout << "Commands: touch, ls, rm, rmall" << endl;
-        cout << "Set up: echo 'space wtf key path attributes map(string, string) blockmap, int directory, int mode' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
+        cout << "Set up: echo 'space wtf key path attributes string blockmap, int directory, int mode' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
     }
 
     return EXIT_SUCCESS;
