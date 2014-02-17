@@ -136,7 +136,7 @@ class file
 inline std::ostream& 
 operator << (std::ostream& lhs, const file& rhs) 
 { 
-    lhs << rhs.m_path << std::endl;
+    lhs << "\tpath: " << rhs.m_path << std::endl;
     lhs << "\treplicas: " << rhs.m_replicas << std::endl;
     lhs << "\tlength: " << rhs.m_file_length << std::endl;
     lhs << "\tflags: " << rhs.flags << std::endl;
