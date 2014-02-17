@@ -100,26 +100,6 @@ read()
 }
 
 void
-put(const char* filename)
-{
-    if (verbose) cout << ">>>>putting [" << filename << "]" << endl;
-
-    retval = h->put_if_not_exist(WTF_SPACE, filename, strlen(filename), NULL, 0, &status);
-    print_return();
-    if (verbose) cout << endl;
-}
-
-void
-del(const char* filename)
-{
-    if (verbose) cout << ">>>>deleting [" << filename << "]" << endl;
-
-    retval = h->del(WTF_SPACE, filename, strlen(filename), &status);
-    print_return();
-    if (verbose) cout << endl;
-}
-
-void
 search(const char* attr, const char* value, hyperpredicate predicate)
 {
     if (verbose) cout << ">>>>searching [" << attr << "] for [" << value << "] with [" << predicate << "]" << endl;
@@ -153,67 +133,16 @@ main(int argc, const char* argv[])
     
     if (argc > 1)
     {
-        if (strcmp(argv[1], "touch") == 0)
-        {
-            if (argc > 3) verbose = true;
-            if (argc > 2)
-            {
-                cout << "touch " << argv[2] << endl;
-                put(argv[2]);
-            }
-            else
-            {
-                cout << "usage: touch <filename>" << endl;
-            }
-        }
-        else if (strcmp(argv[1], "ls") == 0)
-        {
-            if (argc > 3) verbose = true;
-            string query("^");
-            if (argc > 2)
-            {
-                query += string(argv[2]);
-            }
+        if (argc > 2) verbose = true;
 
-            cout << "ls " << query << endl;
-            search("path", query.c_str(), HYPERPREDICATE_REGEX);
-        }
-        else if (strcmp(argv[1], "rm") == 0)
-        {
-            if (argc > 3) verbose = true;
-            if (argc > 2)
-            {
-                cout << "rm " << argv[2] << endl;
-                del(argv[2]);
-            }
-            else
-            {
-                cout << "usage: rm <filename>" << endl;
-            }
-        }
-        else if (strcmp(argv[1], "rmall") == 0)
-        {
-            verbose = true;
+        string query("^");
+        query += string(argv[1]);
 
-            struct hyperdex_client_attribute_check check;
-            check.attr = "path";
-            check.value = "*";
-            check.value_sz = 0;
-            check.datatype = HYPERDATATYPE_STRING;
-            check.predicate = HYPERPREDICATE_REGEX;
-
-            status = (hyperdex_client_returncode)NULL;
-            retval = h->group_del(WTF_SPACE, &check, 1, &status);
-            print_return();
-        }
-        else
-        {
-            cout << argv[1] << " is not supported" << endl;
-        }
+        search("path", query.c_str(), HYPERPREDICATE_REGEX);
     }
     else
     {
-        cout << "Commands: touch, ls, rm, rmall" << endl;
+        cout << "Usage: ./wtf-stat <file_name_regex>" << endl;
         cout << "Set up: echo 'space wtf key path attributes string blockmap, int directory, int mode' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
     }
 

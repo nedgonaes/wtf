@@ -88,7 +88,7 @@ noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += visibility.h
 
-noinst_PROGRAMS += wtf-shelltest
+noinst_PROGRAMS += wtf-stat
 
 bin_PROGRAMS += wtf
 
@@ -327,13 +327,13 @@ wtf_server_forget_LDADD = libwtf-admin.la -lpopt
 wtf_server_kill_SOURCES = tools/server-kill.cc
 wtf_server_kill_LDADD = libwtf-admin.la -lpopt
 
-# shelltest
-wtf_shelltest_SOURCES =
-wtf_shelltest_SOURCES += common/block.cc
-wtf_shelltest_SOURCES += common/block_location.cc
-wtf_shelltest_SOURCES += client/file.cc
-wtf_shelltest_SOURCES += tools/shelltest.cc
-wtf_shelltest_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+# wtf-stat (metadata dump)
+wtf_stat_SOURCES =
+wtf_stat_SOURCES += common/block.cc
+wtf_stat_SOURCES += common/block_location.cc
+wtf_stat_SOURCES += client/file.cc
+wtf_stat_SOURCES += tools/stat.cc
+wtf_stat_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 ################################################################################
 ################################## bindings ####################################
