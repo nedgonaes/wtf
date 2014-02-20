@@ -30,6 +30,7 @@
 // STL
 #include <tr1/unordered_map>
 #include <tr1/memory>
+#include <tr1/random>
 
 // po6
 #include <po6/error.h>
@@ -53,7 +54,10 @@ static long _connect_port = 1981;
 static long _hyper_port = 1982;
 static long _concurrent = 50;
 static long _block_size = 4096;
-static long _op_size = 4096;
+static long _min_read = 4096;
+static long _max_read = 4096;
+static long _min_write = 4096;
+static long _max_write = 4096;
 static const char* _output = "wtf-sync-benchmark.log";
 static const char* _dir = ".";
 static const char* _connect_host = "127.0.0.1";
@@ -96,6 +100,10 @@ get_random()
     return ret;
 }
 
+using std::tr1::uniform_int;
+using std::tr1::variate_generator;
+using std::tr1::mt19937;
+
 void 
 worker_thread(const armnod::argparser& _f,
         const armnod::argparser& _v)
@@ -114,19 +122,31 @@ worker_thread(const armnod::argparser& _f,
             std::string v = val();
             wtf_client_returncode status = WTF_CLIENT_GARBAGE;
             std::string f = file();
+            
+            /* create a random file */
             int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, _block_size, &status);
             if (fd < 0)
             {
                 WTF_TEST_FAIL(0, "failed to open file");
             }
 
+            
+            mt19937 eng(get_random()); 
+            uniform_int<size_t> write_distribution(_min_write, _max_write);
+            uniform_int<size_t> read_distribution(_min_read, _max_read);
+            variate_generator<mt19937, uniform_int<size_t> > 
+                read_size(eng, read_distribution);
+            variate_generator<mt19937, uniform_int<size_t> > 
+                write_size(eng, write_distribution);
 
-            ssize_t rem = v.size();
+            /* Write some stuff to the random file, in random size chunks. */
+            size_t rem = v.size();
             int64_t reqid = -1;
             size_t sz = 0;
             while (rem > 0)
             {
-                sz = _op_size;
+                sz = write_size();
+                sz = std::min(sz, rem);
                 reqid = cl.write(fd, v.data() + v.size() - rem, &sz, 1, &status);
 
                 if (reqid < 0)
@@ -148,8 +168,8 @@ worker_thread(const armnod::argparser& _f,
 
             wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
 
+            /* close the random file */
             cl.close(fd, &rc);
-
 
             if (reqid < 0)
             {
@@ -157,6 +177,7 @@ worker_thread(const armnod::argparser& _f,
                  
             }
 
+            /* open the file */
             char* dd = new char[v.size()];
             fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
 
@@ -166,24 +187,36 @@ worker_thread(const armnod::argparser& _f,
                 
             }
 
-            sz = v.size();
-            reqid = cl.read(fd, dd, &sz, &status);
-
-            if (reqid < 0)
+            /* read the file in random size chunks. */
+            rem = v.size();
+            reqid = -1;
+            sz = 0;
+            while (rem > 0)
             {
-                WTF_TEST_FAIL(0, "XXX");;
-                 
+                sz = read_size();
+                sz = std::min(sz, rem);
+
+                reqid = cl.read(fd, dd + v.size() - rem, &sz, &status);
+
+                if (reqid < 0)
+                {
+                    WTF_TEST_FAIL(0, "XXX");;
+
+                }
+
+                reqid = cl.loop(reqid, -1, &status);
+
+                if (reqid < 0)
+                {
+                    WTF_TEST_FAIL(0, reqid);;
+
+                }
+
+                rem -= sz;
             }
 
-            reqid = cl.loop(reqid, -1, &status);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, reqid);;
-                 
-            }
-
-            std::string d(dd, sz);
+            /* compare the contents of the write with the contents returned from read */
+            std::string d(dd, v.size());
 
             if (v.compare(d) != 0)
             {
@@ -195,64 +228,10 @@ worker_thread(const armnod::argparser& _f,
                                   << slc2.hex());
             }
 
+            /* close the file */
             cl.close(fd, &rc);
 
-            std::string v2 = v;
-            v2.replace(0,3,"XXX");
-            fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
-
-            sz = 3;
-            reqid = cl.write(fd, "XXX", &sz, 1, &status);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "wtf_client->write encountered" << status);
-            }
-
-            rc = WTF_CLIENT_GARBAGE;
-
-            cl.close(fd, &rc);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "wtf_loop encountered " << rc);
-            }
-
-            fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
-
-            char* dd2 = new char[v.size()];
-            size_t sz2 = v2.size();
-            reqid = cl.read(fd, dd2, &sz2, &status);
-
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "wtf_client->read encountered " << rc);
-            }
-
-            reqid = cl.loop(reqid, -1, &status);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "wtf_loop encountered " << rc);
-            }
-
-            std::string d2(dd2, sz2);
-
-            if (v2.compare(d2) != 0)
-            {
-                e::slice slc1(v2.data(), v2.size());
-                e::slice slc2(d2.data(), d2.size());
-                WTF_TEST_FAIL(0, "Strings don't match: " << std::endl 
-                                 << slc1.hex() << std::endl
-                                 << " != " << std::endl
-                                 << slc2.hex());
-                
-            }
-
-            cl.close(fd, &rc);
             delete [] dd;
-            delete [] dd2;
             
             WTF_TEST_SUCCESS(0);      
         }
@@ -305,9 +284,18 @@ main(int argc, const char* argv[])
     ap.arg().name('b', "block-size")
         .description("size of blocks")
         .as_long(&_block_size);
-    ap.arg().name('O', "op-size")
-        .description("size of ops")
-        .as_long(&_op_size);
+    ap.arg().long_name("max-write-length")
+        .description("maximum size of write ops")
+        .as_long(&_max_write);
+    ap.arg().long_name("min-write-length")
+        .description("minimum size of write ops")
+        .as_long(&_min_write);
+    ap.arg().long_name("max-read-length")
+        .description("maximum size of read ops")
+        .as_long(&_max_read);
+    ap.arg().long_name("min-read-length")
+        .description("minimum size of read ops")
+        .as_long(&_min_read);
     ap.arg().name('q', "quiet")
             .description("silence all output")
             .set_true(&_quiet);

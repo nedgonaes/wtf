@@ -118,7 +118,7 @@ operator << (std::ostream& lhs, const std::vector<T>& rhs)
 inline std::ostream& 
 operator << (std::ostream& lhs, const block& rhs) 
 { 
-    lhs << "\t\t[" << rhs.m_offset << "," << rhs.m_offset+rhs.m_length << ")" << std::endl;
+    lhs << "\t\t[" << rhs.m_offset << "," << rhs.m_offset+rhs.m_length << ") (capacity = " << rhs.m_capacity << ")" << std::endl;
 
     for (block::block_list::const_iterator it = rhs.m_block_list.begin();
             it < rhs.m_block_list.end(); ++it)

@@ -100,7 +100,9 @@ pending_read :: handle_message(client* cl,
     up = up >> rc >> bi;
     struct buffer_block_len bbl = m_offset_map[std::make_pair(si.get(), bi)];
     e::slice data = up.as_slice();
-    memmove(m_buf + bbl.buf_offset, data.data(), data.size()); 
+    std::cerr << "block_offset = " << bbl.block_offset << ", data = " << data.hex() << std::endl; 
+    std::cerr << "copying to offset " << bbl.buf_offset << ": " << e::slice(data.data() + bbl.block_offset, data.size() - bbl.block_offset).hex() << std::endl;
+    memmove(m_buf + bbl.buf_offset, data.data() + bbl.block_offset, data.size() - bbl.block_offset); 
     return true;
 }
 

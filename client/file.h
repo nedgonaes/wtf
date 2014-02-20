@@ -191,7 +191,10 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
     rhs->m_bytes_left_in_file = rhs->m_file_length - rhs->m_offset;
     file::block_map::iterator it = rhs->m_block_map.lower_bound(rhs->m_offset);
     
-    if (it == rhs->m_block_map.end())
+    if (it == rhs->m_block_map.end() ||
+       (it != rhs->m_block_map.begin() &&
+        it != rhs->m_block_map.end() && 
+        it->second->offset() > rhs->m_offset))
     {
         it--;
     }

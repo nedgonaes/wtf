@@ -63,7 +63,7 @@ file :: file(const char* path, size_t reps, size_t block_sz)
 {
         m_current_block = new block(m_block_size, 0, reps);
         m_block_map[m_offset] = m_current_block;
-        m_bytes_left_in_block = m_current_block->length();
+        m_bytes_left_in_block = m_current_block->capacity();
         m_current_block_length = m_bytes_left_in_block;
 }
 
@@ -105,7 +105,7 @@ file :: current_block_length()
 size_t
 file :: current_block_offset()
 {
-    return m_current_block_length - m_bytes_left_in_block;
+    return m_current_block->capacity() - m_bytes_left_in_block;
 }
 
 size_t

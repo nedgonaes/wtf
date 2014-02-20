@@ -59,7 +59,7 @@ wtf-mkfs
 logfusetest
 wtf
 test-driver
-test/readwrite-stress-test
+test/readwrite-sync-stress-test
 wtf-0.1.dev.tar.bz2
 wtf-0.1.dev.tar.gz
 makelog

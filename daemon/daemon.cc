@@ -653,6 +653,8 @@ daemon :: process_update(const wtf::connection& conn,
         LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
 
+    LOG(INFO) << "UPDATE(" << bid << "): " << data.hex();
+
     if (ret < data.size())
     {
         rc = wtf::RESPONSE_SERVER_ERROR;
