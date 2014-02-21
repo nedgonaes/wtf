@@ -45,7 +45,16 @@ print_return()
 void
 read()
 {
-    if (status == HYPERDEX_CLIENT_SEARCHDONE) return;
+    if (status == HYPERDEX_CLIENT_SEARCHDONE)
+    {
+        cout << "HYPERDEX_CLIENT_SEARCHDONE" << endl;
+        return;
+    }
+    if (status == HYPERDEX_CLIENT_NONEPENDING)
+    {
+        cout << "HYPERDEX_CLIENT_NONEPENDING (possibly because connection to HyperDex coordinator could not be made)" << endl;
+        return;
+    }
 
     // Reading
     if (_verbose) cout << "[" << attrs_sz << "] attributes" << endl;
@@ -129,7 +138,7 @@ search(const char* attr, const char* value, hyperpredicate predicate)
         print_return();
         read();
     }
-    cout << "\nSearch finished successfully" << endl;
+    cout << "\nSearch finished" << endl;
 }
 
 int
@@ -138,11 +147,11 @@ main(int argc, const char* argv[])
     e::argparser ap;
     ap.autohelp();
     ap.arg().name('p', "port")
-        .description("port on the hyperdex coordinator")
+        .description("port on the HyperDex coordinator")
         .metavar("p")
         .as_long(&_hyper_port);
     ap.arg().name('h', "host")
-        .description("address of hyperdex coordinator")
+        .description("address of HyperDex coordinator")
         .metavar("p")
         .as_string(&_hyper_host);
     ap.arg().name('q', "query")
@@ -168,7 +177,7 @@ main(int argc, const char* argv[])
         //cout << "Usage: wtf-stat <file_name_regex>" << endl;
         //cout << "Type wtf-stat --help to see options" << endl;
         //cout << "Set up: echo 'space wtf key path attributes string blockmap, int directory, int mode' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
-    }
 
-    return EXIT_SUCCESS;
+        return EXIT_SUCCESS;
+    }
 }
