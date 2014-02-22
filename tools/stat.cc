@@ -129,7 +129,7 @@ search(const char* attr, const char* value, hyperpredicate predicate)
 
     status = (hyperdex_client_returncode)NULL;
     // TODO max_int64 results
-    retval = h->sorted_search(WTF_SPACE, &check, 1, "path", 100, false, &status, &attrs, &attrs_sz);
+    retval = h->sorted_search(WTF_SPACE, &check, 1, "path", 1000, false, &status, &attrs, &attrs_sz);
 
     int counter = 0;
     while (status != HYPERDEX_CLIENT_SEARCHDONE && status != HYPERDEX_CLIENT_NONEPENDING)
@@ -173,10 +173,6 @@ main(int argc, const char* argv[])
         string query("^");
         query += string(_query);
         search("path", query.c_str(), HYPERPREDICATE_REGEX);
-
-        //cout << "Usage: wtf-stat <file_name_regex>" << endl;
-        //cout << "Type wtf-stat --help to see options" << endl;
-        //cout << "Set up: echo 'space wtf key path attributes string blockmap, int directory, int mode' | hyperdex add-space -h 127.0.0.1 -p 1982" << endl;
 
         return EXIT_SUCCESS;
     }
