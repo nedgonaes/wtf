@@ -64,10 +64,10 @@ read()
     }
     else
     {
-        e::intrusive_ptr<wtf::file> f = new wtf::file("", 0);
+        e::intrusive_ptr<wtf::file> f = new wtf::file("", 0, CHUNKSIZE);
         for (size_t i = 0; i < attrs_sz; ++i)
         {
-            if (_verbose) cout << i << ". [" << attrs[i].attr << "]:";
+            if (_verbose) cout << i << ". [" << attrs[i].attr << "]: ";
             if (strcmp(attrs[i].attr, "path") == 0)
             {
                 string path(attrs[i].value, attrs[i].value_sz);
@@ -112,6 +112,7 @@ read()
                 if (_verbose) cout << "<unexpected attribute>" << endl;
             }
         }
+        if (_verbose) cout << "Summary:" << endl;
         cout << *f << endl;
     }
 }
