@@ -136,7 +136,7 @@ class file
 inline std::ostream& 
 operator << (std::ostream& lhs, const file& rhs) 
 { 
-    lhs << rhs.m_path << std::endl;
+    lhs << "\tpath: " << rhs.m_path << std::endl;
     lhs << "\treplicas: " << rhs.m_replicas << std::endl;
     lhs << "\tlength: " << rhs.m_file_length << std::endl;
     lhs << "\tflags: " << rhs.flags << std::endl;
@@ -186,6 +186,7 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
         e::intrusive_ptr<block> b = new block(0, 0, 0);
         up = up >> *b;
         rhs->m_block_map[b->offset()] =  b; 
+        rhs->m_replicas = b->size();
     }
 
     rhs->m_bytes_left_in_file = rhs->m_file_length - rhs->m_offset;

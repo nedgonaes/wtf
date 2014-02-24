@@ -44,9 +44,8 @@ wtf-daemon
 wtf-initialize-cluster
 wtf.pc
 wtf-admin.pc
+wtf-client.pc
 stamp-h1
-wtf-shelltest
-wtf-fusetest
 wtf-server-forget
 wtf-server-kill
 wtf-server-offline
@@ -54,9 +53,8 @@ wtf-server-online
 wtf-server-register
 _logs
 wtf-fusetest
-wtf-shelltest
+wtf-stat
 wtf-mkfs
-logfusetest
 wtf
 test-driver
 test/readwrite-sync-stress-test
