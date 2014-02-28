@@ -33,9 +33,10 @@
 
 //WTF 
 #include <wtf/client.h>
-
+#ifndef SWIG
 namespace wtf
 {
+#endif
 
 class Client
 {
@@ -88,7 +89,7 @@ class Client
             { return wtf_client_close(m_cl, fd, status); }
         int64_t loop(int64_t id, int timeout, wtf_client_returncode* status)
             { return wtf_client_loop(m_cl, id, timeout, status); }
-        int64_t truncate(int fd, off_t length, wtf_client_returncode* status)
+        int64_t truncate(int fd, size_t length, wtf_client_returncode* status)
             { return wtf_client_truncate(m_cl, fd, length, status); }
         int64_t opendir(const char* path, wtf_client_returncode* status)
             { return wtf_client_opendir(m_cl, path, status); }
@@ -110,10 +111,13 @@ class Client
     private:
         wtf_client* m_cl;
 };
-
+#ifndef SWIG
 } // namespace wtf
+#endif
 
+#ifndef SWIG
 std::ostream&
 operator << (std::ostream& lhs, wtf_client_returncode rhs);
+#endif
 
 #endif // wtf_client_hpp_
