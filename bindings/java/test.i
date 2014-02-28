@@ -14,8 +14,9 @@ using namespace wtf;
 %include typemaps.i
 %apply int {mode_t}
 %apply int {off_t}
-%apply unsigned long long *INOUT {size_t *data_sz};
+%apply unsigned long *INOUT {size_t *data_sz};
 %apply int *OUTPUT {wtf_client_returncode *status}
+%apply char *BYTE {char *data}
 
 %ignore "";
 
