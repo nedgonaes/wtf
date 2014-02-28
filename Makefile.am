@@ -285,16 +285,20 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 shell_wrappers =
 shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 
+#wtf-test_readwrite
+check_PROGRAMS += test/readwrite-sync-stress-test
+test_readwrite_sync_stress_test_SOURCES = test/readwrite_sync_stress_test.cc 
+test_readwrite_sync_stress_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
+
+#java tests
+java_wrappers =
+java_wrappers += test/sh/bindings.java.Basic.sh
+shell_wrappers += $(java_wrappers)
 TESTS += $(shell_wrappers)
 
 EXTRA_DIST += $(shell_wrappers)
 EXTRA_DIST += test/env.sh
 EXTRA_DIST += test/runner.py
-
-#wtf-test_readwrite
-check_PROGRAMS += test/readwrite-sync-stress-test
-test_readwrite_sync_stress_test_SOURCES = test/readwrite_sync_stress_test.cc 
-test_readwrite_sync_stress_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 #if ENABLE_GTEST
 #wtf_test_blockstore_SOURCES = test/test_blockstore.cc

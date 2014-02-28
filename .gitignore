@@ -1,4 +1,5 @@
 # wildcards
+*.class
 .deps
 .dirstamp
 .libs

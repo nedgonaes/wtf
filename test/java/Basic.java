@@ -1,8 +1,8 @@
-public class Main {
+import org.wtf.client.Client;
+public class Basic {
 	public static void main (String[] args) {
 		System.out.println("start");
-		System.loadLibrary("test");
-		Client c = new Client("127.0.0.1", 1981, "127.0.0.1", 1982);
+		Client c = new Client(args[0], Integer.valueOf(args[1]), args[2], Integer.valueOf(args[3]));
 		int[] status = new int[1];
 		status[0] = 0;
 		//long fd = c.open("/file1", O_CREAT | O_RDWR, 0777, 3, 4096, status);
