@@ -7,8 +7,15 @@ using namespace wtf;
 %include cpointer.i
 %include various.i
 %include stdint.i
-
-//%pointer_functions(struct wtf_file_attrs,wtf_file_attrs_ptr);
+%include "enums.swg"
+%javaconst(1);
+%pragma(java) jniclasscode=
+%{
+    static
+    {
+        System.loadLibrary("wtf-client-java");
+    }
+%}
 
 %include std_string.i
 %include typemaps.i
