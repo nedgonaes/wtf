@@ -44,6 +44,43 @@ AC_LANG(C++)
 
 ANAL_WARNINGS
 
+
+AC_ARG_ENABLE([java-bindings], [AS_HELP_STRING([--enable-java-bindings],
+              [enable the Java bindings @<:@default: yes@:>@])],
+              [java_bindings=${enableval}], [java_bindings=no])
+AM_CONDITIONAL([ENABLE_JAVA_BINDINGS], [test x"${java_bindings}" = xyes])
+need_swig=no
+
+JNI_CPPFLAGS=
+if test x"${java_bindings}" = xyes; then
+    AC_PROG_JAR
+    AC_PROG_JAVAC
+    AC_JNI_INCLUDE_DIR
+    need_swig=yes
+    found_jnidir=no
+    for jnidir in ${JNI_INCLUDE_DIRS}
+    do
+        if test x"${found_jnidir}" = xno; then
+            JNI_CPPFLAGS="-I${jnidir}"
+            found_jnidir=yes
+        fi
+    done
+    if test x"${found_jnidir}" = xno; then
+        AC_MSG_ERROR([
+-------------------------------------------------
+HyperDex relies upon the JNI for Java bindings.
+No JNI include dir could be found.
+Set JAVAC to point to your Java compiler.
+-------------------------------------------------])
+    fi
+fi
+AC_SUBST([JNI_CPPFLAGS], [${JNI_CPPFLAGS}])
+
+if test x"${need_swig}" = xyes; then
+    AX_PKG_SWIG(1.3)
+    SWIG_ENABLE_CXX
+fi
+
 # Checks for libraries.
 AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_ERROR([
 ---------------------------------------
