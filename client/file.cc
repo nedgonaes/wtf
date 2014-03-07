@@ -237,7 +237,7 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
         if (!last->second->is_hole())
          {
              m_file_length = last->first + last->second->length();
-             return;
+             break;
          }
 
     } while (last != m_block_map.begin());

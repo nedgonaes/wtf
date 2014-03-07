@@ -481,6 +481,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         return -1;
     }
 
+    std::cerr << O_CREAT << " & " << flags << std::endl;
     
 
     if (flags & O_CREAT)
@@ -496,7 +497,10 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         e::intrusive_ptr<file> f = new file(path, num_replicas, block_size);
         m_fds[m_next_fileno] = f; 
         f->flags = flags;
-        get_file_metadata(path, f, false);
+        if (get_file_metadata(path, f, false) != 0)
+        {
+            return -1;
+        }
     }
 
     return m_next_fileno++;
@@ -633,6 +637,8 @@ client :: read(int64_t fd, char* buf,
 
     get_file_metadata(f->path().get(), f, false);
 
+    std::cerr << *f << std::endl;
+
     /* The op object here is created once and a reference to it
      * is inserted into the m_pending list for each send operation,
      * which is called from perform_aggregation.  The pending_aggregation
@@ -650,6 +656,8 @@ client :: read(int64_t fd, char* buf,
 
     size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
     size_t buf_offset = 0;
+
+    std::cerr << "buf_sz = " << *buf_sz << std::endl;
 
     while(rem > 0)
     {
@@ -1102,7 +1110,7 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
 
     std::cerr << *f << std::endl;
     
-    return ret;
+    return 0;
 }
 
 int64_t
