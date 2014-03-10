@@ -303,6 +303,29 @@ WTF_API int64_t wtf_client_readdir(wtf_client* _cl,
 }
 
 
+WTF_API int64_t wtf_client_write_sync(wtf_client* _cl, 
+            int64_t fd, const char* data, 
+            size_t* data_sz,
+            wtf_client_returncode* status)
+{
+    C_WRAP_EXCEPT(
+        return cl->write_sync(fd, data, data_sz, status);
+    );
+
+}
+
+WTF_API int64_t wtf_client_read_sync(wtf_client* _cl, 
+            int64_t fd, char* data, 
+            size_t* data_sz, 
+            wtf_client_returncode* status)
+{
+    C_WRAP_EXCEPT(
+        return cl->read_sync(fd, data, data_sz, status);
+    );
+
+}
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif // __cplusplus

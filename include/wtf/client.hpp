@@ -98,6 +98,17 @@ class Client
         int64_t readdir(int fd, char* entry, wtf_client_returncode* status)
             { return wtf_client_readdir(m_cl, fd, entry, status); }
 
+        int64_t write_sync(int64_t fd,
+                      const char* data,
+                      size_t* data_sz,
+                      size_t replicas,
+                      wtf_client_returncode* status)
+            { return wtf_client_write_sync(m_cl, fd, data, data_sz, status); }
+        int64_t read_sync(int64_t fd,
+                     char* data,
+                     size_t *data_sz,
+                     wtf_client_returncode* status)
+            { return wtf_client_read_sync(m_cl, fd, data, data_sz, status); }
     public:
         std::string error_message()
             { return wtf_client_error_message(m_cl); }

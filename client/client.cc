@@ -241,7 +241,9 @@ int64_t
 client :: loop(int64_t client_id, int timeout, wtf_client_returncode* status)
 {
 	TRACE;
-    return inner_loop(timeout, status, client_id);
+    int64_t out = inner_loop(timeout, status, client_id);
+    std::cerr << "loop success!" << std::endl;
+    return out;
 }
 
 int64_t
@@ -627,6 +629,7 @@ client :: read(int64_t fd, char* buf,
                    wtf_client_returncode* status)
 {
 	TRACE;
+    std::cerr << "buf = " << (int*)buf << std::endl;
     if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -1350,4 +1353,46 @@ operator << (std::ostream& lhs, wtf_client_returncode rhs)
             lhs << "unknown wtf_client_returncode";
             return lhs;
     }
+}
+
+
+/* Sync ops */
+int64_t
+client :: write_sync(int64_t fd, const char* buf,
+                   size_t * buf_sz, 
+                   wtf_client_returncode* status)
+{
+    int64_t reqid = write(fd, buf, buf_sz, status);
+    if (reqid < 0)
+    {
+        return reqid;
+    }
+
+    int64_t lreqid = loop(fd, -1, status);
+    if (lreqid < 0)
+    {
+        return lreqid;
+    }
+
+    return lreqid;
+}
+
+int64_t
+client :: read_sync(int64_t fd, char* buf,
+                   size_t* buf_sz,
+                   wtf_client_returncode* status)
+{
+    int64_t reqid = read(fd, buf, buf_sz, status);
+    if (reqid < 0)
+    {
+        return reqid;
+    }
+
+    int64_t lreqid = loop(fd, -1, status);
+    if (lreqid < 0)
+    {
+        return lreqid;
+    }
+
+    return lreqid;
 }

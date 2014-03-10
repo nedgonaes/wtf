@@ -114,6 +114,15 @@ class client
         const char* error_location();
         void set_error_message(const char* msg);
 
+    public:
+        int64_t write_sync(int64_t fd,
+                      const char* buf,
+                      size_t* buf_sz,
+                      wtf_client_returncode* status);
+        int64_t read_sync(int64_t fd,
+                     char* data,
+                     size_t *data_sz,
+                     wtf_client_returncode* status);
     private:
         struct pending_server_pair
         {

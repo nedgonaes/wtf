@@ -3,6 +3,7 @@
 #include <wtf/client.hpp>
 #include <wtf/client.h>
 using namespace wtf;
+
 %}
 %include cpointer.i
 %include various.i
@@ -21,14 +22,24 @@ using namespace wtf;
 %include typemaps.i
 %apply int {mode_t}
 %apply int {off_t}
-%apply (char *STRING, size_t LENGTH) { (char *data, size_t data_sz) };
-%apply int *OUTPUT {wtf_client_returncode *status}
+%apply long long *INOUT {size_t *data_sz};
+%apply char *BYTE {char *data};
+%apply long *OUTPUT {wtf_client_returncode *status}
 
 %ignore "";
 
 %rename("%s") "wtf_file_attrs";
+%rename("%s") "testbuf";
 %rename("%s") "Client";
 %rename("%s", %$ismember) "";
 
 %include "wtf/client.h"
 %include "wtf/client.hpp"
+%{
+void testbuf(char* data)
+{
+    data[0]='x';
+}
+%}
+void testbuf(char* data);
+

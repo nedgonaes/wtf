@@ -129,6 +129,15 @@ extern "C"
     int64_t wtf_client_readdir(struct wtf_client* m_cl, 
             int64_t fd, char* entry, wtf_client_returncode* status);
 
+    int64_t wtf_client_read_sync(struct wtf_client* m_cl, 
+            int64_t fd, char* data, 
+            size_t* data_sz, 
+            wtf_client_returncode* status);
+    int64_t wtf_client_write_sync(struct wtf_client* m_cl, 
+            int64_t fd, const char* data, 
+            size_t* data_sz, 
+            wtf_client_returncode* status);
+
     const char* wtf_client_error_message(struct wtf_client* m_cl);
     const char* wtf_client_error_location(struct wtf_client* m_cl);
 
