@@ -30,9 +30,6 @@ public class Basic {
         reqid = -1;
         reqid = c.read_sync(fd, readdata, data_sz, status);
 		assert(reqid > 0) : "reqid: " + reqid;
-		//assert(reqid2 == reqid) : "reqid2: " + reqid2 + " != reqid " + reqid + " status: " + status[0] + " " + c.error_message() + " " + c.error_location();
-        //assert(Arrays.equals(readdata, data));
-        //assert(data_sz[0] == data_sz[0]);
         System.out.println(new String(readdata));
 		System.out.println("finish");
 	}

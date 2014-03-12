@@ -62,10 +62,14 @@ class Client
         int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, 
                      size_t block_length, wtf_client_returncode* status)
             { return wtf_client_open(m_cl, path, flags, mode, num_replicas, block_length, status); }
+        int64_t unlink(const char* path, wtf_client_returncode* status)
+            { return wtf_client_unlink(m_cl, path, status); }
+        int64_t rename(const char* src, const char* dst, wtf_client_returncode* status)
+            { return wtf_client_rename(m_cl, src, dst, status); }
         int64_t getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status)
             { return wtf_client_getattr(m_cl, path, fa, status); }
-        int64_t lseek(int64_t fd, uint64_t offset, wtf_client_returncode* status)
-            { return wtf_client_lseek(m_cl, fd, offset, status); }
+        int64_t lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* status)
+            { return wtf_client_lseek(m_cl, fd, offset, whence, status); }
         int64_t begin_tx(wtf_client_returncode* status)
             { return wtf_client_begin_tx(m_cl, status); }
         int64_t end_tx(wtf_client_returncode* status)

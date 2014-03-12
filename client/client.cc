@@ -508,6 +508,106 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     return m_next_fileno++;
 }
 
+int64_t
+client :: unlink(const char* path, wtf_client_returncode* status)
+{
+	TRACE;
+
+    hyperdex_client_returncode hstatus;
+    char *abspath = new char[PATH_MAX]; 
+
+    if (canon_path(path, abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
+    int64_t ret = m_hyperdex_client.del("wtf", abspath, strlen(abspath), &hstatus);
+
+    if (ret < 0)
+    {
+        ERROR(IO) << "Couldn't delete from HyperDex";
+        return -1;
+    }
+
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+
+    if (res == HYPERDEX_CLIENT_NOTFOUND)
+    {
+        ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
+        return -1;
+    }
+    else if (res < 0)
+    {
+        ERROR(IO) << "Couldn't delete from HyperDex";
+        return -1;
+    }
+
+    return 0;
+}
+
+int64_t
+client :: rename(const char* src, const char* dst, wtf_client_returncode* status)
+{
+	TRACE;
+
+    const struct hyperdex_client_attribute* attrs;
+    size_t attrs_sz;
+    hyperdex_client_returncode hstatus;
+    char *src_abspath = new char[PATH_MAX]; 
+
+    if (canon_path(src, src_abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
+    char *dst_abspath = new char[PATH_MAX]; 
+
+    if (canon_path(dst, dst_abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
+    int64_t ret = m_hyperdex_client.get("wtf", src_abspath, strlen(src_abspath), &hstatus, &attrs, &attrs_sz);
+
+    if (ret < 0)
+    {
+        ERROR(IO) << "Couldn't delete from HyperDex";
+        return -1;
+    }
+
+    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+
+    if (res == HYPERDEX_CLIENT_NOTFOUND)
+    {
+        ERROR(NOTFOUND) << "path " << src_abspath << " not found in HyperDex.";
+        return -1;
+    }
+    else if (res < 0)
+    {
+        ERROR(IO) << "Couldn't get from HyperDex";
+        return -1;
+    }
+
+    ret = m_hyperdex_client.put("wtf", dst_abspath, strlen(dst_abspath), attrs, attrs_sz, &hstatus);
+
+    if (ret < 0)
+    {
+        ERROR(IO) << "Couldn't put to HyperDex";
+        return -1;
+    }
+
+    res = hyperdex_wait_for_result(ret, hstatus);
+
+    if (res < 0)
+    {
+        ERROR(IO) << "Couldn't put to HyperDex";
+        return -1;
+    }
+
+
+    return 0;
+}
+
 void
 client :: begin_tx()
 {
@@ -522,11 +622,32 @@ client :: end_tx()
     //proprietary HyperDex Warp code here.
 }
 
-void
-client :: lseek(int64_t fd, uint64_t offset)
+int64_t
+client :: lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* status)
 {
 	TRACE;
-    m_fds[fd]->set_offset(offset);
+
+    if (m_fds.find(fd) == m_fds.end())
+    {
+        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
+        return -1;
+    }
+
+
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    switch (whence)
+    {
+        case SEEK_SET:
+            f->set_offset(offset);
+            return f->offset();
+        case SEEK_CUR:
+            f->set_offset(f->offset() + offset);
+            return f->offset();
+        case SEEK_END:
+            f->set_offset(f->length() + offset);
+            return f->offset();
+    }
 }
 
 int64_t
@@ -763,7 +884,7 @@ client :: truncate(int fd, off_t length)
 }
 
 int64_t
-client :: canon_path(char* rel, char* abspath, size_t abspath_sz)
+client :: canon_path(const char* rel, char* abspath, size_t abspath_sz)
 {
 	TRACE;
     wtf_client_returncode lstatus;

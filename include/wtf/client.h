@@ -97,11 +97,15 @@ extern "C"
     int64_t wtf_client_open(struct wtf_client* m_cl, 
             const char* path, int flags, mode_t mode, size_t num_replicas,
             size_t block_size, wtf_client_returncode* status);
+    int64_t wtf_client_unlink(struct wtf_client* m_cl, const char* path,
+            wtf_client_returncode* status);
+    int64_t wtf_client_rename(struct wtf_client* m_cl, const char* src,
+            const char* dst, wtf_client_returncode* status);
     int64_t wtf_client_getattr(struct wtf_client* m_cl, 
             const char* path, 
             struct wtf_file_attrs* fa, wtf_client_returncode* status);
     int64_t wtf_client_lseek(struct wtf_client* m_cl, 
-            int64_t fd, size_t offset, wtf_client_returncode* status);
+            int64_t fd, size_t offset, int whence, wtf_client_returncode* status);
     int64_t wtf_client_begin_tx(struct wtf_client* m_cl, wtf_client_returncode* status);
     int64_t wtf_client_end_tx(struct wtf_client* m_cl, wtf_client_returncode* status);
     int64_t wtf_client_mkdir(struct wtf_client* m_cl, 

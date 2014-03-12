@@ -170,6 +170,25 @@ WTF_API int64_t wtf_client_open(wtf_client* _cl,
 
 }
 
+WTF_API int64_t wtf_client_unlink(wtf_client* _cl, 
+            const char* path, wtf_client_returncode* status)
+{
+    C_WRAP_EXCEPT(
+        return cl->unlink(path, status);
+    );
+
+}
+
+WTF_API int64_t wtf_client_rename(wtf_client* _cl, 
+            const char* src, const char* dst, 
+            wtf_client_returncode* status)
+{
+    C_WRAP_EXCEPT(
+        return cl->rename(src, dst, status);
+    );
+
+}
+
 WTF_API int64_t wtf_client_getattr(wtf_client* _cl, 
             const char* path, 
             struct wtf_file_attrs* fa, wtf_client_returncode* status)
@@ -181,12 +200,11 @@ WTF_API int64_t wtf_client_getattr(wtf_client* _cl,
 }
 
 WTF_API int64_t wtf_client_lseek(wtf_client* _cl, 
-            int64_t fd, size_t offset, wtf_client_returncode* status)
+            int64_t fd, size_t offset, int whence, wtf_client_returncode* status)
 {
 
     C_WRAP_EXCEPT(
-        cl->lseek(fd, offset);
-        return 0;
+        return cl->lseek(fd, offset, whence, status);
     );
 
 }
