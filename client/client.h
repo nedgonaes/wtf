@@ -36,6 +36,8 @@
 
 // STL
 #include <map>
+#include <vector>
+#include <string>
 #include <memory>
 
 // po6
@@ -91,6 +93,7 @@ class client
         int64_t unlink(const char* path, wtf_client_returncode* status);
         int64_t rename(const char* src, const char* dst, wtf_client_returncode* status);
         int64_t getattr(const char* path, struct wtf_file_attrs* fa);
+        std::vector<std::string> ls(const char* path);
 
         int64_t lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* status);
         void begin_tx();

@@ -362,7 +362,7 @@ nodist_libwtf_client_java_la_SOURCES = bindings/java/wtf_client_wrap.cxx
 libwtf_client_java_la_CPPFLAGS = $(JNI_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)
 libwtf_client_java_la_CXXFLAGS = -fno-strict-aliasing $(AM_CXXFLAGS) -fvisibility=default $(CXXFLAGS)
 libwtf_client_java_la_LIBADD = libwtf-client.la
-bindings/java/wtf_client_wrap.cxx: bindings/java/wtf_client.i include/wtf/client.h
+bindings/java/wtf_client_wrap.cxx: bindings/java/wtf_client.i include/wtf/client.hpp include/wtf/client.h
 	$(swig_verbose)mkdir -p $(abs_top_builddir)/bindings/java/org/wtf/client &&  \
 	${SWIG} -I${abs_srcdir}/include -java -package org.wtf.client -c++ -outdir $(abs_builddir)/bindings/java/org/wtf/client \
 		-o $(abs_builddir)/$@ -w518 $(abs_top_srcdir)/$<

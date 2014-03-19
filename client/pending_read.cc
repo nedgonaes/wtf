@@ -105,6 +105,7 @@ pending_read :: handle_message(client* cl,
     std::cerr << "copying to offset " << bbl.buf_offset << ": " << e::slice(data.data() + bbl.block_offset, data.size() - bbl.block_offset).hex() << std::endl;
     std::cerr << "m_buf = " << (int*)m_buf << std::endl;
     memmove(m_buf + bbl.buf_offset, data.data() + bbl.block_offset, data.size() - bbl.block_offset); 
+    *m_buf_sz += (data.size() - bbl.block_offset); 
     std::cerr << "memmove success!" << std::endl;
     return true;
 }

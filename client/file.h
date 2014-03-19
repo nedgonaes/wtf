@@ -206,7 +206,7 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
     rhs->m_current_block_length = b->capacity();
     rhs->m_current_block = b;
 
-    std::cout << b->offset() << ", " << b->capacity() << ", " << rhs->m_offset << std::endl;
+    //std::cout << b->offset() << ", " << b->capacity() << ", " << rhs->m_offset << std::endl;
 
     return up; 
 }

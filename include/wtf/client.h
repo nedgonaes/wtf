@@ -31,6 +31,8 @@
 
 /* C */
 #include <stdint.h>
+#include <vector>
+#include <string>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -104,6 +106,8 @@ extern "C"
     int64_t wtf_client_getattr(struct wtf_client* m_cl, 
             const char* path, 
             struct wtf_file_attrs* fa, wtf_client_returncode* status);
+    std::vector<std::string> wtf_client_ls(struct wtf_client* m_cl, 
+            const char* path);
     int64_t wtf_client_lseek(struct wtf_client* m_cl, 
             int64_t fd, size_t offset, int whence, wtf_client_returncode* status);
     int64_t wtf_client_begin_tx(struct wtf_client* m_cl, wtf_client_returncode* status);

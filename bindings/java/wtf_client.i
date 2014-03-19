@@ -8,6 +8,8 @@ using namespace wtf;
 %include cpointer.i
 %include various.i
 %include stdint.i
+%include std_vector.i
+%include std_string.i
 %include "enums.swg"
 %javaconst(1);
 %pragma(java) jniclasscode=
@@ -25,7 +27,7 @@ using namespace wtf;
 %apply long long *INOUT {size_t *data_sz};
 %apply char *BYTE {char *data};
 %apply long *OUTPUT {wtf_client_returncode *status}
-
+%template(StringVec) std::vector<std::string>;
 %ignore "";
 
 %rename("%s") "wtf_file_attrs";

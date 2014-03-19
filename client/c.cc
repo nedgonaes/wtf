@@ -199,6 +199,13 @@ WTF_API int64_t wtf_client_getattr(wtf_client* _cl,
 
 }
 
+WTF_API std::vector<std::string> wtf_client_ls(wtf_client* _cl,
+            const char* path)
+{
+    wtf::client* cl = reinterpret_cast<wtf::client*>(_cl);
+    return cl->ls(path);
+}
+
 WTF_API int64_t wtf_client_lseek(wtf_client* _cl, 
             int64_t fd, size_t offset, int whence, wtf_client_returncode* status)
 {

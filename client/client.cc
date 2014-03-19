@@ -475,6 +475,7 @@ int64_t
 client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size)
 {
 	TRACE;
+    std::cerr << "opening file " << path << std::endl;
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
 
@@ -788,6 +789,7 @@ client :: read(int64_t fd, char* buf,
     size_t buf_offset = 0;
 
     std::cerr << "buf_sz = " << *buf_sz << std::endl;
+    *buf_sz = 0;
 
     while(rem > 0)
     {
@@ -1112,6 +1114,15 @@ int64_t
 client :: mkdir(const char* path, mode_t mode)
 {
 	TRACE;
+
+    char *abspath = new char[PATH_MAX]; 
+
+    if (canon_path(path, abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
+
     hyperdex_client_returncode status;
     int64_t ret = -1;
     struct hyperdex_client_attribute attr[2];
@@ -1128,7 +1139,7 @@ client :: mkdir(const char* path, mode_t mode)
     attr[1].datatype = HYPERDATATYPE_INT64;
 
  
-    ret = m_hyperdex_client.put_if_not_exist("wtf", path, strlen(path), attr, 2, &status);
+    ret = m_hyperdex_client.put_if_not_exist("wtf", abspath, strlen(abspath), attr, 2, &status);
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
@@ -1157,11 +1168,66 @@ client :: closedir(int fd)
 }
 
 int64_t 
-client :: readdir(int fd, char* entry)
+client :: readdir(int fd, char* e)
 {
 	TRACE;
-    //XXX implement readdir.
     return 0;
+}
+
+std::vector<std::string>
+client :: ls(const char* path)
+{
+    TRACE;
+
+    hyperdex_client_returncode hstatus;
+
+    char *abspath = new char[PATH_MAX]; 
+
+    if (canon_path(path, abspath, PATH_MAX) != 0)
+    {
+        return std::vector<std::string>();
+    }
+
+    std::string query("^");
+    query += std::string(abspath);
+
+    struct hyperdex_client_attribute_check check;
+    const struct hyperdex_client_attribute* attrs;
+    size_t attrs_sz = 0;
+
+    check.attr = "path";
+    check.value = query.c_str();
+    check.value_sz = query.size();
+    check.datatype = HYPERDATATYPE_STRING;
+    check.predicate = HYPERPREDICATE_REGEX;
+    int64_t retval = m_hyperdex_client.search("wtf", &check, 1, &hstatus, &attrs, &attrs_sz);
+
+    std::vector<std::string> output;
+
+    while (hstatus != HYPERDEX_CLIENT_SEARCHDONE &&
+           hstatus != HYPERDEX_CLIENT_NONEPENDING)
+    {
+        hyperdex_client_returncode lstatus;
+        retval = m_hyperdex_client.loop(-1, &lstatus);
+        if (retval > 0)
+        {
+            for (size_t i = 0; i < attrs_sz; ++i)
+            {
+                if (strcmp(attrs[i].attr, "path") == 0)
+                {
+                    if (attrs[i].value_sz == 0)
+                    {
+                        continue;
+                    }
+
+                    output.push_back(std::string(attrs[i].value, attrs[i].value_sz));
+                    attrs_sz = 0;
+                }
+           }
+        }
+    }
+
+    return output;
 }
 
 /* HYPERDEX */
@@ -1495,7 +1561,7 @@ client :: write_sync(int64_t fd, const char* buf,
         return reqid;
     }
 
-    int64_t lreqid = loop(fd, -1, status);
+    int64_t lreqid = loop(reqid, -1, status);
     if (lreqid < 0)
     {
         return lreqid;
@@ -1515,11 +1581,11 @@ client :: read_sync(int64_t fd, char* buf,
         return reqid;
     }
 
-    int64_t lreqid = loop(fd, -1, status);
+    int64_t lreqid = loop(reqid, -1, status);
     if (lreqid < 0)
     {
         return lreqid;
     }
 
-    return lreqid;
+    return reqid;
 }
