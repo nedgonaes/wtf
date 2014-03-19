@@ -259,16 +259,7 @@ file :: get_block_length(size_t offset)
 uint64_t
 file :: length()
 {
-    if (m_block_map.size() == 0)
-    {
-        return 0;
-    }
-
-    block_map::iterator it = m_block_map.end();
-    it--;
-    uint64_t bid = it->first;
-    uint64_t len = it->second->length();
-    return CHUNKSIZE*bid + len;
+    return m_file_length;
 }
 
 std::auto_ptr<e::buffer>
