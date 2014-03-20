@@ -89,8 +89,6 @@ pending_write :: handle_message(client* cl,
     response_returncode rc;
     up = up >> rc >> bi >> file_offset >> block_capacity >> block_length;
 
-    std::cerr << "daemon returned block_capacity = " << block_capacity << std::endl;
-
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
 

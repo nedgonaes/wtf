@@ -38,6 +38,7 @@ pending_read :: pending_read(uint64_t id,
                              size_t* buf_sz)
     : m_buf(buf)
     , m_buf_sz(buf_sz)
+    , m_max_buf_sz(*buf_sz)
     , pending_aggregation(id, status)
     , m_done(false)
 {
@@ -100,13 +101,9 @@ pending_read :: handle_message(client* cl,
     up = up >> rc >> bi;
     struct buffer_block_len bbl = m_offset_map[std::make_pair(si.get(), bi)];
     e::slice data = up.as_slice();
-    std::cerr << "block_offset = " << bbl.block_offset << ", data = " << data.hex() << std::endl; 
-    std::cerr << "buf_offset = " << bbl.buf_offset << ", data.size() = " << data.size() << std::endl; 
-    std::cerr << "copying to offset " << bbl.buf_offset << ": " << e::slice(data.data() + bbl.block_offset, data.size() - bbl.block_offset).hex() << std::endl;
-    std::cerr << "m_buf = " << (int*)m_buf << std::endl;
-    memmove(m_buf + bbl.buf_offset, data.data() + bbl.block_offset, data.size() - bbl.block_offset); 
-    *m_buf_sz += (data.size() - bbl.block_offset); 
-    std::cerr << "memmove success!" << std::endl;
+    size_t len = std::min(data.size() - bbl.block_offset, m_max_buf_sz - bbl.buf_offset);
+    memmove(m_buf + bbl.buf_offset, data.data() + bbl.block_offset, len); 
+    *m_buf_sz += len; 
     return true;
 }
 

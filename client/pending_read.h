@@ -96,6 +96,7 @@ class pending_read : public pending_aggregation
     private:
         char* m_buf;
         size_t* m_buf_sz;
+        size_t m_max_buf_sz;
         offset_map_t m_offset_map;
         bool m_done;
 };

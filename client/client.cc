@@ -70,8 +70,8 @@
     _BUSYBEE_ERROR(BBRC); \
     return false;
 
-#define TRACECALLS
-#define LOG_METADATA
+//#define TRACECALLS
+//#define LOG_METADATA
 
 #ifdef TRACECALLS
 #define TRACE std::cerr << __FILE__ << ":" << __func__ << std::endl
@@ -211,7 +211,6 @@ client :: send(wtf_network_msgtype mt,
     msg->pack_at(BUSYBEE_HEADER_SIZE)
         << type << nonce;
     m_busybee.set_timeout(-1);
-    std::cerr << "sending to " << to << std::endl;
     busybee_returncode rc = m_busybee.send(to.get(), msg);
 
     switch (rc)
@@ -242,7 +241,6 @@ client :: loop(int64_t client_id, int timeout, wtf_client_returncode* status)
 {
 	TRACE;
     int64_t out = inner_loop(timeout, status, client_id);
-    std::cerr << "loop success!" << std::endl;
     return out;
 }
 
@@ -475,7 +473,6 @@ int64_t
 client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size)
 {
 	TRACE;
-    std::cerr << "opening file " << path << std::endl;
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
 
@@ -483,8 +480,6 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     {
         return -1;
     }
-
-    std::cerr << O_CREAT << " & " << flags << std::endl;
 
     char *abspath = new char[PATH_MAX]; 
 
@@ -611,6 +606,12 @@ client :: rename(const char* src, const char* dst, wtf_client_returncode* status
         return -1;
     }
 
+    ret = unlink(src_abspath, status);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
 
     return 0;
 }
@@ -713,7 +714,6 @@ client :: write(int64_t fd, const char* buf,
             std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
             e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
                 pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
-            std::cerr << "sending " << msg->hex() << std::endl;
             pa.copy(data);
 
             if (!maintain_coord_connection(status))
@@ -757,7 +757,6 @@ client :: read(int64_t fd, char* buf,
                    wtf_client_returncode* status)
 {
 	TRACE;
-    std::cerr << "buf = " << (int*)buf << std::endl;
     if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -767,8 +766,6 @@ client :: read(int64_t fd, char* buf,
     e::intrusive_ptr<file> f = m_fds[fd];
 
     get_file_metadata(f->path().get(), f, false);
-
-    std::cerr << *f << std::endl;
 
     /* The op object here is created once and a reference to it
      * is inserted into the m_pending list for each send operation,
@@ -788,7 +785,6 @@ client :: read(int64_t fd, char* buf,
     size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
     size_t buf_offset = 0;
 
-    std::cerr << "buf_sz = " << *buf_sz << std::endl;
     *buf_sz = 0;
 
     while(rem > 0)
@@ -1143,7 +1139,6 @@ client :: mkdir(const char* path, mode_t mode)
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
-        std::cerr << "mkdir returned " << res << std::endl;
         return -1;
     }
     else
@@ -1304,7 +1299,6 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
         }
     }
 
-    std::cerr << *f << std::endl;
     
     return 0;
 }
@@ -1316,7 +1310,6 @@ client :: update_file_metadata(e::intrusive_ptr<file> f,
                                wtf_client_returncode *status)
 {
 	TRACE;
-    std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
     int i = 0;
 
@@ -1345,9 +1338,6 @@ client :: update_file_metadata(e::intrusive_ptr<file> f,
     update_attr[2].value_sz = blockmap_update->size();
     update_attr[2].datatype = HYPERDATATYPE_STRING;
 
-    std::cerr << "MESSAGE: " << blockmap_update->hex() << std::endl;
-
-
     /* construct the attributes for the cond_put condition */
     struct hyperdex_client_attribute_check cond_attr;
 
@@ -1374,8 +1364,6 @@ client :: update_file_metadata(e::intrusive_ptr<file> f,
         return -1;
     }
 
-    std::cerr << *f << std::endl;
-
     return ret;
 }
 
@@ -1384,7 +1372,6 @@ int64_t
 client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *status)
 {
 	TRACE;
-    std::cout << "updating hyperdex for file " << f->path().get() << std::endl;
     int64_t ret = -1;
     int i = 0;
 
@@ -1412,8 +1399,6 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
     update_attr[2].value_sz = blockmap_update->size();
     update_attr[2].datatype = HYPERDATATYPE_STRING;
 
-    std::cerr << "MESSAGE: " << blockmap_update->hex() << std::endl;
-
     ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), update_attr, 3, &hstatus);
 
     if (ret < 0)
@@ -1429,8 +1414,6 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
         ERROR(INTERNAL) << "HyperDex returned " << ret;
         return -1;
     }
-
-    std::cerr << *f << std::endl;
 
     return ret;
 }
