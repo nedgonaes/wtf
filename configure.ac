@@ -49,19 +49,18 @@ AC_ARG_ENABLE([java-bindings], [AS_HELP_STRING([--enable-java-bindings],
               [enable the Java bindings @<:@default: yes@:>@])],
               [java_bindings=${enableval}], [java_bindings=no])
 AM_CONDITIONAL([ENABLE_JAVA_BINDINGS], [test x"${java_bindings}" = xyes])
-need_swig=no
+need_swig=yes
 
 JNI_CPPFLAGS=
 if test x"${java_bindings}" = xyes; then
     AC_PROG_JAR
     AC_PROG_JAVAC
     AC_JNI_INCLUDE_DIR
-    need_swig=yes
     found_jnidir=no
     for jnidir in ${JNI_INCLUDE_DIRS}
     do
         if test x"${found_jnidir}" = xno; then
-            JNI_CPPFLAGS="-I${jnidir}"
+            JNI_CPPFLAGS="-I${jnidir} -I${jnidir}/linux"
             found_jnidir=yes
         fi
     done
@@ -140,4 +139,6 @@ AC_CHECK_FUNCS([clock_gettime mach_absolute_time])
 
 AC_CONFIG_FILES([Makefile
                  wtf-client.pc wtf-admin.pc])
+AC_CONFIG_LINKS([test/java/.exists:test/java/.exists])
+AC_CONFIG_LINKS([bindings/java/.exists:bindings/java/.exists])
 AC_OUTPUT

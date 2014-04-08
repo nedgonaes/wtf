@@ -25,7 +25,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
-
+AM_DISTCHECK_CONFIGURE_FLAGS = --enable-java-bindings
 AM_CPPFLAGS  = -I${abs_top_srcdir}/include $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(HYPERLEVELDB_CFLAGS) $(REPLICANT_CFLAGS) $(SPARSEHASH_CFLAGS)
 AM_CFLAGS = $(WANAL_CFLAGS)
 AM_CXXFLAGS = $(WANAL_CXXFLAGS) $(PO6_CFLAGS) $(E_CFLAGS) $(BUSYBEE_CFLAGS) $(LRT_CFLAGS)
@@ -55,7 +55,7 @@ check_PROGRAMS =
 pkgconfig_DATA =
 
 jardir = $(datadir)/java
-jar_DATA =
+dist_jar_DATA =
 
 EXTRA_DIST =
 CLEANFILES =
@@ -295,6 +295,7 @@ java_wrappers =
 java_wrappers += test/sh/bindings.java.Basic.sh
 shell_wrappers += $(java_wrappers)
 TESTS += $(shell_wrappers)
+TESTS += $(java_wrappers)
 
 EXTRA_DIST += $(shell_wrappers)
 EXTRA_DIST += test/env.sh
@@ -351,17 +352,22 @@ swig_verbose_ = $(swig_verbose_$(AM_DEFAULT_VERBOSITY))
 swig_verbose_0 = @echo "  SWIG  " $@;
 wtf_client_jarfile = bindings/java/org.wtf.client-$(VERSION).jar
 
-CLEANFILES += $(wtf_client_jarfile)
+CLEANFILES += bindings/java/org/wtf/client/*
+CLEANFILES += test/java/*.class
 
-if ENABLE_JAVA_BINDINGS
+EXTRA_DIST += test/java/Basic.java
+EXTRA_DIST += test/java/.exists
+EXTRA_DIST += bindings/java/.exists
+EXTRA_DIST += bindings/java/wtf_client.i
+
 lib_LTLIBRARIES += libwtf-client-java.la
-jar_DATA += $(wtf_client_jarfile)
-endif
+dist_jar_DATA += $(wtf_client_jarfile)
 
-nodist_libwtf_client_java_la_SOURCES = bindings/java/wtf_client_wrap.cxx
+libwtf_client_java_la_SOURCES = bindings/java/wtf_client_wrap.cxx
 libwtf_client_java_la_CPPFLAGS = $(JNI_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)
 libwtf_client_java_la_CXXFLAGS = -fno-strict-aliasing $(AM_CXXFLAGS) -fvisibility=default $(CXXFLAGS)
 libwtf_client_java_la_LIBADD = libwtf-client.la
+
 bindings/java/wtf_client_wrap.cxx: bindings/java/wtf_client.i include/wtf/client.hpp include/wtf/client.h
 	$(swig_verbose)mkdir -p $(abs_top_builddir)/bindings/java/org/wtf/client &&  \
 	${SWIG} -I${abs_srcdir}/include -java -package org.wtf.client -c++ -outdir $(abs_builddir)/bindings/java/org/wtf/client \
@@ -370,3 +376,6 @@ bindings/java/wtf_client_wrap.cxx: bindings/java/wtf_client.i include/wtf/client
 $(wtf_client_jarfile): bindings/java/wtf_client_wrap.cxx
 	javac bindings/java/org/wtf/client/*.java
 	cd bindings/java ; $(JAR) cvf $(JARFLAGS) ../../$(wtf_client_jarfile) org/wtf/client/*.class
+
+clean-local:
+	-rm -rf bindings/java/org
