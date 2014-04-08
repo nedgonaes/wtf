@@ -291,11 +291,12 @@ test_readwrite_sync_stress_test_SOURCES = test/readwrite_sync_stress_test.cc
 test_readwrite_sync_stress_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 #java tests
+if ENABLE_JAVA_BINDINGS
 java_wrappers =
 java_wrappers += test/sh/bindings.java.Basic.sh
 shell_wrappers += $(java_wrappers)
+endif
 TESTS += $(shell_wrappers)
-TESTS += $(java_wrappers)
 
 EXTRA_DIST += $(shell_wrappers)
 EXTRA_DIST += test/env.sh
@@ -347,6 +348,7 @@ wtf_stat_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 ################################################################################
 ################################## bindings ####################################
 ################################################################################
+if ENABLE_JAVA_BINDINGS
 swig_verbose = $(swig_verbose_$(V))
 swig_verbose_ = $(swig_verbose_$(AM_DEFAULT_VERBOSITY))
 swig_verbose_0 = @echo "  SWIG  " $@;
@@ -379,3 +381,5 @@ $(wtf_client_jarfile): bindings/java/wtf_client_wrap.cxx
 
 clean-local:
 	-rm -rf bindings/java/org
+
+endif
