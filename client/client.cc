@@ -670,9 +670,13 @@ client :: write(int64_t fd, const char* buf,
         return -1;
     }
 
+    std::cerr << "Wrting " << *buf_sz << " bytes to file." << std::endl;
+
     e::intrusive_ptr<file> f = m_fds[fd];
 
     get_file_metadata(f->path().get(), f, false);
+    
+    std::cerr << "at position " << f->offset() << std::endl;
 
     /* The op object here is created once and a reference to it
      * is inserted into the m_pending list for each send operation,
@@ -1538,6 +1542,11 @@ client :: write_sync(int64_t fd, const char* buf,
                    size_t * buf_sz, 
                    wtf_client_returncode* status)
 {
+    if (*buf_sz == 0)
+    {
+        return 0;
+    }
+
     int64_t reqid = write(fd, buf, buf_sz, status);
     if (reqid < 0)
     {
@@ -1558,6 +1567,11 @@ client :: read_sync(int64_t fd, char* buf,
                    size_t* buf_sz,
                    wtf_client_returncode* status)
 {
+    if (*buf_sz == 0)
+    {
+        return 0;
+    }
+
     int64_t reqid = read(fd, buf, buf_sz, status);
     if (reqid < 0)
     {

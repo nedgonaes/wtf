@@ -486,7 +486,7 @@ daemon :: recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg)
     {
         busybee_returncode rc = m_busybee->recv(&conn->token, msg);
 
-        LOG(INFO) << "recv'd " << rc;
+        //LOG(INFO) << "recv'd " << rc;
 
         switch (rc)
         {
@@ -610,7 +610,7 @@ daemon :: process_get(const wtf::connection& conn,
     if (len > 0) 
     {
         pa = pa.copy(e::slice(data,len));
-        LOG(INFO) << "GET(" << bid << "): " << e::slice(data,len).hex();
+        //LOG(INFO) << "GET(" << bid << "): " << e::slice(data,len).hex();
     }
 
     delete [] data;
@@ -636,8 +636,8 @@ daemon :: process_update(const wtf::connection& conn,
 
 
     up = up >> bid >> block_offset >> block_capacity >> file_offset;
-    LOG(INFO) << "block_offset = " << block_offset;
-    LOG(INFO) << "block_capacity = " << block_capacity;
+    //LOG(INFO) << "block_offset = " << block_offset;
+    //LOG(INFO) << "block_capacity = " << block_capacity;
     e::slice data = up.as_slice();
     sid = m_us.get();
 
@@ -645,15 +645,15 @@ daemon :: process_update(const wtf::connection& conn,
     {
         ret = m_blockman.write_block(data, sid, bid); 
         block_len = ret; 
-        LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
+        //LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
     else
     {
         ret = m_blockman.update_block(data, block_offset, sid, bid, block_len); 
-        LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
+        //LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
 
-    LOG(INFO) << "UPDATE(" << bid << "): " << data.hex();
+    //LOG(INFO) << "UPDATE(" << bid << "): " << data.hex();
 
     if (ret < data.size())
     {
@@ -664,7 +664,7 @@ daemon :: process_update(const wtf::connection& conn,
         rc = wtf::RESPONSE_SUCCESS;
     }
 
-    LOG(INFO) << "Returning " << rc << " to client.";
+    //LOG(INFO) << "Returning " << rc << " to client.";
 
 
     size_t sz = COMMAND_HEADER_SIZE + 

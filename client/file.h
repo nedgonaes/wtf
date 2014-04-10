@@ -160,8 +160,9 @@ inline e::buffer::packer
 operator << (e::buffer::packer pa, const file& rhs) 
 { 
     uint64_t length = rhs.m_file_length;
+    uint64_t block_size = rhs.m_block_size;
     uint64_t sz = rhs.m_block_map.size();
-    pa = pa << length << sz;
+    pa = pa << length << block_size << sz;
 
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();
             it != rhs.m_block_map.end(); ++it)
@@ -176,9 +177,11 @@ inline e::unpacker
 operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs) 
 { 
     uint64_t sz;
+    uint64_t block_size;
     uint64_t length;
-    up = up >> length >> sz; 
+    up = up >> length >> block_size >> sz; 
 
+    rhs->m_block_size = block_size;
     rhs->m_file_length = length;
 
     for (int i = 0; i < sz; ++i) 
