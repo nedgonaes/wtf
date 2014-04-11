@@ -301,6 +301,13 @@ TESTS += $(shell_wrappers)
 EXTRA_DIST += $(shell_wrappers)
 EXTRA_DIST += test/env.sh
 EXTRA_DIST += test/runner.py
+EXTRA_DIST += tools/startlocal.sh
+EXTRA_DIST += .hyperdex_daemon_hosts
+EXTRA_DIST += .hyperdex_coordinator_host
+EXTRA_DIST += .wtf_daemon_hosts
+EXTRA_DIST += .wtf_coordinator_host
+EXTRA_DIST += .wtf_client_hosts
+
 
 #if ENABLE_GTEST
 #wtf_test_blockstore_SOURCES = test/test_blockstore.cc

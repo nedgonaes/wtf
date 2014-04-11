@@ -1,5 +1,5 @@
 PSSH=parallel-ssh
-WTF_DIR=/home/sean/src/wtf
+WTF_DIR=/home/sean/src/wtf-0.1.dev
 WTF_COORDINATOR=${WTF_DIR}/.wtf_coordinator_host
 WTF_PORT=1981
 HYPERDEX_COORDINATOR=${WTF_DIR}/.hyperdex_coordinator_host
@@ -66,7 +66,7 @@ reset_cluster()
     sleep 5
     echo "STARTING WTF DAEMONS...\n"
     ${PSSH} -h ${WTF_DAEMONS} -i "${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -d"
-    ./wtf-mkfs -h ${HYPERDEX_COORDINATOR} -p ${HYPERDEX_PORT}
+    ./wtf-mkfs -H ${HC} -P ${HYPERDEX_PORT}
     #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
     sleep 5
 }

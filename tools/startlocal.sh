@@ -1,4 +1,4 @@
-WTF_DIR=/home/sean/src/wtf
+WTF_DIR=/home/sean/src/wtf-0.1.dev
 WTF_COORDINATOR=${WTF_DIR}/.wtf_coordinator_host
 WTF_PORT=1981
 HYPERDEX_COORDINATOR=${WTF_DIR}/.hyperdex_coordinator_host
@@ -12,7 +12,7 @@ WTF_DAEMON_DATA_DIR=${DATA_DIR}/wtf-daemon
 HYPERDEX_DAEMON_DATA_DIR=${DATA_DIR}/hyperdex-daemon
 HYPERDEX_COORDINATOR_DATA_DIR=${DATA_DIR}/hyperdex-coordinator
 HYPERDEX=hyperdex
-WTF=./wtf
+WTF=wtf
 
 ALL_HOSTS=`mktemp`
 sort .wtf_client_hosts .wtf_daemon_hosts .hyperdex_daemon_hosts .wtf_coordinator_host .hyperdex_coordinator_host | sort -u > ${ALL_HOSTS}
