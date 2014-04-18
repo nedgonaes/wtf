@@ -68,7 +68,7 @@ class WTFCluster(object):
         self.hyperdex_daemons = hyperdex_daemons
         self.clean = clean
         self.base = base
-        self.log_output = False
+        self.log_output = True 
 
     def setup(self):
         if self.base is None:

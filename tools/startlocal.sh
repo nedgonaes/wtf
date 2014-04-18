@@ -1,4 +1,4 @@
-WTF_DIR=/home/sean/src/wtf-0.1.dev
+WTF_DIR=/home/sean/src/wtf
 WTF_COORDINATOR=${WTF_DIR}/.wtf_coordinator_host
 WTF_PORT=1981
 HYPERDEX_COORDINATOR=${WTF_DIR}/.hyperdex_coordinator_host
@@ -12,7 +12,7 @@ WTF_DAEMON_DATA_DIR=${DATA_DIR}/wtf-daemon
 HYPERDEX_DAEMON_DATA_DIR=${DATA_DIR}/hyperdex-daemon
 HYPERDEX_COORDINATOR_DATA_DIR=${DATA_DIR}/hyperdex-coordinator
 HYPERDEX=hyperdex
-WTF=wtf
+WTF=${WTF_DIR}/wtf
 
 ALL_HOSTS=`mktemp`
 sort .wtf_client_hosts .wtf_daemon_hosts .hyperdex_daemon_hosts .wtf_coordinator_host .hyperdex_coordinator_host | sort -u > ${ALL_HOSTS}
@@ -48,7 +48,10 @@ clean_cluster()
     mkdir ${HYPERDEX_COORDINATOR_DATA_DIR}
     mkdir ${HYPERDEX_DAEMON_DATA_DIR}
     rm wtf-*.log
-    mkdir ${WTF_DAEMON_DATA_DIR}/data
+    mkdir ${WTF_DAEMON_DATA_DIR}/data1
+    mkdir ${WTF_DAEMON_DATA_DIR}/data2
+    mkdir ${WTF_DAEMON_DATA_DIR}/1
+    mkdir ${WTF_DAEMON_DATA_DIR}/2
 }
 
 reset_cluster()
@@ -68,8 +71,11 @@ reset_cluster()
     echo "STARTING WTF COORDINATOR...\n"
     ${WTF} coordinator -D ${WTF_COORDINATOR_DATA_DIR} -l ${WC} -p ${WTF_PORT} -d
     sleep 1
-    echo "STARTING WTF DAEMONS...\n"
-    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -d
+    echo "STARTING WTF DAEMON #1...\n"
+    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/1 -M ${WTF_DAEMON_DATA_DIR}/data1/metadata -p 2013 -c ${WC} -P ${WTF_PORT} -t 1 -d
+    sleep 1
+    echo "STARTING WTF DAEMON #2...\n"
+    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -d
     #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
 }
 #

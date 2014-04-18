@@ -183,8 +183,7 @@ worker_thread(const armnod::argparser& _f,
 
             if (fd < 0)
             {
-                WTF_TEST_FAIL(0, "XXX");;
-                
+                WTF_TEST_FAIL(0, "unable to open file " << f << cl.error_location() << ":" << cl.error_message());
             }
 
             /* read the file in random size chunks. */

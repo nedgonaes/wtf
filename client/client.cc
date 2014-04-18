@@ -490,6 +490,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
 
     if (flags & O_CREAT)
     {
+        std::cerr << "Creating file " << abspath << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[m_next_fileno] = f; 
         f->flags = flags;
@@ -498,10 +499,11 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     }
     else
     {
+        std::cerr << "Opening file " << abspath << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[m_next_fileno] = f; 
         f->flags = flags;
-        if (get_file_metadata(path, f, false) != 0)
+        if (get_file_metadata(abspath, f, false) != 0)
         {
             return -1;
         }
