@@ -171,6 +171,8 @@ void
 configuration :: assign_random_block_locations(std::vector<block_location>& bl) const
 {
     static size_t last_server = 0;
+    std::cerr << "Picking " << bl.size() << " random servers to send to." << std::endl;
+    std::cerr << "Last server was " << last_server << "." << std::endl;
     for (size_t i = 0; i < bl.size(); ++i)
     {
         /* if this server could be any server */
@@ -183,6 +185,7 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl) 
                 if (s.state == server::AVAILABLE)
                 {
                     bl[i].si = s.id.get();
+                    break;
                 }
             }
         }
