@@ -481,7 +481,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         return -1;
     }
 
-    char *abspath = new char[PATH_MAX]; 
+    char abspath[PATH_MAX]; 
 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
@@ -518,32 +518,38 @@ client :: unlink(const char* path, wtf_client_returncode* status)
 	TRACE;
 
     hyperdex_client_returncode hstatus;
-    char *abspath = new char[PATH_MAX]; 
+    char abspath[PATH_MAX]; 
 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
         return -1;
     }
 
-    int64_t ret = m_hyperdex_client.del("wtf", abspath, strlen(abspath), &hstatus);
+    std::vector<std::string> files = ls(abspath);
 
-    if (ret < 0)
+    for (std::vector<std::string>::iterator it = files.begin();
+        it != files.end(); ++it)
     {
-        ERROR(IO) << "Couldn't delete from HyperDex";
-        return -1;
-    }
+        int64_t ret = m_hyperdex_client.del("wtf", it->c_str(), it->size(), &hstatus);
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+        if (ret < 0)
+        {
+            ERROR(IO) << "Couldn't delete from HyperDex";
+            return -1;
+        }
 
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
-    {
-        ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
-        return -1;
-    }
-    else if (res < 0)
-    {
-        ERROR(IO) << "Couldn't delete from HyperDex";
-        return -1;
+        hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+
+        if (res == HYPERDEX_CLIENT_NOTFOUND)
+        {
+            ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
+            return -1;
+        }
+        else if (res < 0)
+        {
+            ERROR(IO) << "Couldn't delete from HyperDex";
+            return -1;
+        }
     }
 
     return 0;
@@ -557,14 +563,14 @@ client :: rename(const char* src, const char* dst, wtf_client_returncode* status
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
     hyperdex_client_returncode hstatus;
-    char *src_abspath = new char[PATH_MAX]; 
+    char src_abspath[PATH_MAX];
 
     if (canon_path(src, src_abspath, PATH_MAX) != 0)
     {
         return -1;
     }
 
-    char *dst_abspath = new char[PATH_MAX]; 
+    char dst_abspath[PATH_MAX]; 
 
     if (canon_path(dst, dst_abspath, PATH_MAX) != 0)
     {
@@ -1025,7 +1031,7 @@ int64_t
 client :: chdir(char* path)
 {
 	TRACE;
-    char *abspath = new char[PATH_MAX]; 
+    char abspath[PATH_MAX]; 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
         return -1;
@@ -1117,7 +1123,7 @@ client :: mkdir(const char* path, mode_t mode)
 {
 	TRACE;
 
-    char *abspath = new char[PATH_MAX]; 
+    char abspath[PATH_MAX]; 
 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
@@ -1182,7 +1188,7 @@ client :: ls(const char* path)
 
     hyperdex_client_returncode hstatus;
 
-    char *abspath = new char[PATH_MAX]; 
+    char abspath[PATH_MAX]; 
 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
