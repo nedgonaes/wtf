@@ -47,6 +47,7 @@
 static bool _daemonize = false;
 static const char* _data = "./data";
 static const char* _metadata = "./metadata";
+static const char* _log = NULL;
 static const char* _listen_host = "auto";
 static unsigned long _listen_port = 2013;
 static po6::net::ipaddr _listen_ip;
@@ -70,6 +71,9 @@ static struct poptOption popts[] = {
      "dir"},
     {"data", 'D', POPT_ARG_STRING, &_data, 'D',
      "store persistent state in this directory (default: ./data)",
+     "dir"},
+    {"log", 'L', POPT_ARG_STRING, &_log, 'O',
+     "store persistent state in this directory (default: --data)",
      "dir"},
     {"listen", 'l', POPT_ARG_STRING, &_listen_host, 'l',
      "listen on a specific IP address (default: auto)",
@@ -199,11 +203,12 @@ main(int argc, const char* argv[])
         }
 
         po6::pathname data(_data);
+        po6::pathname log(_log ? _log : _data);
         po6::pathname metadata(_metadata);
         po6::net::location bind_to(_listen_ip, _listen_port);
         po6::net::hostname coord(_coordinator_host, _coordinator_port);
 
-        return d.run(_daemonize, data, metadata, _listen, bind_to, _coordinator, coord, _threads);
+        return d.run(_daemonize, data, log, metadata, _listen, bind_to, _coordinator, coord, _threads);
     }
     catch (po6::error& e)
     {

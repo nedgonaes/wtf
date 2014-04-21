@@ -167,6 +167,7 @@ install_signal_handler(int signum, void (*f)(int))
 int
 daemon :: run(bool daemonize,
               po6::pathname data,
+              po6::pathname log,
               po6::pathname backing_path,
               bool set_bind_to,
               po6::net::location bind_to,
@@ -229,7 +230,8 @@ daemon :: run(bool daemonize,
         google::SetLogSymlink(google::WARNING, "");
         google::SetLogSymlink(google::ERROR, "");
         google::SetLogSymlink(google::FATAL, "");
-        google::SetLogDestination(google::INFO, "wtf-daemon-");
+        log = po6::join(log, "wtf-daemon-");
+        google::SetLogDestination(google::INFO, log.get());
 
         if (::daemon(1, 0) < 0)
         {
