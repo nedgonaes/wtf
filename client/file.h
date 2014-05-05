@@ -103,8 +103,10 @@ class file
         void inc() { ++m_ref; }
         void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
 
-    private:
+    public:
         typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
+
+    private:
         file& operator = (const file&);
 
     private:
