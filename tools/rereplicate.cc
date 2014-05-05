@@ -72,9 +72,17 @@ rereplicate(const char* filename, uint64_t sid)
         }
     }
 
-    for (wtf::file::block_map::const_iterator it = f->blocks_begin(); it != f->blocks_end(); ++it)
+    std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator it;
+    for (it = f->blocks_begin(); it != f->blocks_end(); ++it)
     {
-        cout << *it->second << endl;
+        std::vector<wtf::block_location>::const_iterator it2;
+        for (it2 = it->second->blocks_begin(); it2 != it->second->blocks_end(); ++it2)
+        {
+            if (it2->si == sid)
+            {
+                cout << "match " << *it2 << endl;
+            }
+        }
     }
 
     return 0;
@@ -91,7 +99,7 @@ main(int argc, const char* argv[])
     else
     {
         const char* filename = argv[1];
-        uint64_t sid = atoi(argv[2]);
+        uint64_t sid = strtol(argv[2], NULL, 10);
         int64_t ret = rereplicate(filename, sid);
 
         return ret;

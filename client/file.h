@@ -103,10 +103,8 @@ class file
         void inc() { ++m_ref; }
         void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
 
-    public:
-        typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
-
     private:
+        typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
         file& operator = (const file&);
 
     private:
@@ -131,8 +129,8 @@ class file
         uint64_t mode;
 
     public:
-        block_map::const_iterator blocks_begin() { return m_block_map.begin(); }
-        block_map::const_iterator blocks_end() { return m_block_map.end(); }
+        std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator blocks_begin() { return m_block_map.begin(); }
+        std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator blocks_end() { return m_block_map.end(); }
 };
 
 inline std::ostream& 
