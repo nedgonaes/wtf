@@ -155,16 +155,25 @@ rereplicate(const char* filename, uint64_t sid)
 
     print_return();
 
-    //wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
-    //wtf_client_returncode s;
-    //int64_t fd = wc.open(filename, O_RDONLY, 0777, 3, 4096, &s);
-    //char buf[4096];
-    //size_t size = 4096;
-    //int64_t reqid = wc.read(fd, buf, &size, &s);
-    //reqid = wc.loop(reqid, -1, &s);
-    //e::slice data = e::slice(buf, size);
-    //cout << "reqid " << reqid << " read " << size << " status " << s << endl;
-    //cout << data.hex() << endl;
+    wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
+    wtf_client_returncode s;
+    int64_t fd = wc.open(filename, O_RDONLY, 0, 0, 0, &s);
+    char buf[4096];
+
+    size_t size;
+    int64_t reqid;
+    do {
+        size = 4096;
+        reqid = wc.read(fd, buf, &size, &s);
+        reqid = wc.loop(reqid, -1, &s);
+        e::slice data = e::slice(buf, size);
+        cout << "reqid " << reqid << " read " << size << " status " << s << endl;
+        cout << data.hex() << endl;
+        reqid = wc.write(fd, buf, &size, 0, &s);
+        reqid = wc.loop(reqid, -1, &s);
+    } while (false);
+
+    wc.close(fd, &s);
 
     return 0;
 }
