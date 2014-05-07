@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <map>
-//#include <stdint.h>
 
 // E
 #include <e/endian.h>
@@ -17,6 +16,7 @@
 
 // WTF 
 #include "client/file.h"
+#include <wtf/client.hpp>
 
 using namespace std;
 
@@ -84,6 +84,17 @@ rereplicate(const char* filename, uint64_t sid)
             }
         }
     }
+
+    wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
+    wtf_client_returncode s;
+    int64_t fd = wc.open(filename, O_RDONLY, 0777, 3, 4096, &s);
+    char buf[4096];
+    size_t size = 4096;
+    int64_t reqid = wc.read(fd, buf, &size, &s);
+    reqid = wc.loop(reqid, -1, &s);
+    e::slice data = e::slice(buf, size);
+    cout << "reqid " << reqid << " read " << size << " status " << s << endl;
+    cout << data.hex() << endl;
 
     return 0;
 }
