@@ -215,6 +215,7 @@ libwtf_client_la_SOURCES += client/pending_write.cc
 libwtf_client_la_SOURCES += common/coordinator_link.cc
 libwtf_client_la_SOURCES += client/file.cc
 libwtf_client_la_SOURCES += client/client.cc
+libwtf_client_la_SOURCES += client/rereplicate.cc
 
 libwtf_client_la_LIBADD = 
 libwtf_client_la_LIBADD += $(E_LIBS) 
