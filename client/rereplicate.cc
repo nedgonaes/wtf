@@ -60,10 +60,9 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
     hyperdex_client_returncode status;
 
     retval = wc->m_hyperdex_client.get("wtf", filename, strlen(filename), &status, &attrs, &attrs_sz);
-    /*
     printf("first retval %ld status %d:", retval, status);
     cout << status << endl;
-    retval = wc.m_hyperdex_client.loop(-1, &status);
+    retval = wc->m_hyperdex_client.loop(-1, &status);
     printf("final retval %ld status %d:", retval, status);
     cout << status << endl;
 
@@ -136,7 +135,6 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             }
         }
     }
-*/
 
     //wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
     //wtf_client_returncode s;
