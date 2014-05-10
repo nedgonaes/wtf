@@ -48,7 +48,6 @@ class rereplicate
     public:
         int64_t replicate(const char* filename, uint64_t sid);
     private:
-        wtf::coordinator_link m_coord;
         hyperdex::Client m_hyperdex_client;
 };
 

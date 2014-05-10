@@ -93,7 +93,7 @@ noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += visibility.h
 
 noinst_PROGRAMS += wtf-stat
-noinst_PROGRAMS += wtf-rereplicate
+noinst_PROGRAMS += wtf-backup
 
 bin_PROGRAMS += wtf
 
@@ -355,13 +355,14 @@ wtf_stat_SOURCES += client/file.cc
 wtf_stat_SOURCES += tools/stat.cc
 wtf_stat_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
-# wtf-rereplicate (rereplicate file block)
-wtf_rereplicate_SOURCES =
-wtf_rereplicate_SOURCES += common/block.cc
-wtf_rereplicate_SOURCES += common/block_location.cc
-wtf_rereplicate_SOURCES += client/file.cc
-wtf_rereplicate_SOURCES += tools/rereplicate.cc
-wtf_rereplicate_LDADD = libwtf-client.la $(E_LIBS) $(HYPERCLIENT_LIBS)
+# wtf-backup (rereplicate file block)
+wtf_backup_SOURCES =
+wtf_backup_SOURCES += common/block.cc
+wtf_backup_SOURCES += common/block_location.cc
+wtf_backup_SOURCES += client/file.cc
+wtf_backup_SOURCES += client/rereplicate.cc
+wtf_backup_SOURCES += tools/rereplicate.cc
+wtf_backup_LDADD = libwtf-client.la $(E_LIBS) $(HYPERCLIENT_LIBS)
 
 ################################################################################
 ################################## bindings ####################################

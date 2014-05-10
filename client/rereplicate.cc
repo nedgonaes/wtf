@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "client/rereplicate.h"
+#include "client/file.h"
 
 #ifdef TRACECALLS
 #define TRACE std::cerr << __FILE__ << ":" << __func__ << std::endl
@@ -38,8 +39,7 @@ using wtf::rereplicate;
 
 rereplicate :: rereplicate(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
-    : m_coord(host, port)
-    , m_hyperdex_client(hyper_host, hyper_port)
+    : m_hyperdex_client(hyper_host, hyper_port)
 {
 	TRACE;
 }
@@ -50,11 +50,20 @@ rereplicate :: ~rereplicate() throw ()
 }
 
 int64_t
-replicate(const char* filename, uint64_t sid)
+rereplicate :: replicate(const char* filename, uint64_t sid)
 {
     cout << "filename " << filename << " sid " << sid << endl;
+    int64_t retval;
+    const struct hyperdex_client_attribute* attrs;
+    size_t attrs_sz;
+    hyperdex_client_returncode status;
+
     retval = m_hyperdex_client.get("wtf", filename, strlen(filename), &status, &attrs, &attrs_sz);
-    print_return();
+    printf("first retval %ld status %d:", retval, status);
+    cout << status << endl;
+    retval = m_hyperdex_client.loop(-1, &status);
+    printf("final retval %ld status %d:", retval, status);
+    cout << status << endl;
 
     if (status != HYPERDEX_CLIENT_SUCCESS)
     {
@@ -126,8 +135,8 @@ replicate(const char* filename, uint64_t sid)
         }
     }
 
-    wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
-    wtf_client_returncode s;
+    //wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
+    //wtf_client_returncode s;
     //if (!wc.maintain_coord_connection(&s)) { cout << "NOOOOOOOOOOOOOOOOO" << endl; } else { cout << "YESSSSSSSSSSSSSSSS" << endl; }
     /*
     uint64_t mode = f->mode;
