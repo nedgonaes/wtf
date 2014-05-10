@@ -26,6 +26,8 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "client/rereplicate.h"
+#include "client/constants.h"
+#include "client/pending_read.h"
 #include "client/file.h"
 
 #ifdef TRACECALLS
@@ -54,85 +56,70 @@ int64_t
 rereplicate :: replicate(const char* filename, uint64_t sid)
 {
     cout << "filename " << filename << " sid " << sid << endl;
-    int64_t retval;
-    const struct hyperdex_client_attribute* attrs;
-    size_t attrs_sz;
-    hyperdex_client_returncode status;
-
-    retval = wc->m_hyperdex_client.get("wtf", filename, strlen(filename), &status, &attrs, &attrs_sz);
-    printf("first retval %ld status %d:", retval, status);
-    cout << status << endl;
-    retval = wc->m_hyperdex_client.loop(-1, &status);
-    printf("final retval %ld status %d:", retval, status);
-    cout << status << endl;
-
-    if (status != HYPERDEX_CLIENT_SUCCESS)
-    {
-        cout << "failed to get file from hyperdex" << endl;
-        return -1;
-    }
-
-    if (attrs == NULL)
-    {
-        cout << "attrs is NULL" << endl;
-        return -1;
-    }
+    int64_t ret;
+    int64_t client_id = 0;
 
     e::intrusive_ptr<wtf::file> f = new wtf::file(filename, 0, CHUNKSIZE);
-    for (size_t i = 0; i < attrs_sz; ++i)
+    ret = wc->get_file_metadata(f->path().get(), f, false);
+
+    if (ret < 0)
     {
-        if (strcmp(attrs[i].attr, "blockmap") == 0)
-        {
-            e::unpacker up(attrs[i].value, attrs[i].value_sz);
-
-            if (attrs[i].value_sz == 0)
-            {
-                continue;
-            }
-
-            up = up >> f;
-        }
-        else if (strcmp(attrs[i].attr, "directory") == 0)
-        {
-            uint64_t is_dir;
-
-            e::unpacker up(attrs[i].value, attrs[i].value_sz);
-            up = up >> is_dir;
-            e::unpack64be((uint8_t*)&is_dir, &is_dir);
-
-            if (is_dir == 0)
-            {
-                f->is_directory = false;
-            }
-            else
-            {
-                f->is_directory = true;
-            }
-        }
-        else if (strcmp(attrs[i].attr, "mode") == 0)
-        {
-            uint64_t mode;
-
-            e::unpacker up(attrs[i].value, attrs[i].value_sz);
-            up = up >> mode;
-            e::unpack64be((uint8_t*)&mode, &mode);
-            f->mode = mode;
-        }
+        return -1;
     }
 
     std::auto_ptr<e::buffer> old_blockmap = f->serialize_blockmap();
-
     std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator it;
     for (it = f->blocks_begin(); it != f->blocks_end(); ++it)
     {
+        bool match = false;
+        std::vector<server_id> servers;
+        uint64_t si; // TODO DELETE
+        uint64_t bi; // TODO DELETE
         std::vector<wtf::block_location>::iterator it2;
         for (it2 = it->second->blocks_begin(); it2 != it->second->blocks_end(); ++it2)
         {
+
             if (it2->si == sid)
             {
                 cout << "match " << *it2 << endl;
-                //*it2 = wtf::block_location();
+                match = true;
             }
+            else
+            {
+                cout << "no match " << *it2 << endl;
+                servers.push_back(server_id(it2->si));
+                si = it2->si;
+                bi = it2->bi;
+                if (servers.size() > 1) cout << "MORE THAN ONE SERVERS" << endl;
+            }
+
+        }
+        if (match)
+        {
+            wtf_client_returncode status;
+            e::intrusive_ptr<pending_read> op;
+            char buf[4096] = {0};
+            size_t buf_sz = 4096;
+            client_id++;
+            op = new pending_read(client_id, &status, buf, &buf_sz);
+            f->add_pending_op(client_id);
+            op->set_offset(si, bi, 0, 0, 4096);
+
+            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                + sizeof(uint64_t) // bl.bi (local block number) 
+                + sizeof(uint32_t); //block_length
+            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bi << 4096;
+
+            if (!wc->maintain_coord_connection(&status))
+            {
+                return -1;
+            }
+
+            wc->perform_aggregation(servers, op.get(), REQ_GET, msg, &status);
+
+            wc->loop(client_id, -1, &status);
+            cout << buf << endl;
         }
     }
 
@@ -168,7 +155,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
     cond_attr.datatype = HYPERDATATYPE_STRING;
     cond_attr.predicate = HYPERPREDICATE_EQUALS;
 
-    retval = wc.m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
+    ret = wc.m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
                                      update_attr, 3, &status);
 
     print_return();
