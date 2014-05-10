@@ -361,7 +361,7 @@ wtf_backup_SOURCES += common/block.cc
 wtf_backup_SOURCES += common/block_location.cc
 wtf_backup_SOURCES += client/file.cc
 wtf_backup_SOURCES += client/rereplicate.cc
-wtf_backup_SOURCES += tools/rereplicate.cc
+wtf_backup_SOURCES += tools/backup.cc
 wtf_backup_LDADD = libwtf-client.la $(E_LIBS) $(HYPERCLIENT_LIBS)
 
 ################################################################################

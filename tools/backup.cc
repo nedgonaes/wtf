@@ -20,8 +20,8 @@ main(int argc, const char* argv[])
         const char* filename = argv[1];
         uint64_t sid = strtoull(argv[2], NULL, 10);
 
-        wtf::rereplicate* re = new wtf::rereplicate("127.0.0.1", 1981, "127.0.0.1", 1982);
-        int64_t ret = re->replicate(filename, sid);
+        wtf::rereplicate re("127.0.0.1", 1981, "127.0.0.1", 1982);
+        int64_t ret = re.replicate(filename, sid);
 
         return ret;
     }
