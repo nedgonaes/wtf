@@ -39,14 +39,15 @@ using wtf::rereplicate;
 
 rereplicate :: rereplicate(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
-    : m_hyperdex_client(hyper_host, hyper_port)
 {
-	TRACE;
+    wc = new client(host, port, hyper_host, hyper_port);
+    TRACE;
 }
 
 rereplicate :: ~rereplicate() throw ()
 {
-	TRACE;
+    delete wc;
+    TRACE;
 }
 
 int64_t
@@ -58,10 +59,11 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
     size_t attrs_sz;
     hyperdex_client_returncode status;
 
-    retval = m_hyperdex_client.get("wtf", filename, strlen(filename), &status, &attrs, &attrs_sz);
+    retval = wc->m_hyperdex_client.get("wtf", filename, strlen(filename), &status, &attrs, &attrs_sz);
+    /*
     printf("first retval %ld status %d:", retval, status);
     cout << status << endl;
-    retval = m_hyperdex_client.loop(-1, &status);
+    retval = wc.m_hyperdex_client.loop(-1, &status);
     printf("final retval %ld status %d:", retval, status);
     cout << status << endl;
 
@@ -134,6 +136,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             }
         }
     }
+*/
 
     //wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
     //wtf_client_returncode s;
@@ -167,7 +170,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
     cond_attr.datatype = HYPERDATATYPE_STRING;
     cond_attr.predicate = HYPERPREDICATE_EQUALS;
 
-    retval = m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
+    retval = wc.m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
                                      update_attr, 3, &status);
 
     print_return();

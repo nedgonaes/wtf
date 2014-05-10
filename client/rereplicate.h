@@ -29,14 +29,13 @@
 #ifndef client_rereplicate_h_
 #define client_rereplicate_h_
 
-//hyperdex
-#include <hyperdex/client.hpp>
-
 //wtf
+#include <wtf/client.h>
 #include "common/coordinator_link.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
+class client;
 
 class rereplicate
 {
@@ -48,7 +47,7 @@ class rereplicate
     public:
         int64_t replicate(const char* filename, uint64_t sid);
     private:
-        hyperdex::Client m_hyperdex_client;
+        client* wc;
 };
 
 } // namespace wtf __attribute__ ((visibility("hidden")))
