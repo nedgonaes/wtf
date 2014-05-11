@@ -100,46 +100,47 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
         {
             wtf_client_returncode status;
             e::intrusive_ptr<pending_read> op;
-            char buf[4096];
-            size_t buf_sz = 4096;
+            size_t buf_sz = it->second->length() - it->second->offset();
+            char buf[buf_sz];
+            cout << "buf_sz " << buf_sz << endl;
 
-            int64_t fd = wc->open(filename, O_RDONLY, 0, 0, 0);
-            int64_t reqid;
-            do {
-                buf_sz = 4096;
-                reqid = wc->read(fd, buf, &buf_sz, &status);
-                reqid = wc->loop(reqid, -1, &status);
-                e::slice data = e::slice(buf, buf_sz);
-                cout << "reqid " << reqid << " read " << buf_sz << endl;
-                cout << data.hex() << endl;
-                //reqid = wc.write(fd, buf, &buf_sz, 0, &status);
-                //reqid = wc.loop(reqid, -1, &status);
-            } while (false);
-            wc->close(fd, &status);
+            //int64_t fd = wc->open(filename, O_RDONLY, 0, 0, 0);
+            //int64_t reqid;
+            //do {
+            //    buf_sz = 4096;
+            //    reqid = wc->read(fd, buf, &buf_sz, &status);
+            //    reqid = wc->loop(reqid, -1, &status);
+            //    e::slice data = e::slice(buf, buf_sz);
+            //    cout << "reqid " << reqid << " read " << buf_sz << endl;
+            //    cout << data.hex() << endl;
+            //    //reqid = wc.write(fd, buf, &buf_sz, 0, &status);
+            //    //reqid = wc.loop(reqid, -1, &status);
+            //} while (false);
+            //wc->close(fd, &status);
 
-            memset(buf, '\0', 4096);
             client_id++;
             op = new pending_read(client_id, &status, buf, &buf_sz);
             f->add_pending_op(client_id);
-            op->set_offset(si, bi, 0, 0, 513);
-            cout << "si " << si << " bi " << bi << " buf_offset 0 block_offset 0 advance 513" << endl;
+            op->set_offset(si, bi, 0, it->second->offset(), it->second->length());
+            cout << "si " << si << " bi " << bi << " buf_offset 0 block_offset " << it->second->offset() << " advance " << it->second->length() << endl;
 
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                 + sizeof(uint64_t) // bl.bi (local block number) 
                 + sizeof(uint32_t); //block_length
             std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bi << 513;
+            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bi << (uint32_t)it->second->length();
 
             if (!wc->maintain_coord_connection(&status))
             {
                 return -1;
             }
 
+            buf_sz = 0;
             wc->perform_aggregation(servers, op.get(), REQ_GET, msg, &status);
 
             wc->loop(client_id, -1, &status);
             e::slice data = e::slice(buf, buf_sz);
-            cout << data.hex() << endl;
+            cout << "buf_sz " << buf_sz << endl << data.hex() << endl;
         }
     }
 
