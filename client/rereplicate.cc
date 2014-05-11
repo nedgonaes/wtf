@@ -100,9 +100,9 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
         {
             wtf_client_returncode status;
             e::intrusive_ptr<pending_read> op;
-            size_t buf_sz = it->second->length() - it->second->offset();
+            size_t buf_sz = it->second->length();
             char buf[buf_sz];
-            cout << "buf_sz " << buf_sz << endl;
+            cout << "buf_sz created " << buf_sz << endl;
 
             //int64_t fd = wc->open(filename, O_RDONLY, 0, 0, 0);
             //int64_t reqid;
@@ -120,9 +120,8 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
 
             client_id++;
             op = new pending_read(client_id, &status, buf, &buf_sz);
-            f->add_pending_op(client_id);
-            op->set_offset(si, bi, 0, it->second->offset(), it->second->length());
-            cout << "si " << si << " bi " << bi << " buf_offset 0 block_offset " << it->second->offset() << " advance " << it->second->length() << endl;
+            op->set_offset(si, bi, 0, 0, it->second->length());
+            cout << "si " << si << " bi " << bi << " buf_offset 0 block_offset 0 advance " << it->second->length() << endl;
 
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                 + sizeof(uint64_t) // bl.bi (local block number) 
@@ -140,7 +139,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
 
             wc->loop(client_id, -1, &status);
             e::slice data = e::slice(buf, buf_sz);
-            cout << "buf_sz " << buf_sz << endl << data.hex() << endl;
+            cout << "buf_sz read " << buf_sz << endl << data.hex() << endl;
         }
     }
 
