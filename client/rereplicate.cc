@@ -58,7 +58,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
 {
     cout << "filename " << filename << " sid " << sid << endl;
     int64_t ret;
-    int64_t client_id = 0;
+    int64_t reqid;
 
     e::intrusive_ptr<wtf::file> f = new wtf::file(filename, 0, CHUNKSIZE);
     ret = wc->get_file_metadata(f->path().get(), f, false);
@@ -68,16 +68,15 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
         return -1;
     }
 
-    std::auto_ptr<e::buffer> old_blockmap = f->serialize_blockmap();
     std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator it;
     for (it = f->blocks_begin(); it != f->blocks_end(); ++it)
     {
         bool match = false;
         std::set<block_location> location_set;
         std::vector<wtf::block_location>::iterator it2;
-        for (it2 = it->second->blocks_begin(); it2 != it->second->blocks_end(); ++it2)
+        std::vector<wtf::block_location> block_locations = it->second->block_locations();
+        for (it2 = block_locations.begin(); it2 != block_locations.end(); ++it2)
         {
-
             if (it2->si == sid)
             {
                 cout << "match " << *it2 << endl;
@@ -89,7 +88,6 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
                 cout << "no match " << *it2 << endl;
                 location_set.insert(*it2);
             }
-
         }
         if (match)
         {
@@ -101,8 +99,8 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             servers.push_back(server_id(location_set_it->si));
 
             // Read block
-            client_id++;
-            e::intrusive_ptr<pending_read> read_op = new pending_read(client_id, &status, buf, &buf_sz);
+            reqid = wc->m_next_client_id++;
+            e::intrusive_ptr<pending_read> read_op = new pending_read(reqid, &status, buf, &buf_sz);
 
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                 + sizeof(uint64_t)  // bi (local block number)
@@ -118,21 +116,28 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             buf_sz = 0;
             wc->perform_aggregation(servers, read_op.get(), REQ_GET, read_msg, &status);
 
-            wc->loop(client_id, -1, &status);
+            reqid = wc->loop(reqid, -1, &status);
+            if (reqid < 0)
+            {
+                cout << "read failed" << endl;
+                return -1;
+            }
+
             e::slice data = e::slice(buf, buf_sz);
             cout << "buf_sz read " << buf_sz << endl << data.hex() << endl;
 
 
             // Write block
-            client_id++;
-            e::intrusive_ptr<pending_aggregation> write_op = new pending_write(client_id, f, &status);
+            reqid = wc->m_next_client_id++;
+            e::intrusive_ptr<pending_aggregation> write_op = new pending_write(reqid, f, &status);
+            uint32_t block_capacity = 4096;
+            uint64_t file_offset = it->second->offset();
 
-            std::vector<wtf::block_location> modified_blocks = it->second->blocks();
-            wc->m_coord.config()->assign_random_block_locations(modified_blocks);
-            it->second->set_blocks(modified_blocks);
-            for (it2 = it->second->blocks_begin(); it2 != it->second->blocks_end(); ++it2)
+            wc->m_coord.config()->assign_random_block_locations(block_locations);
+            std::vector<wtf::block_location>::iterator it3;
+            for (it3 = block_locations.begin(); it3 != block_locations.end(); ++it3)
             {
-                if (location_set.find(*it2) == location_set.end())
+                if (location_set.find(*it3) == location_set.end())
                 {
                     size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                         + sizeof(uint64_t) // bi (remote block number) 
@@ -142,9 +147,9 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
                         + data.size();     // user data 
                     std::auto_ptr<e::buffer> write_msg(e::buffer::create(sz));
                     e::buffer::packer pa = write_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-                    pa = pa << (uint64_t)it2->bi << (uint32_t)0 << (uint32_t)4096 << (uint64_t)it->second->offset(); // TODO CHANGE
+                    pa = pa << (uint64_t)it3->bi << (uint32_t)0 << block_capacity << file_offset;
                     pa.copy(data);
-                    cout << "server " << it2->si << " bi " << it2->bi << " block_offset 0 block_capacity 4096 file_offset " << it->second->offset() << " data size " << data.size() << endl;
+                    cout << "server " << it3->si << " bi " << it3->bi << " block_offset 0 block_capacity " << block_capacity << " file_offset " << file_offset << " data size " << data.size() << endl;
 
                     if (!wc->maintain_coord_connection(&status))
                     {
@@ -152,71 +157,45 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
                     }
 
                     std::vector<server_id> servers;
-                    servers.push_back(server_id(it2->si));
+                    servers.push_back(server_id(it3->si));
                     wc->perform_aggregation(servers, write_op, REQ_UPDATE, write_msg, &status);
+
+                    reqid = wc->loop(reqid, -1, &status);
+                    if (reqid < 0)
+                    {
+                        cout << "write failed" << endl;
+                        return -1;
+                    }
+                    cout << "file after write" << endl << *(f.get()) << endl;
                 }
             }
+            std::auto_ptr<e::buffer> old_blockmap = f->serialize_blockmap();
+            pending_write* write_op_downcasted = static_cast<pending_write*>(write_op.get());
+            std::map<uint64_t, e::intrusive_ptr<block> >::iterator changeset_it = write_op_downcasted->m_changeset.find(file_offset);
+            e::intrusive_ptr<block> bl;
+
+            if (changeset_it == write_op_downcasted->m_changeset.end())
+            {
+                cout << "changeset is empty" << endl;
+                bl = new block(block_capacity, file_offset, 0);
+                bl->set_length(data.size());
+                bl->set_offset(file_offset);
+                write_op_downcasted->m_changeset[file_offset] = bl;
+            }
+            else
+            {
+                cout << "changeset is not empty" << endl;
+                bl = changeset_it->second;
+            }
+
+            for (location_set_it = location_set.begin(); location_set_it != location_set.end(); ++location_set_it)
+            {
+                bl->add_replica(*location_set_it);
+            }
+            f->apply_changeset(write_op_downcasted->m_changeset);
+            wc->update_file_metadata(f, reinterpret_cast<const char*>(old_blockmap->data()), old_blockmap->size(), &status);
         }
     }
-
-    //wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
-    //wtf_client_returncode s;
-    //if (!wc.maintain_coord_connection(&s)) { cout << "NOOOOOOOOOOOOOOOOO" << endl; } else { cout << "YESSSSSSSSSSSSSSSS" << endl; }
-    /*
-    uint64_t mode = f->mode;
-    uint64_t directory = f->is_directory;
-    std::auto_ptr<e::buffer> new_blockmap = f->serialize_blockmap();
-    struct hyperdex_client_attribute update_attr[3];
-
-    update_attr[0].attr = "mode";
-    update_attr[0].value = (const char*)&mode;
-    update_attr[0].value_sz = sizeof(mode);
-    update_attr[0].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[1].attr = "directory";
-    update_attr[1].value = (const char*)&directory;
-    update_attr[1].value_sz = sizeof(directory);
-    update_attr[1].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[2].attr = "blockmap";
-    update_attr[2].value = reinterpret_cast<const char*>(new_blockmap->data());
-    update_attr[2].value_sz = new_blockmap->size();
-    update_attr[2].datatype = HYPERDATATYPE_STRING;
-
-    struct hyperdex_client_attribute_check cond_attr;
-
-    cond_attr.attr = "blockmap";
-    cond_attr.value = reinterpret_cast<const char*>(old_blockmap->data());
-    cond_attr.value_sz = old_blockmap->size();
-    cond_attr.datatype = HYPERDATATYPE_STRING;
-    cond_attr.predicate = HYPERPREDICATE_EQUALS;
-
-    ret = wc.m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
-                                     update_attr, 3, &status);
-
-    print_return();
-
-    wtf::Client wc("127.0.0.1", 1981, "127.0.0.1", 1982);
-    wtf_client_returncode s;
-    int64_t fd = wc.open(filename, O_RDONLY, 0, 0, 0, &s);
-    char buf[4096];
-
-    size_t size;
-    int64_t reqid;
-    do {
-        size = 4096;
-        reqid = wc.read(fd, buf, &size, &s);
-        reqid = wc.loop(reqid, -1, &s);
-        e::slice data = e::slice(buf, size);
-        cout << "reqid " << reqid << " read " << size << " status " << s << endl;
-        cout << data.hex() << endl;
-        reqid = wc.write(fd, buf, &size, 0, &s);
-        reqid = wc.loop(reqid, -1, &s);
-    } while (false);
-
-    wc.close(fd, &s);
-    */
-
     return 0;
 }
 

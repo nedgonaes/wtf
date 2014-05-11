@@ -50,6 +50,7 @@ class pending_write : public pending_aggregation
         virtual bool yield(wtf_client_returncode* status, e::error* error);
 
     friend class file;
+    friend class rereplicate;
 
     // events
     public:
