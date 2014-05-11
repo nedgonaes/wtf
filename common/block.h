@@ -57,6 +57,8 @@ class block
         uint64_t length() { return m_length; }
         uint64_t capacity() { return m_capacity; }
         block_location first_location();
+        std::vector<wtf::block_location> blocks() { return m_block_list; }
+        void set_blocks(std::vector<wtf::block_location> block_list) { m_block_list = block_list; }
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
         std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
         bool is_hole() { return first_location() == block_location(); }

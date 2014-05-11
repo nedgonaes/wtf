@@ -28,6 +28,7 @@
 #include "client/rereplicate.h"
 #include "client/constants.h"
 #include "client/pending_read.h"
+#include "client/pending_write.h"
 #include "client/file.h"
 
 #ifdef TRACECALLS
@@ -72,9 +73,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
     for (it = f->blocks_begin(); it != f->blocks_end(); ++it)
     {
         bool match = false;
-        std::vector<server_id> servers;
-        uint64_t si; // TODO DELETE
-        uint64_t bi; // TODO DELETE
+        std::set<block_location> location_set;
         std::vector<wtf::block_location>::iterator it2;
         for (it2 = it->second->blocks_begin(); it2 != it->second->blocks_end(); ++it2)
         {
@@ -82,52 +81,35 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             if (it2->si == sid)
             {
                 cout << "match " << *it2 << endl;
+                *it2 = wtf::block_location();
                 match = true;
             }
             else
             {
                 cout << "no match " << *it2 << endl;
-                if (servers.size() < 1)
-                {
-                    servers.push_back(server_id(it2->si));
-                    si = it2->si;
-                    bi = it2->bi;
-                }
+                location_set.insert(*it2);
             }
 
         }
         if (match)
         {
             wtf_client_returncode status;
-            e::intrusive_ptr<pending_read> op;
             size_t buf_sz = it->second->length();
             char buf[buf_sz];
             cout << "buf_sz created " << buf_sz << endl;
+            std::vector<server_id> servers;
+            set<block_location>::const_iterator location_set_it = location_set.begin();
+            servers.push_back(server_id(location_set_it->si));
 
-            //int64_t fd = wc->open(filename, O_RDONLY, 0, 0, 0);
-            //int64_t reqid;
-            //do {
-            //    buf_sz = 4096;
-            //    reqid = wc->read(fd, buf, &buf_sz, &status);
-            //    reqid = wc->loop(reqid, -1, &status);
-            //    e::slice data = e::slice(buf, buf_sz);
-            //    cout << "reqid " << reqid << " read " << buf_sz << endl;
-            //    cout << data.hex() << endl;
-            //    //reqid = wc.write(fd, buf, &buf_sz, 0, &status);
-            //    //reqid = wc.loop(reqid, -1, &status);
-            //} while (false);
-            //wc->close(fd, &status);
-
+            // Read block
             client_id++;
-            op = new pending_read(client_id, &status, buf, &buf_sz);
-            op->set_offset(si, bi, 0, 0, it->second->length());
-            cout << "si " << si << " bi " << bi << " buf_offset 0 block_offset 0 advance " << it->second->length() << endl;
+            e::intrusive_ptr<pending_read> read_op = new pending_read(client_id, &status, buf, &buf_sz);
 
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                + sizeof(uint64_t) // bl.bi (local block number) 
-                + sizeof(uint32_t); //block_length
+                + sizeof(uint64_t)  // bi (local block number)
+                + sizeof(uint32_t); // block_length
             std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bi << (uint32_t)it->second->length();
+            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << location_set_it->bi << (uint32_t)it->second->length();
 
             if (!wc->maintain_coord_connection(&status))
             {
@@ -135,11 +117,57 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             }
 
             buf_sz = 0;
-            wc->perform_aggregation(servers, op.get(), REQ_GET, msg, &status);
+            wc->perform_aggregation(servers, read_op.get(), REQ_GET, msg, &status);
 
             wc->loop(client_id, -1, &status);
             e::slice data = e::slice(buf, buf_sz);
             cout << "buf_sz read " << buf_sz << endl << data.hex() << endl;
+
+
+            // Write block
+            client_id++;
+            e::intrusive_ptr<pending_aggregation> write_op = new pending_write(client_id, f, &status);
+
+            std::vector<wtf::block_location> modified_blocks = it->second->blocks();
+            wc->m_coord.config()->assign_random_block_locations(modified_blocks);
+            it->second->set_blocks(modified_blocks);
+            for (it2 = it->second->blocks_begin(); it2 != it->second->blocks_end(); ++it2)
+            {
+                if (location_set.find(*it2) == location_set.end())
+                {
+                    cout << "server " << it2->si << " block " << it2->bi << endl;
+                }
+            }
+            //std::vector<block_location> bl;
+            //uint32_t block_offset;
+            //uint32_t block_capacity;
+            //uint64_t file_offset;
+            //size_t slice_len;
+            //prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
+            //e::slice data = e::slice(buf, slice_len);
+
+            //for (size_t i = 0; i < bl.size(); ++i)
+            //{
+            //    size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+            //        + sizeof(uint64_t) // bl.bi (remote block number) 
+            //        + sizeof(uint32_t) // block_offset (remote block offset) 
+            //        + sizeof(uint32_t) // block_capacity 
+            //        + sizeof(uint64_t) // file_offset 
+            //        + data.size();     // user data 
+            //    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+            //    e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+            //    pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
+            //    pa.copy(data);
+
+            //    if (!wc->maintain_coord_connection(&status))
+            //    {
+            //        return -1;
+            //    }
+
+            //    std::vector<server_id> servers;
+            //    servers.push_back(server_id(bl[i].si));
+            //    wc->perform_aggregation(servers, write_op, REQ_UPDATE, msg, &status);
+            //}
         }
     }
 
