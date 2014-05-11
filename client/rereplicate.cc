@@ -96,7 +96,6 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             wtf_client_returncode status;
             size_t buf_sz = it->second->length();
             char buf[buf_sz];
-            cout << "buf_sz created " << buf_sz << endl;
             std::vector<server_id> servers;
             set<block_location>::const_iterator location_set_it = location_set.begin();
             servers.push_back(server_id(location_set_it->si));
@@ -108,8 +107,8 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                 + sizeof(uint64_t)  // bi (local block number)
                 + sizeof(uint32_t); // block_length
-            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << location_set_it->bi << (uint32_t)it->second->length();
+            std::auto_ptr<e::buffer> read_msg(e::buffer::create(sz));
+            read_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << (uint64_t)location_set_it->bi << (uint32_t)it->second->length();
 
             if (!wc->maintain_coord_connection(&status))
             {
@@ -117,7 +116,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             }
 
             buf_sz = 0;
-            wc->perform_aggregation(servers, read_op.get(), REQ_GET, msg, &status);
+            wc->perform_aggregation(servers, read_op.get(), REQ_GET, read_msg, &status);
 
             wc->loop(client_id, -1, &status);
             e::slice data = e::slice(buf, buf_sz);
@@ -135,39 +134,28 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             {
                 if (location_set.find(*it2) == location_set.end())
                 {
-                    cout << "server " << it2->si << " block " << it2->bi << endl;
+                    size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                        + sizeof(uint64_t) // bi (remote block number) 
+                        + sizeof(uint32_t) // block_offset (remote block offset) 
+                        + sizeof(uint32_t) // block_capacity 
+                        + sizeof(uint64_t) // file_offset 
+                        + data.size();     // user data 
+                    std::auto_ptr<e::buffer> write_msg(e::buffer::create(sz));
+                    e::buffer::packer pa = write_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+                    pa = pa << (uint64_t)it2->bi << (uint32_t)0 << (uint32_t)4096 << (uint64_t)it->second->offset(); // TODO CHANGE
+                    pa.copy(data);
+                    cout << "server " << it2->si << " bi " << it2->bi << " block_offset 0 block_capacity 4096 file_offset " << it->second->offset() << " data size " << data.size() << endl;
+
+                    if (!wc->maintain_coord_connection(&status))
+                    {
+                        return -1;
+                    }
+
+                    std::vector<server_id> servers;
+                    servers.push_back(server_id(it2->si));
+                    wc->perform_aggregation(servers, write_op, REQ_UPDATE, write_msg, &status);
                 }
             }
-            //std::vector<block_location> bl;
-            //uint32_t block_offset;
-            //uint32_t block_capacity;
-            //uint64_t file_offset;
-            //size_t slice_len;
-            //prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
-            //e::slice data = e::slice(buf, slice_len);
-
-            //for (size_t i = 0; i < bl.size(); ++i)
-            //{
-            //    size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-            //        + sizeof(uint64_t) // bl.bi (remote block number) 
-            //        + sizeof(uint32_t) // block_offset (remote block offset) 
-            //        + sizeof(uint32_t) // block_capacity 
-            //        + sizeof(uint64_t) // file_offset 
-            //        + data.size();     // user data 
-            //    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            //    e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-            //    pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
-            //    pa.copy(data);
-
-            //    if (!wc->maintain_coord_connection(&status))
-            //    {
-            //        return -1;
-            //    }
-
-            //    std::vector<server_id> servers;
-            //    servers.push_back(server_id(bl[i].si));
-            //    wc->perform_aggregation(servers, write_op, REQ_UPDATE, msg, &status);
-            //}
         }
     }
 
