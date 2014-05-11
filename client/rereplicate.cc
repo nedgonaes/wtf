@@ -94,9 +94,9 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             wtf_client_returncode status;
             size_t buf_sz = it->second->length();
             char buf[buf_sz];
-            std::vector<server_id> servers;
+            std::vector<server_id> read_servers;
             set<block_location>::const_iterator location_set_it = location_set.begin();
-            servers.push_back(server_id(location_set_it->si));
+            read_servers.push_back(server_id(location_set_it->si));
 
             // Read block
             reqid = wc->m_next_client_id++;
@@ -114,7 +114,7 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             }
 
             buf_sz = 0;
-            wc->perform_aggregation(servers, read_op.get(), REQ_GET, read_msg, &status);
+            wc->perform_aggregation(read_servers, read_op.get(), REQ_GET, read_msg, &status);
 
             reqid = wc->loop(reqid, -1, &status);
             if (reqid < 0)
@@ -130,47 +130,49 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             // Write block
             reqid = wc->m_next_client_id++;
             e::intrusive_ptr<pending_aggregation> write_op = new pending_write(reqid, f, &status);
+            pending_write* write_op_downcasted = static_cast<pending_write*>(write_op.get());
             uint32_t block_capacity = 4096;
             uint64_t file_offset = it->second->offset();
 
             wc->m_coord.config()->assign_random_block_locations(block_locations);
             std::vector<wtf::block_location>::iterator it3;
+            std::vector<server_id> write_servers;
             for (it3 = block_locations.begin(); it3 != block_locations.end(); ++it3)
             {
                 if (location_set.find(*it3) == location_set.end())
                 {
-                    size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                        + sizeof(uint64_t) // bi (remote block number) 
-                        + sizeof(uint32_t) // block_offset (remote block offset) 
-                        + sizeof(uint32_t) // block_capacity 
-                        + sizeof(uint64_t) // file_offset 
-                        + data.size();     // user data 
-                    std::auto_ptr<e::buffer> write_msg(e::buffer::create(sz));
-                    e::buffer::packer pa = write_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-                    pa = pa << (uint64_t)it3->bi << (uint32_t)0 << block_capacity << file_offset;
-                    pa.copy(data);
                     cout << "server " << it3->si << " bi " << it3->bi << " block_offset 0 block_capacity " << block_capacity << " file_offset " << file_offset << " data size " << data.size() << endl;
 
-                    if (!wc->maintain_coord_connection(&status))
-                    {
-                        return -1;
-                    }
-
-                    std::vector<server_id> servers;
-                    servers.push_back(server_id(it3->si));
-                    wc->perform_aggregation(servers, write_op, REQ_UPDATE, write_msg, &status);
-
-                    reqid = wc->loop(reqid, -1, &status);
-                    if (reqid < 0)
-                    {
-                        cout << "write failed" << endl;
-                        return -1;
-                    }
-                    cout << "file after write" << endl << *(f.get()) << endl;
+                    write_servers.push_back(server_id(it3->si));
                 }
             }
+            if (write_servers.size() > 0)
+            {
+                size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                    + sizeof(uint64_t) // bi (remote block number) 
+                    + sizeof(uint32_t) // block_offset (remote block offset) 
+                    + sizeof(uint32_t) // block_capacity 
+                    + sizeof(uint64_t) // file_offset 
+                    + data.size();     // user data 
+                std::auto_ptr<e::buffer> write_msg(e::buffer::create(sz));
+                e::buffer::packer pa = write_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+                pa = pa << (uint64_t)wtf::block_location().bi << (uint32_t)0 << block_capacity << file_offset;
+                pa.copy(data);
+                if (!wc->maintain_coord_connection(&status))
+                {
+                    return -1;
+                }
+                wc->perform_aggregation(write_servers, write_op, REQ_UPDATE, write_msg, &status);
+
+                reqid = wc->loop(reqid, -1, &status);
+                if (reqid < 0)
+                {
+                    cout << "write failed" << endl;
+                    return -1;
+                }
+            }
+
             std::auto_ptr<e::buffer> old_blockmap = f->serialize_blockmap();
-            pending_write* write_op_downcasted = static_cast<pending_write*>(write_op.get());
             std::map<uint64_t, e::intrusive_ptr<block> >::iterator changeset_it = write_op_downcasted->m_changeset.find(file_offset);
             e::intrusive_ptr<block> bl;
 
@@ -184,7 +186,6 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
             }
             else
             {
-                cout << "changeset is not empty" << endl;
                 bl = changeset_it->second;
             }
 
