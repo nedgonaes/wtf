@@ -216,3 +216,8 @@ rereplicate :: replicate(const char* path, uint64_t sid)
     return 0;
 }
 
+int64_t
+rereplicate:: replicate_all(uint64_t sid)
+{
+    return 0;
+}
