@@ -46,7 +46,6 @@ class rereplicate
 
     public:
         int64_t replicate(const char* path, uint64_t sid);
-        int64_t replicate_all(uint64_t sid);
     private:
         client* wc;
 };

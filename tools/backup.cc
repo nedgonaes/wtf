@@ -32,6 +32,9 @@
 // E
 #include <e/popt.h>
 
+// HyperDex
+#include <hyperdex/client.hpp>
+
 // WTF 
 #include "client/rereplicate.h"
 
@@ -90,13 +93,41 @@ main(int argc, const char* argv[])
     uint64_t server_id = strtoull(_sid, NULL, 10);
 
     int64_t ret;
-    if (_path == NULL)
+    if (_path != NULL)
     {
-        ret = re.replicate_all(server_id);
+        ret = re.replicate(_path, server_id);
     }
     else
     {
-        ret = re.replicate(_path, server_id);
+        hyperdex::Client* h = new hyperdex::Client(_hyper_host, _hyper_port);
+        hyperdex_client_returncode status;
+        const struct hyperdex_client_attribute* attrs;
+        size_t attrs_sz;
+        int64_t retval;
+
+        struct hyperdex_client_attribute_check check;
+        check.attr = "path";
+        check.value = "^";
+        check.value_sz = strlen(check.value);
+        check.datatype = HYPERDATATYPE_STRING;
+        check.predicate = HYPERPREDICATE_REGEX;
+
+        retval = h->search("wtf", &check, 1, &status, &attrs, &attrs_sz);
+        while (status != HYPERDEX_CLIENT_SEARCHDONE && status != HYPERDEX_CLIENT_NONEPENDING)
+        {
+            retval = h->loop(-1, &status);
+            for (size_t i = 0; i < attrs_sz; ++i)
+            {
+                if (strcmp(attrs[i].attr, "path") == 0)
+                {
+                    string path(attrs[i].value, attrs[i].value_sz);
+                    re.replicate(path.c_str(), server_id);
+                }
+            }
+        }
+        cout << "\nSearch finished" << endl;
+
+        return 0;
     }
 
     return ret;
