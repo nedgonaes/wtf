@@ -41,11 +41,11 @@ class rereplicate
 {
     public:
         rereplicate(const char* host, in_port_t port,
-                   const char* hyper_host, in_port_t hyper_port);
+                    const char* hyper_host, in_port_t hyper_port);
         ~rereplicate() throw ();
 
     public:
-        int64_t replicate(const char* filename, uint64_t sid);
+        int64_t replicate(const char* path, uint64_t sid);
     private:
         client* wc;
 };

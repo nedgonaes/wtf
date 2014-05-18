@@ -54,13 +54,13 @@ rereplicate :: ~rereplicate() throw ()
 }
 
 int64_t
-rereplicate :: replicate(const char* filename, uint64_t sid)
+rereplicate :: replicate(const char* path, uint64_t sid)
 {
-    cout << "filename " << filename << " sid " << sid << endl;
+    cout << "path " << path << " sid " << sid << endl;
     int64_t ret;
     int64_t reqid;
 
-    e::intrusive_ptr<wtf::file> f = new wtf::file(filename, 0, CHUNKSIZE);
+    e::intrusive_ptr<wtf::file> f = new wtf::file(path, 0, CHUNKSIZE);
     while(true)
     {
         cout << "top of while true" << endl;
@@ -69,6 +69,13 @@ rereplicate :: replicate(const char* filename, uint64_t sid)
         if (ret < 0)
         {
             return -1;
+        }
+
+        // If path is a directory, ignore
+        if (f->is_directory)
+        {
+            cout << "is directory" << endl;
+            break;
         }
 
         std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator it;
