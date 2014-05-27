@@ -85,6 +85,9 @@ pending_write :: handle_message(client* cl,
     bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
+    changeset_t::iterator it;
+    e::intrusive_ptr<block> bl;
+
     /*
      * If the response is from hyperdex, we can assume all daemon messages are finished.
      * If the response is successful, the operation is complete and we're done.  If not, we
@@ -98,7 +101,12 @@ pending_write :: handle_message(client* cl,
 
         if (rc != HYPERDEX_CLIENT_SUCCESS)
         {
-            //XXX: This is probably the right place to retry failed metadata ops.
+            if (rc == HYPERDEX_CLIENT_CMPFAIL)
+            {
+                cl->get_file_metadata(m_file->path().get(), m_file, false);
+                goto metadata_update;
+            }
+                
             PENDING_ERROR(SERVERERROR) << "hyperdex returned " << rc;
         }
 
@@ -127,8 +135,7 @@ pending_write :: handle_message(client* cl,
         return true;
     }
 
-    changeset_t::iterator it = m_changeset.find(file_offset);
-    e::intrusive_ptr<block> bl;
+    it = m_changeset.find(file_offset);
 
     if (it == m_changeset.end())
     {
@@ -150,7 +157,7 @@ pending_write :: handle_message(client* cl,
            should be done atomically so that no other op
            can modify the metadata after we apply our changes
            but before we update hyperdex */ 
-           
+metadata_update: 
         m_file->apply_changeset(m_changeset);
 
         wtf_client_returncode cstatus;
