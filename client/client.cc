@@ -285,6 +285,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
     while (m_yielding ||
            !m_failed.empty() ||
            !m_pending_ops.empty() ||
+           !m_pending_hyperdex_ops.empty() ||
            !m_yieldable.empty())
     {
         m_gc.quiescent_state(&m_gc_ts);
@@ -367,7 +368,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
 
         /* Handle a new pending op. */
-        assert(!m_pending_ops.empty());
+        assert(!m_pending_ops.empty() || !m_pending_hyperdex_ops.empty());
 
         if (!maintain_coord_connection(status))
         {
@@ -415,6 +416,19 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                                 << (unsigned) rc << ": please file a bug";
                 return -1;
         }
+
+        /*
+         * If we got a hyperdex message, we look up the pending op in a
+         * map indexed by hyperdex request ID.  We fill msg with the 
+         * request id returned from hyperdex loop, and the status returned
+         * from hyperdex. We can then pass this to op->handle_message just
+         * like any other, setting the msgtype to be HYPERDEX_RESPONSE.
+         * pending ops are responsible for whatever needs to happen given
+         * that information.
+         *
+         * If there is a failure, we put the pending server pair in the failed_ops
+         * with the server ID set to the hyperdex client poll file descriptor.
+         */ 
 
         if (hyperdex_message)
         {
