@@ -137,6 +137,7 @@ monotonic_time()
 
 daemon :: ~daemon() throw ()
 {
+    m_gc.deregister_thread(&m_gc_ts);
 }
 
 daemon :: daemon()
@@ -150,7 +151,10 @@ daemon :: daemon()
     , m_blockman()
     , m_periodic()
     , m_config()
+    , m_gc()
+    , m_gc_ts()
 {
+    m_gc.register_thread(&m_gc_ts);
     trip_periodic(0, &daemon::periodic_stat);
 }
 
@@ -270,7 +274,7 @@ daemon :: run(bool daemonize,
 
     LOG(INFO) << "token " << m_us.get();
 
-    m_busybee.reset(new busybee_mta(&m_busybee_mapper, bind_to, m_us.get(), threads));
+    m_busybee.reset(new busybee_mta(&m_gc, &m_busybee_mapper, bind_to, m_us.get(), threads));
     m_busybee->set_ignore_signals();
     m_blockman.setup(m_us.get(), data, backing_path);
 
@@ -340,11 +344,16 @@ daemon :: run(bool daemonize,
             //m_data.set_checkpoint_lower_gc(checkpoint_gc);
         }
 
+        m_gc.quiescent_state(&m_gc_ts);
+        m_gc.offline(&m_gc_ts);
+
         if (!m_coord.maintain_link())
         {
+            m_gc.online(&m_gc_ts);
             continue;
         }
 
+        m_gc.online(&m_gc_ts);
         const configuration& old_config(m_config);
         const configuration& new_config(m_coord.config());
 
@@ -451,6 +460,9 @@ daemon :: loop(size_t thread)
         return;
     }
 
+    e::garbage_collector::thread_state ts;
+    m_gc.register_thread(&ts);
+
     wtf::connection conn;
     std::auto_ptr<e::buffer> msg;
 
@@ -476,7 +488,11 @@ daemon :: loop(size_t thread)
                 LOG(WARNING) << "unknown message type; here's some hex:  " << msg->hex();
                 break;
         }
+
+        m_gc.quiescent_state(&ts);
     }
+
+    m_gc.deregister_thread(&ts);
 
     LOG(INFO) << "network thread shutting down";
 }

@@ -135,6 +135,8 @@ class daemon
         std::set<uint64_t> m_disrupted_backoff;
         bool m_disrupted_retry_scheduled;
         configuration m_config;
+        e::garbage_collector m_gc;
+        e::garbage_collector::thread_state m_gc_ts;
 };
 
 } // namespace wtf __attribute__ ((visibility("hidden")))

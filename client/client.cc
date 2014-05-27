@@ -90,8 +90,10 @@ using wtf::client;
 client :: client(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
     : m_coord(host, port)
+    , m_gc()
+    , m_gc_ts()
     , m_busybee_mapper(m_coord.config())
-    , m_busybee(&m_busybee_mapper, busybee_generate_id())
+    , m_busybee(&m_gc, &m_busybee_mapper, busybee_generate_id())
     , m_next_client_id(1)
     , m_next_server_nonce(1)
     , m_pending_ops()
@@ -105,11 +107,13 @@ client :: client(const char* host, in_port_t port,
     , m_cwd("/")
 {
 	TRACE;
+    m_gc.register_thread(&m_gc_ts);
 }
 
 client :: ~client() throw ()
 {
 	TRACE;
+    m_gc.deregister_thread(&m_gc_ts);
 }
 
 bool
@@ -282,6 +286,8 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
            !m_pending_ops.empty() ||
            !m_yieldable.empty())
     {
+        m_gc.quiescent_state(&m_gc_ts);
+
         /* Handle currently yielding operation first. */
         if (m_yielding)
         {
@@ -368,6 +374,13 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         }
 
         uint64_t sid_num;
+        /*
+        struct pollfd[3];
+        pollfd[0].fd = m_busybee.poll_fd();
+        pollfd[0].events = POLLIN | POLLPRI | POLLRDHUP;
+        pollfd[1].fd = m_
+        m_busybee.poll_fd();
+        */
         std::auto_ptr<e::buffer> msg;
         m_busybee.set_timeout(timeout);
         busybee_returncode rc = m_busybee.recv(&sid_num, &msg);

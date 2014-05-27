@@ -54,8 +54,10 @@ using wtf::admin;
 
 admin :: admin(const char* coordinator, uint16_t port)
     : m_coord(coordinator, port)
+    , m_gc()
+    , m_gc_ts()
     , m_busybee_mapper(m_coord.config())
-    , m_busybee(&m_busybee_mapper, 0)
+    , m_busybee(&m_gc, &m_busybee_mapper, 0)
     , m_next_admin_id(1)
     , m_next_server_nonce(1)
     , m_handle_coord_ops(false)

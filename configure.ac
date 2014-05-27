@@ -94,12 +94,12 @@ else
     AC_SUBST([LRT_CFLAGS], [""])
 fi
 
-PKG_CHECK_MODULES([PO6], [libpo6 >= 0.3.1])
-PKG_CHECK_MODULES([E], [libe >= 0.3.2])
-PKG_CHECK_MODULES([BUSYBEE], [busybee >= 0.3.0])
-PKG_CHECK_MODULES([REPLICANT], [replicant >= 0.2.dev])
-PKG_CHECK_MODULES([HYPERLEVELDB], [libhyperleveldb])
-PKG_CHECK_MODULES([HYPERCLIENT], [hyperdex-client >= 1.0.dev])
+PKG_CHECK_MODULES([PO6], [libpo6 >= 0.5])
+PKG_CHECK_MODULES([E], [libe >= 0.7])
+PKG_CHECK_MODULES([BUSYBEE], [busybee >= 0.5])
+PKG_CHECK_MODULES([REPLICANT], [replicant >= 0.6])
+PKG_CHECK_MODULES([HYPERLEVELDB], [libhyperleveldb >= 1.0])
+PKG_CHECK_MODULES([HYPERCLIENT], [hyperdex-client >= 1.3])
 PKG_CHECK_MODULES([GLOG], [libglog >= 0.3.3])
 
 # Checks for header files.
