@@ -1438,14 +1438,6 @@ client :: update_file_metadata(e::intrusive_ptr<file> f,
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res != HYPERDEX_CLIENT_SUCCESS)
-    {
-        ERROR(INTERNAL) << "HyperDex returned " << ret;
-        return -1;
-    }
-
     return ret;
 }
 
