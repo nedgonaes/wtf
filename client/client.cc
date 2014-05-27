@@ -97,6 +97,7 @@ client :: client(const char* host, in_port_t port,
     , m_next_client_id(1)
     , m_next_server_nonce(1)
     , m_pending_ops()
+    , m_pending_hyperdex_ops()
     , m_failed()
     , m_yielding()
     , m_yielded()
@@ -374,22 +375,21 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         }
 
         uint64_t sid_num;
-        /*
-        struct pollfd[3];
-        pollfd[0].fd = m_busybee.poll_fd();
-        pollfd[0].events = POLLIN | POLLPRI | POLLRDHUP;
-        pollfd[1].fd = m_
-        m_busybee.poll_fd();
-        */
+
+        m_busybee.set_external_fd(m_hyperdex_client.poll_fd());
+
         std::auto_ptr<e::buffer> msg;
         m_busybee.set_timeout(timeout);
         busybee_returncode rc = m_busybee.recv(&sid_num, &msg);
 
         server_id id(sid_num);
 
+        bool hyperdex_message = false;
+
         switch (rc)
         {
             case BUSYBEE_SUCCESS:
+                hyperdex_message = false;
                 break;
             case BUSYBEE_INTERRUPTED:
                 ERROR(INTERRUPTED) << "signal received";
@@ -401,6 +401,11 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 handle_disruption(id);
                 continue;
             case BUSYBEE_EXTERNAL:
+                if (sid_num == m_hyperdex_client.poll_fd())
+                {
+                    hyperdex_message = true;
+                    break;
+                }
                 continue;
             BUSYBEE_ERROR_CASE(POLLFAILED);
             BUSYBEE_ERROR_CASE(ADDFDFAIL);
@@ -409,6 +414,44 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 ERROR(INTERNAL) << "internal error: BusyBee unexpectedly returned "
                                 << (unsigned) rc << ": please file a bug";
                 return -1;
+        }
+
+        if (hyperdex_message)
+        {
+            hyperdex_client_returncode hstatus;
+            int64_t reqid = m_hyperdex_client.loop(-1, &hstatus);
+            pending_map_t::iterator it = m_pending_hyperdex_ops.find(reqid);
+
+            if (it == m_pending_hyperdex_ops.end())
+            {
+                continue;
+            }
+
+            const pending_server_pair psp(it->second);
+            e::intrusive_ptr<pending> op = psp.op;
+            m_pending_hyperdex_ops.erase(it);
+
+            wtf_network_msgtype msg_type = HYPERDEX_RESPONSE;
+            msg.reset(e::buffer::create(sizeof(reqid) + sizeof(hstatus)));
+            *msg << reqid << hstatus;
+            e::unpacker up = msg->unpack_from(0);
+
+            if (!op->handle_message(this, id, msg_type, 
+                                    msg, up, status, &m_last_error))
+            {
+                return -1;
+            }
+
+            if (wait_for > 0 && wait_for != op->client_visible_id())
+            {
+                m_yieldable.insert(std::make_pair(op->client_visible_id(), op)); 
+            }
+            else
+            {
+                m_yielding = op;
+            }
+ 
+            continue;
         }
 
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);

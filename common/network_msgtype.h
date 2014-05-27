@@ -45,6 +45,8 @@ enum wtf_network_msgtype
     REQ_UPDATE = 32,
     RESP_UPDATE = 33,
 
+    HYPERDEX_RESPONSE = 64,
+
     PACKET_NOP = 254,
     CONFIGMISMATCH = 255
 };
