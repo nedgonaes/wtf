@@ -25,6 +25,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+//hyperdex
+#include <hyperdex/client.hpp>
+
 // WTF
 #include "client/pending_write.h"
 #include "common/response_returncode.h"
@@ -82,6 +85,32 @@ pending_write :: handle_message(client* cl,
     bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
+    /*
+     * If the response is from hyperdex, we can assume all daemon messages are finished.
+     * If the response is successful, the operation is complete and we're done.  If not, we
+     * should retry.
+     */
+    if (mt == HYPERDEX_RESPONSE)
+    {
+        int rc;
+        int64_t reqid = 0;
+        up = up >> reqid >> rc; 
+
+        if (rc != HYPERDEX_CLIENT_SUCCESS)
+        {
+            //XXX: This is probably the right place to retry failed metadata ops.
+            PENDING_ERROR(SERVERERROR) << "hyperdex returned " << rc;
+        }
+
+        return true;
+    }
+
+    /* 
+     * If the respons isn't from hyperdex, we're still processing the daemon
+     * work.  We take those messages until the last one is received, then request to update
+     * the metadata from hyperdex.
+     */
+
     uint64_t bi;
     uint64_t file_offset;
     uint32_t block_capacity;
@@ -126,12 +155,19 @@ pending_write :: handle_message(client* cl,
 
         wtf_client_returncode cstatus;
 
-        if (cl->update_file_metadata(m_file, reinterpret_cast<const char*>(m_old_blockmap->data()), 
-                                     m_old_blockmap->size(), &cstatus))
+        int64_t reqid = cl->update_file_metadata(m_file, reinterpret_cast<const char*>(m_old_blockmap->data()), 
+                                     m_old_blockmap->size(), &cstatus);
+        if (reqid < 0)
         {
             CLIENT_ERROR(cstatus);
             return true;
         }
+
+        /*
+         * Add the pending hyperdex op to our list to delay can_yeild from
+         * returning true until after we hear back from hyperdex.
+         */
+        this->handle_sent_to(server_id(cl->m_hyperdex_client.poll_fd()));
     }
 
     return true;

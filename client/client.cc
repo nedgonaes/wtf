@@ -446,8 +446,8 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             m_pending_hyperdex_ops.erase(it);
 
             wtf_network_msgtype msg_type = HYPERDEX_RESPONSE;
-            msg.reset(e::buffer::create(sizeof(reqid) + sizeof(hstatus)));
-            *msg << reqid << hstatus;
+            msg.reset(e::buffer::create(sizeof(reqid) + sizeof(uint64_t)));
+            *msg << reqid << (int)hstatus;
             e::unpacker up = msg->unpack_from(0);
 
             if (!op->handle_message(this, id, msg_type, 
