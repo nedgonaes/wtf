@@ -50,6 +50,7 @@
 #include "client/file.h"
 #include "common/coordinator_link.h"
 #include "client/pending_write.h"
+#include "client/pending_del.h"
 #include "client/pending_read.h"
 #include "visibility.h"
 
@@ -597,6 +598,10 @@ client :: unlink(const char* path, wtf_client_returncode* status)
 
     std::vector<std::string> files = ls(abspath);
 
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending> op;
+    op = new pending_del(client_id, status);
+
     for (std::vector<std::string>::iterator it = files.begin();
         it != files.end(); ++it)
     {
@@ -608,22 +613,12 @@ client :: unlink(const char* path, wtf_client_returncode* status)
             return -1;
         }
 
-        //XXX: add op to pending_hyperdex_ops and pass id of op to client.
-        //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-        if (res == HYPERDEX_CLIENT_NOTFOUND)
-        {
-            ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
-            return -1;
-        }
-        else if (res < 0)
-        {
-            ERROR(IO) << "Couldn't delete from HyperDex";
-            return -1;
-        }
+        pending_server_pair psp(server_id(m_hyperdex_client.poll_fd()), op);
+        op->handle_sent_to(server_id(m_hyperdex_client.poll_fd()));
+        m_pending_hyperdex_ops.insert(std::make_pair(ret,psp));
     }
 
-    return 0;
+    return client_id;
 }
 
 int64_t
