@@ -608,7 +608,8 @@ client :: unlink(const char* path, wtf_client_returncode* status)
             return -1;
         }
 
-        hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+        //XXX: add op to pending_hyperdex_ops and pass id of op to client.
+        //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
         if (res == HYPERDEX_CLIENT_NOTFOUND)
         {
@@ -655,7 +656,8 @@ client :: rename(const char* src, const char* dst, wtf_client_returncode* status
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
+    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
@@ -1119,7 +1121,7 @@ client :: chdir(char* path)
     {
         return -1;
     }
-
+    
     hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
@@ -1175,7 +1177,8 @@ client :: chmod(const char* path, mode_t mode)
 
  
     ret = m_hyperdex_client.put("wtf", path, strlen(path), &attr, 1, &status);
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
+    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
 
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
@@ -1218,7 +1221,8 @@ client :: mkdir(const char* path, mode_t mode)
 
  
     ret = m_hyperdex_client.put_if_not_exist("wtf", abspath, strlen(abspath), attr, 2, &status);
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
+    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
         return -1;
@@ -1326,7 +1330,8 @@ client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool cre
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
+    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res == HYPERDEX_CLIENT_NOTFOUND)
     {
@@ -1481,7 +1486,8 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
         return -1;
     }
 
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
+    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
+    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
 
     if (res != HYPERDEX_CLIENT_SUCCESS)
     {
@@ -1492,6 +1498,8 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
     return ret;
 }
 
+/*
+XXX: make sure new inner_loop logic makes this unnecessary.
 hyperdex_client_returncode
 client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status)
 {
@@ -1515,6 +1523,7 @@ client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& stat
         }
     } 
 }
+*/
 
 
 /* BOILERPLATE */
