@@ -58,6 +58,23 @@ int64_t
 rereplicate :: replicate(const char* path, uint64_t sid)
 {
     cout << "path " << path << " sid " << sid << endl;
+    wtf_client_returncode status;
+
+    if (!wc->maintain_coord_connection(&status))
+    {
+        return -1;
+    }
+    wtf::server::state_t state = wc->m_coord.config()->get_state(server_id(sid));
+    if(state == wtf::server::AVAILABLE)
+    {
+        cout << "server up" << endl;
+        return 0;
+    }
+    else
+    {
+        cout << "server not up" << endl;
+    }
+
     int64_t ret;
     int64_t reqid;
 
@@ -102,7 +119,6 @@ rereplicate :: replicate(const char* path, uint64_t sid)
             }
             if (match)
             {
-                wtf_client_returncode status;
                 size_t buf_sz = it->second->length();
                 char buf[buf_sz];
                 std::vector<server_id> read_servers;
@@ -135,7 +151,6 @@ rereplicate :: replicate(const char* path, uint64_t sid)
                 }
 
                 e::slice data = e::slice(buf, buf_sz);
-                cout << "buf_sz read " << buf_sz << endl << data.hex() << endl;
 
 
                 // Write block
