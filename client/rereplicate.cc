@@ -55,7 +55,7 @@ rereplicate :: ~rereplicate() throw ()
 }
 
 int64_t
-rereplicate :: replicate(const char* path, uint64_t sid)
+rereplicate :: replicate_one(const char* path, uint64_t sid)
 {
     cout << "path " << path << " sid " << sid << endl;
     wtf_client_returncode status;
@@ -67,12 +67,7 @@ rereplicate :: replicate(const char* path, uint64_t sid)
     wtf::server::state_t state = wc->m_coord.config()->get_state(server_id(sid));
     if(state == wtf::server::AVAILABLE)
     {
-        cout << "server up" << endl;
         return 0;
-    }
-    else
-    {
-        cout << "server not up" << endl;
     }
 
     int64_t ret;
@@ -229,6 +224,45 @@ rereplicate :: replicate(const char* path, uint64_t sid)
             break;
         }
     }
+    return 0;
+}
+
+int64_t
+rereplicate :: replicate_all(uint64_t sid, const char* hyper_host, in_port_t hyper_port)
+{
+    hyperdex::Client* h = new hyperdex::Client(hyper_host, hyper_port);
+    hyperdex_client_returncode status;
+    const struct hyperdex_client_attribute* attrs;
+    size_t attrs_sz;
+    int64_t retval;
+
+    struct hyperdex_client_attribute_check check;
+    check.attr = "path";
+    check.value = "^";
+    check.value_sz = strlen(check.value);
+    check.datatype = HYPERDATATYPE_STRING;
+    check.predicate = HYPERPREDICATE_REGEX;
+
+    retval = h->search("wtf", &check, 1, &status, &attrs, &attrs_sz);
+    while (true)
+    {
+        retval = h->loop(-1, &status);
+        if (status != HYPERDEX_CLIENT_SUCCESS)
+        {
+            break;
+        }
+        for (size_t i = 0; i < attrs_sz; ++i)
+        {
+            if (strcmp(attrs[i].attr, "path") == 0)
+            {
+                std::string path(attrs[i].value, attrs[i].value_sz);
+                replicate_one(path.c_str(), sid);
+            }
+        }
+    }
+    std::cout << "\nSearch finished" << std::endl;
+
+    return EXIT_SUCCESS;
     return 0;
 }
 

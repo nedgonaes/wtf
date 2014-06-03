@@ -45,7 +45,8 @@ class rereplicate
         ~rereplicate() throw ();
 
     public:
-        int64_t replicate(const char* path, uint64_t sid);
+        int64_t replicate_one(const char* path, uint64_t sid);
+        int64_t replicate_all(uint64_t sid, const char* hyper_host, in_port_t hyper_port);
     private:
         client* wc;
 };
