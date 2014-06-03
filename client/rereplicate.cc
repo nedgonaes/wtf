@@ -32,41 +32,34 @@
 #include "client/pending_write.h"
 #include "client/file.h"
 
-#ifdef TRACECALLS
-#define TRACE std::cerr << __FILE__ << ":" << __func__ << std::endl
-#else
-#define TRACE
-#endif
-
-using namespace std;
 using wtf::rereplicate;
 
 rereplicate :: rereplicate(const char* host, in_port_t port,
                          const char* hyper_host, in_port_t hyper_port)
 {
     wc = new client(host, port, hyper_host, hyper_port);
-    TRACE;
 }
 
 rereplicate :: ~rereplicate() throw ()
 {
     delete wc;
-    TRACE;
 }
 
 int64_t
 rereplicate :: replicate_one(const char* path, uint64_t sid)
 {
-    cout << "path " << path << " sid " << sid << endl;
-    wtf_client_returncode status;
+    wtf_client_returncode w_status;
 
-    if (!wc->maintain_coord_connection(&status))
+    // Check if daemon has actually failed
+    if (!wc->maintain_coord_connection(&w_status))
     {
+        std::cerr << "Failed to read reach coordinator" << std::endl;
         return -1;
     }
     wtf::server::state_t state = wc->m_coord.config()->get_state(server_id(sid));
-    if(state == wtf::server::AVAILABLE)
+    if (state == wtf::server::AVAILABLE)
     {
+        std::cerr << "Daemon " << sid << " is still available; not replicating" << std::endl;
         return 0;
     }
 
@@ -74,23 +67,24 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
     int64_t reqid;
 
     e::intrusive_ptr<wtf::file> f = new wtf::file(path, 0, CHUNKSIZE);
-    while(true)
+    while (true)
     {
-        cout << "top of while true" << endl;
         ret = wc->get_file_metadata(f->path().get(), f, false);
 
         if (ret < 0)
         {
+            std::cerr << "Failed to read file metadata" << std::endl;
             return -1;
         }
 
         // If path is a directory, ignore
         if (f->is_directory)
         {
-            cout << "is directory" << endl;
             break;
         }
 
+        // Find first block with location(s) matching sid, replace location(s) with placeholder,
+        // and assign new locations
         std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator it;
         bool match = false;
         for (it = f->blocks_begin(); it != f->blocks_end(); ++it)
@@ -102,46 +96,47 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
             {
                 if (it2->si == sid)
                 {
-                    cout << "match " << *it2 << endl;
                     *it2 = wtf::block_location();
                     match = true;
                 }
                 else
                 {
-                    cout << "no match " << *it2 << endl;
                     location_set.insert(*it2);
                 }
             }
             if (match)
             {
+                std::cout << "Re-replicating " << path << " block [" << it->second->offset() << "," << it->second->offset() + it->second->length() << ") (capacity = " << it->second->capacity() << ")" << std::endl;
+
                 size_t buf_sz = it->second->length();
                 char buf[buf_sz];
                 std::vector<server_id> read_servers;
-                set<block_location>::const_iterator location_set_it = location_set.begin();
+                std::set<block_location>::const_iterator location_set_it = location_set.begin();
                 read_servers.push_back(server_id(location_set_it->si));
 
                 // Read block
                 reqid = wc->m_next_client_id++;
-                e::intrusive_ptr<pending_read> read_op = new pending_read(reqid, &status, buf, &buf_sz);
+                e::intrusive_ptr<pending_read> read_op = new pending_read(reqid, &w_status, buf, &buf_sz);
 
                 size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                    + sizeof(uint64_t)  // bi (local block number)
-                    + sizeof(uint32_t); // block_length
+                    + sizeof(uint64_t)  // local block number
+                    + sizeof(uint32_t); // block length
                 std::auto_ptr<e::buffer> read_msg(e::buffer::create(sz));
                 read_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << (uint64_t)location_set_it->bi << (uint32_t)it->second->length();
 
-                if (!wc->maintain_coord_connection(&status))
+                if (!wc->maintain_coord_connection(&w_status))
                 {
+                    std::cerr << "Failed to read reach coordinator" << std::endl;
                     return -1;
                 }
 
                 buf_sz = 0;
-                wc->perform_aggregation(read_servers, read_op.get(), REQ_GET, read_msg, &status);
+                wc->perform_aggregation(read_servers, read_op.get(), REQ_GET, read_msg, &w_status);
 
-                reqid = wc->loop(reqid, -1, &status);
+                reqid = wc->loop(reqid, -1, &w_status);
                 if (reqid < 0)
                 {
-                    cout << "read failed" << endl;
+                    std::cerr << "Failed to read from daemon" << std::endl;
                     return -1;
                 }
 
@@ -150,7 +145,7 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
 
                 // Write block
                 reqid = wc->m_next_client_id++;
-                e::intrusive_ptr<pending_aggregation> write_op = new pending_write(reqid, f, &status);
+                e::intrusive_ptr<pending_aggregation> write_op = new pending_write(reqid, f, &w_status);
                 pending_write* write_op_downcasted = static_cast<pending_write*>(write_op.get());
                 uint32_t block_capacity = 4096;
                 uint64_t file_offset = it->second->offset();
@@ -162,44 +157,43 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
                 {
                     if (location_set.find(*it3) == location_set.end())
                     {
-                        cout << "server " << it3->si << " bi " << it3->bi << " block_offset 0 block_capacity " << block_capacity << " file_offset " << file_offset << " data size " << data.size() << endl;
-
                         write_servers.push_back(server_id(it3->si));
                     }
                 }
                 if (write_servers.size() > 0)
                 {
                     size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                        + sizeof(uint64_t) // bi (remote block number) 
-                        + sizeof(uint32_t) // block_offset (remote block offset) 
-                        + sizeof(uint32_t) // block_capacity 
-                        + sizeof(uint64_t) // file_offset 
-                        + data.size();     // user data 
+                        + sizeof(uint64_t) // placeholder
+                        + sizeof(uint32_t) // remote block offset
+                        + sizeof(uint32_t) // block capacity
+                        + sizeof(uint64_t) // file offset
+                        + data.size();     // block data size
                     std::auto_ptr<e::buffer> write_msg(e::buffer::create(sz));
                     e::buffer::packer pa = write_msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
                     pa = pa << (uint64_t)wtf::block_location().bi << (uint32_t)0 << block_capacity << file_offset;
                     pa.copy(data);
-                    if (!wc->maintain_coord_connection(&status))
+                    if (!wc->maintain_coord_connection(&w_status))
                     {
+                        std::cerr << "Failed to read reach coordinator" << std::endl;
                         return -1;
                     }
-                    wc->perform_aggregation(write_servers, write_op, REQ_UPDATE, write_msg, &status);
+                    wc->perform_aggregation(write_servers, write_op, REQ_UPDATE, write_msg, &w_status);
 
-                    reqid = wc->loop(reqid, -1, &status);
+                    reqid = wc->loop(reqid, -1, &w_status);
                     if (reqid < 0)
                     {
-                        cout << "write failed" << endl;
+                        std::cerr << "Failed to write to daemon" << std::endl;
                         return -1;
                     }
                 }
 
+                // Update block metadata with existing locations containing data
                 std::auto_ptr<e::buffer> old_blockmap = f->serialize_blockmap();
                 std::map<uint64_t, e::intrusive_ptr<block> >::iterator changeset_it = write_op_downcasted->m_changeset.find(file_offset);
                 e::intrusive_ptr<block> bl;
 
                 if (changeset_it == write_op_downcasted->m_changeset.end())
                 {
-                    cout << "changeset is empty" << endl;
                     bl = new block(block_capacity, file_offset, 0);
                     bl->set_length(data.size());
                     bl->set_offset(file_offset);
@@ -215,10 +209,13 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
                     bl->add_replica(*location_set_it);
                 }
                 f->apply_changeset(write_op_downcasted->m_changeset);
-                wc->update_file_metadata(f, reinterpret_cast<const char*>(old_blockmap->data()), old_blockmap->size(), &status);
+                wc->update_file_metadata(f, reinterpret_cast<const char*>(old_blockmap->data()), old_blockmap->size(), &w_status);
+
+                // Re-replicate one block, commit, and repeat
                 break;
             }
         }
+
         if (!match)
         {
             break;
@@ -230,8 +227,25 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
 int64_t
 rereplicate :: replicate_all(uint64_t sid, const char* hyper_host, in_port_t hyper_port)
 {
+    wtf_client_returncode w_status;
+
+    // Check if daemon has actually failed
+    if (!wc->maintain_coord_connection(&w_status))
+    {
+        std::cerr << "Failed to read reach coordinator" << std::endl;
+        return -1;
+    }
+    wtf::server::state_t state = wc->m_coord.config()->get_state(server_id(sid));
+    if (state == wtf::server::AVAILABLE)
+    {
+        std::cerr << "Daemon " << sid << " is still available; not replicating" << std::endl;
+        return 0;
+    }
+
+    // Search every file in the file system and call replicate_one
+    // TODO Use wc's HyperDex client instead (creating new client currently to avoid multiple outstanding requests)
     hyperdex::Client* h = new hyperdex::Client(hyper_host, hyper_port);
-    hyperdex_client_returncode status;
+    hyperdex_client_returncode h_status;
     const struct hyperdex_client_attribute* attrs;
     size_t attrs_sz;
     int64_t retval;
@@ -243,11 +257,11 @@ rereplicate :: replicate_all(uint64_t sid, const char* hyper_host, in_port_t hyp
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = HYPERPREDICATE_REGEX;
 
-    retval = h->search("wtf", &check, 1, &status, &attrs, &attrs_sz);
+    retval = h->search("wtf", &check, 1, &h_status, &attrs, &attrs_sz);
     while (true)
     {
-        retval = h->loop(-1, &status);
-        if (status != HYPERDEX_CLIENT_SUCCESS)
+        retval = h->loop(-1, &h_status);
+        if (h_status != HYPERDEX_CLIENT_SUCCESS)
         {
             break;
         }
@@ -260,9 +274,7 @@ rereplicate :: replicate_all(uint64_t sid, const char* hyper_host, in_port_t hyp
             }
         }
     }
-    std::cout << "\nSearch finished" << std::endl;
 
-    return EXIT_SUCCESS;
     return 0;
 }
 

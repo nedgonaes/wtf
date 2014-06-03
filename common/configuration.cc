@@ -172,8 +172,8 @@ void
 configuration :: assign_random_block_locations(std::vector<block_location>& bl) const
 {
     static size_t last_server = 0;
-    std::cerr << "Picking " << bl.size() << " random servers to send to." << std::endl;
-    std::cerr << "Last server was " << last_server << "." << std::endl;
+    //std::cerr << "Picking " << bl.size() << " random servers to send to." << std::endl;
+    //std::cerr << "Last server was " << last_server << "." << std::endl;
 
     std::set<uint64_t> location_set;
     /* build a set of valid servers that has the block */
@@ -182,38 +182,21 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl) 
         if (bl[i] != block_location())
         {
             location_set.insert(bl[i].si);
-            std::cout << "block location " << bl[i].si << std::endl;
-        }
-        else
-        {
-            std::cout << "filler" << std::endl;
         }
     }
-    for (size_t j = 0; j < m_servers.size(); ++j)
-    {
-        server s = m_servers[j];
-        if (s.state == server::AVAILABLE)
-        {
-            std::cout << "available server " << s.id.get() << std::endl;
-        }
-    }
-    std::cout << std::endl;
 
     for (size_t i = 0; i < bl.size(); ++i)
     {
         /* try to find a unique server */
         if (bl[i] == block_location())
         {
-            std::cout << "first pass" << std::endl;
             /* find the next available server and assign it to the block location. */
             for (size_t j = 0; j < m_servers.size(); ++j)
             {
                 server s = m_servers[last_server++ % m_servers.size()];
-                std::cout << "trying server " << s.id.get() << std::endl;
                 if (location_set.find(s.id.get()) == location_set.end()
                     && s.state == server::AVAILABLE)
                 {
-                    std::cout << "good server" << std::endl;
                     bl[i].si = s.id.get();
                     location_set.insert(bl[i].si);
                     break;
@@ -224,21 +207,17 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl) 
         /* if not enough unique servers, then this server could be any server */
         if (bl[i] == block_location())
         {
-            std::cout << "second pass" << std::endl;
             /* find the next available server and assign it to the block location. */
             for (size_t j = 0; j < m_servers.size(); ++j)
             {
                 server s = m_servers[last_server++ % m_servers.size()];
-                std::cout << "trying server " << s.id.get() << std::endl;
                 if (s.state == server::AVAILABLE)
                 {
-                    std::cout << "good server" << std::endl;
                     bl[i].si = s.id.get();
                     break;
                 }
             }
         }
-        std::cout << std::endl;
     }
 }
 

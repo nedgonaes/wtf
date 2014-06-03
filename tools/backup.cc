@@ -94,6 +94,7 @@ main(int argc, const char* argv[])
             ret = re.replicate_all(server_id, conn.hyper_host(), conn.hyper_port());
         }
 
+        std::cout << "Success" << std::endl;
         return ret;
     }
     catch (std::exception& e)
