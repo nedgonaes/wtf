@@ -108,9 +108,13 @@ main(int argc, const char* argv[])
             check.predicate = HYPERPREDICATE_REGEX;
 
             retval = h->search("wtf", &check, 1, &status, &attrs, &attrs_sz);
-            while (status != HYPERDEX_CLIENT_SEARCHDONE && status != HYPERDEX_CLIENT_NONEPENDING)
+            while (true)
             {
                 retval = h->loop(-1, &status);
+                if (status != HYPERDEX_CLIENT_SUCCESS)
+                {
+                    break;
+                }
                 for (size_t i = 0; i < attrs_sz; ++i)
                 {
                     if (strcmp(attrs[i].attr, "path") == 0)
