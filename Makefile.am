@@ -93,6 +93,7 @@ noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += visibility.h
 
 noinst_PROGRAMS += wtf-stat
+noinst_PROGRAMS += wtf-backup
 
 bin_PROGRAMS += wtf
 
@@ -214,6 +215,7 @@ libwtf_client_la_SOURCES += client/pending_write.cc
 libwtf_client_la_SOURCES += common/coordinator_link.cc
 libwtf_client_la_SOURCES += client/file.cc
 libwtf_client_la_SOURCES += client/client.cc
+libwtf_client_la_SOURCES += client/rereplicate.cc
 
 libwtf_client_la_LIBADD = 
 libwtf_client_la_LIBADD += $(E_LIBS) 
@@ -352,6 +354,29 @@ wtf_stat_SOURCES += common/block_location.cc
 wtf_stat_SOURCES += client/file.cc
 wtf_stat_SOURCES += tools/stat.cc
 wtf_stat_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+
+# wtf-backup (rereplicate file block)
+wtf_backup_SOURCES =
+wtf_backup_SOURCES += common/server.cc
+wtf_backup_SOURCES += common/ids.cc
+wtf_backup_SOURCES += common/block_location.cc
+wtf_backup_SOURCES += common/configuration.cc
+wtf_backup_SOURCES += common/mapper.cc
+wtf_backup_SOURCES += common/network_msgtype.cc
+wtf_backup_SOURCES += common/packing.cc
+wtf_backup_SOURCES += common/response_returncode.cc
+wtf_backup_SOURCES += common/block.cc
+wtf_backup_SOURCES += client/pending.cc
+wtf_backup_SOURCES += client/pending_aggregation.cc
+wtf_backup_SOURCES += client/pending_read.cc
+wtf_backup_SOURCES += client/pending_write.cc
+wtf_backup_SOURCES += common/coordinator_link.cc
+wtf_backup_SOURCES += client/file.cc
+wtf_backup_SOURCES += client/client.cc
+wtf_backup_SOURCES += client/rereplicate.cc
+wtf_backup_SOURCES += tools/backup.cc
+wtf_backup_LDADD = $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
+wtf_backup_CPPFLAGS = -I.
 
 ################################################################################
 ################################## bindings ####################################
