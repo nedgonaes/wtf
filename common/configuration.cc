@@ -28,6 +28,7 @@
 // STL
 #include <algorithm>
 #include <memory>
+#include <set>
 
 // Google Log
 #include <glog/logging.h>
@@ -171,11 +172,39 @@ void
 configuration :: assign_random_block_locations(std::vector<block_location>& bl) const
 {
     static size_t last_server = 0;
-    std::cerr << "Picking " << bl.size() << " random servers to send to." << std::endl;
-    std::cerr << "Last server was " << last_server << "." << std::endl;
+    //std::cerr << "Picking " << bl.size() << " random servers to send to." << std::endl;
+    //std::cerr << "Last server was " << last_server << "." << std::endl;
+
+    std::set<uint64_t> location_set;
+    /* build a set of valid servers that has the block */
     for (size_t i = 0; i < bl.size(); ++i)
     {
-        /* if this server could be any server */
+        if (bl[i] != block_location())
+        {
+            location_set.insert(bl[i].si);
+        }
+    }
+
+    for (size_t i = 0; i < bl.size(); ++i)
+    {
+        /* try to find a unique server */
+        if (bl[i] == block_location())
+        {
+            /* find the next available server and assign it to the block location. */
+            for (size_t j = 0; j < m_servers.size(); ++j)
+            {
+                server s = m_servers[last_server++ % m_servers.size()];
+                if (location_set.find(s.id.get()) == location_set.end()
+                    && s.state == server::AVAILABLE)
+                {
+                    bl[i].si = s.id.get();
+                    location_set.insert(bl[i].si);
+                    break;
+                }
+            }
+        }
+
+        /* if not enough unique servers, then this server could be any server */
         if (bl[i] == block_location())
         {
             /* find the next available server and assign it to the block location. */

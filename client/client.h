@@ -145,6 +145,7 @@ class client
         friend class pending_read;
         friend class pending_write;
         friend class pending_readdir;
+        friend class rereplicate;
         typedef std::map<uint64_t, pending_server_pair> pending_map_t;
         typedef std::map<uint64_t, e::intrusive_ptr<pending> > yieldable_map_t;
         typedef std::list<pending_server_pair> pending_queue_t;

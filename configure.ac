@@ -46,7 +46,7 @@ ANAL_WARNINGS
 
 
 AC_ARG_ENABLE([java-bindings], [AS_HELP_STRING([--enable-java-bindings],
-              [enable the Java bindings @<:@default: yes@:>@])],
+              [enable the Java bindings @<:@default: no@:>@])],
               [java_bindings=${enableval}], [java_bindings=no])
 AM_CONDITIONAL([ENABLE_JAVA_BINDINGS], [test x"${java_bindings}" = xyes])
 need_swig=yes
