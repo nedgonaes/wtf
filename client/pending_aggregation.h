@@ -87,7 +87,7 @@ class pending_aggregation : public pending
         virtual void remove_wtf_message(const server_id& si);
         virtual void remove_hyperdex_message(int64_t reqid);
 
-    private:
+    protected:
         std::vector<server_id> m_outstanding_wtf;
         std::vector<e::intrusive_ptr<message> > m_outstanding_hyperdex;
 };

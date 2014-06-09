@@ -29,6 +29,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "client/message_hyperdex_search.h"
 #include "client/pending_readdir.h"
 #include "common/response_returncode.h"
 
@@ -42,10 +43,6 @@ pending_readdir :: pending_readdir(client* cl, uint64_t client_visible_id,
     , m_entry(entry)
     , m_results()
     , m_path(path)
-    , m_search_id(0)
-    , m_search_status(HYPERDEX_CLIENT_GARBAGE)
-    , m_search_attrs(NULL)
-    , m_search_attrs_sz(0)
 {
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
@@ -91,11 +88,16 @@ pending_readdir :: handle_hyperdex_message(client* cl,
     }
     else
     {
-        for (int i = 0; i < m_search_attrs_sz; ++i)
+        e::intrusive_ptr<message_hyperdex_search> msg = 
+            dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
+        hyperdex_client_attribute* attrs = msg->attrs();
+        size_t sz = msg->attrs_sz();
+
+        for (int i = 0; i < sz; ++i)
         {
-            if (m_search_attrs[i].name == "path")
+            if (strcmp(attrs[i].attr, "path") == 0)
             {
-                m_results.push_back(std::string(m_search_attrs[i].value));
+                m_results.push_back(std::string(attrs[i].value));
                 break;
             }
         }
@@ -105,10 +107,10 @@ pending_readdir :: handle_hyperdex_message(client* cl,
 }
 
 bool
-pending_readdir :: try_op(client* cl)
+pending_readdir :: try_op()
 {
     std::string regex("^");
-    regex += m_src;
+    regex += m_path;
 
 
     e::intrusive_ptr<message_hyperdex_search> msg("wtf", "path", regex.c_str());

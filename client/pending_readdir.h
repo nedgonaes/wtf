@@ -53,13 +53,15 @@ class pending_readdir : public pending_aggregation
 
     // events
     public:
-        virtual void handle_sent_to(const server_id& si);
-        virtual void handle_failure(const server_id& si);
-        virtual bool handle_message(client*,
+        virtual bool handle_wtf_message(client*,
                                     const server_id& si,
-                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
+        virtual bool handle_hyperdex_message(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
         bool try_op();
@@ -76,10 +78,6 @@ class pending_readdir : public pending_aggregation
         char** m_entry;
         std::vector<std::string> m_results;
         std::string m_path;
-        int64_t m_search_id;
-        hyperdex_client_returncode m_search_status;
-        hyperdex_client_attribute* m_search_attrs;
-        size_t m_search_attrs_sz;
 };
 
 }
