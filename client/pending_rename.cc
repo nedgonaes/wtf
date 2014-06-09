@@ -26,13 +26,18 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 //hyperdex
+#include <hyperdex/datastructures.h>
 #include <hyperdex/client.hpp>
 
 // WTF
 #include "client/pending_rename.h"
 #include "common/response_returncode.h"
+#include "client/message_hyperdex_search.h"
+#include "client/message_hyperdex_put.h"
+#include "client/message_hyperdex_del.h"
 
 using wtf::pending_rename;
+using wtf::message_hyperdex_put;
 
 pending_rename :: pending_rename(client* cl, uint64_t client_visible_id, 
                            wtf_client_returncode* status, const char* src,
@@ -80,7 +85,7 @@ pending_rename :: handle_hyperdex_message(client* cl,
     //XXX: search for it in m_outstanding_hyperdex
     if (reqid == m_search_id)
     {
-        return handle_search(reqid, rc);
+        return handle_search(cl, reqid, rc, status, err);
     }
 
     else
@@ -88,6 +93,37 @@ pending_rename :: handle_hyperdex_message(client* cl,
         return handle_put_and_delete(cl, reqid, rc, status, err);
     }
 }
+
+typedef struct hyperdex_ds_arena* arena_t;
+typedef struct hyperdex_client_attribute* attr_t;
+
+attr_t 
+change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst)
+{
+    //XXX
+    return NULL;
+}
+
+bool
+pending_rename :: send_put(std::string& dst, hyperdex_client_attribute* attrs, size_t attrs_sz)
+{
+    e::intrusive_ptr<message_hyperdex_put> msg = 
+        new message_hyperdex_put("wtf", dst.c_str(), attrs, attrs_sz);
+
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
+    }
+    else
+    {
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        pending_aggregation::handle_sent_to_hyperdex(m);
+    }
+
+    return true;
+}
+
 
 bool
 pending_rename :: handle_search(client* cl,
@@ -106,12 +142,15 @@ pending_rename :: handle_search(client* cl,
     }
     else
     {
-        typedef struct hyperdex_ds_arena* arena_t;
-        typedef struct hyperdex_client_attribute* attr_t;
+        e::intrusive_ptr<message_hyperdex_search> msg = 
+            dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
+        hyperdex_client_attribute* search_attrs = msg->attrs();
+        size_t sz = msg->attrs_sz();
+
 
         arena_t arena = hyperdex_ds_arena_create();
-        attr_t attrs = change_name(arena, search->attrs, search->attrs_sz, m_dst);
-        bool ret = send_put(attrs) && send_delete(m_dst);
+        attr_t attrs = change_name(arena, search_attrs, sz, m_dst);
+        bool ret = send_put(m_dst, attrs, sz) && send_del(m_dst);
         hyperdex_ds_arena_destroy(arena);
         return ret;
     }
@@ -158,29 +197,10 @@ pending_rename :: handle_put_and_delete(client* cl,
 
     return pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
 }
-
-bool
-pending_rename :: send_put(std::string& dst, hyperdex_client_attributes* attrs, size_t attrs_sz)
-{
-    e::intrusive_ptr<message_hyperdex_put> msg("wtf", dst, attrs, attrs_sz);
-
-    if (msg->send() < 0)
-    {
-        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
-    }
-    else
-    {
-        m_cl->add_hyperdex_op(ret, this);
-        handle_sent_to_hyperdex(msg);
-    }
-
-    return true;
-}
-
 bool
 pending_rename :: send_del(std::string& src)
 {
-    e::intrusive_ptr<message_hyperdex_del> msg("wtf", src);
+    e::intrusive_ptr<message_hyperdex_del> msg = new message_hyperdex_del("wtf", src.c_str());
 
     if (msg->send() < 0)
     {
@@ -188,21 +208,23 @@ pending_rename :: send_del(std::string& src)
     }
     else
     {
-        m_cl->add_hyperdex_op(ret, this);
-        handle_sent_to_hyperdex(msg);
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        handle_sent_to_hyperdex(m);
     }
 
     return true;
 }
 
 bool
-pending_rename :: try_op(client* cl)
+pending_rename :: try_op()
 {
     std::string regex("^");
     regex += m_src;
 
 
-    e::intrusive_ptr<message_hyperdex_search> msg("wtf", "path", regex.c_str());
+    e::intrusive_ptr<message_hyperdex_search> msg = 
+        new message_hyperdex_search("wtf", "path", regex.c_str());
    
     if (msg->send() < 0)
     {
@@ -210,8 +232,9 @@ pending_rename :: try_op(client* cl)
     }
     else
     {
-        m_cl->add_hyperdex_op(ret, this);
-        handle_sent_to_hyperdex(msg);
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        handle_sent_to_hyperdex(m);
     }
 
     return true;

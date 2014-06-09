@@ -46,7 +46,11 @@ class message_hyperdex_get : public message
         virtual ~message_hyperdex_get() throw ();
 
     public:
-        send();
+        int64_t send();
+        hyperdex_client_attribute* attrs() { return m_attrs; }
+        size_t attrs_sz() { return m_attrs_size; }
+        hyperdex_client_returncode status() { return m_status; }
+        int64_t reqid() { return m_reqid; }
 
     // refcount
     protected:

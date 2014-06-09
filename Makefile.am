@@ -195,6 +195,8 @@ noinst_HEADERS += client/pending_write.h
 noinst_HEADERS += client/pending_readdir.h
 noinst_HEADERS += client/pending_rename.h
 noinst_HEADERS += client/message_hyperdex_get.h
+noinst_HEADERS += client/message_hyperdex_put.h
+noinst_HEADERS += client/message_hyperdex_del.h
 noinst_HEADERS += client/message_hyperdex_search.h
 
 libwtf_client_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
@@ -217,6 +219,8 @@ libwtf_client_la_SOURCES += client/pending_write.cc
 libwtf_client_la_SOURCES += client/pending_readdir.cc
 libwtf_client_la_SOURCES += client/pending_rename.cc
 libwtf_client_la_SOURCES += client/message_hyperdex_get.cc
+libwtf_client_la_SOURCES += client/message_hyperdex_put.cc
+libwtf_client_la_SOURCES += client/message_hyperdex_del.cc
 libwtf_client_la_SOURCES += client/message_hyperdex_search.cc
 libwtf_client_la_SOURCES += common/coordinator_link.cc
 libwtf_client_la_SOURCES += client/file.cc

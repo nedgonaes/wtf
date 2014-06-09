@@ -25,28 +25,50 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "client/message_hyperdex_get.h"
+#ifndef wtf_client_message_hyperdex_del_h_
+#define wtf_client_message_hyperdex_del_h_
 
-using wtf::message_hyperdex_get;
+// e
+#include <e/intrusive_ptr.h>
 
-message_hyperdex_get :: message_hyperdex_get(wtf_client* cl,
-                                             const char* space,
-                                             const char* key)
-    : message(cl, OPCODE_HYPERDEX_GET, cl->m_hyperdex_client->poll_fd()) 
-    , m_space(space)
-    , m_key(key)
-    , m_status(HYPERDEX_CLIENT_GARBAGE)
-    , m_attrs(NULL)
-    , m_attrs_size(0)
-    , m_reqid(0)
+//WTF  
+#include "client/client.h"
+#include "client/message.h"
+
+namespace wtf __attribute__ ((visibility("hidden")))
 {
-}
 
-int64_t
-message_hyperdex_get :: send()
+class message_hyperdex_del : public message
 {
-    hyperdex::Client* hc = m_cl->m_hyperdex_client;
-    m_reqid = hc->get(m_space.c_str(), m_key.data(), m_key.size(),
-            &m_status, &m_attrs_size);
-    return m_reqid;
+    public:
+        message_hyperdex_del(const char* space,
+            const char* key);
+        virtual ~message_hyperdex_del() throw ();
+
+    public:
+        int64_t send();
+        hyperdex_client_returncode status() { return m_status; }
+        int64_t reqid() { return m_reqid; }
+
+    // refcount
+    protected:
+        friend class e::intrusive_ptr<message_hyperdex_del>;
+        void inc() { ++m_ref; }
+        void dec() { if (--m_ref == 0) delete this; }
+        size_t m_ref;
+
+    // noncopyable
+    private:
+        message_hyperdex_del(const message_hyperdex_del& other);
+        message_hyperdex_del& operator = (const message_hyperdex_del& rhs);
+
+    // operation state
+    private:
+        std::string m_space;
+        std::string m_key;
+        hyperdex_client_returncode m_status;
+        int64_t m_reqid;
+};
+
 }
+#endif // wtf_client_message_hyperdex_del_h_

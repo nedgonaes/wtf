@@ -62,7 +62,16 @@ class pending_rename : public pending_aggregation
         virtual bool handle_hyperdex_message(client*,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,
-                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
+        virtual bool handle_search(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
+        virtual bool handle_put_and_delete(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
         bool try_op();
@@ -75,9 +84,13 @@ class pending_rename : public pending_aggregation
         pending_rename& operator = (const pending_rename& rhs);
 
     private:
+        bool send_put(std::string& dst, hyperdex_client_attribute* attrs, size_t attrs_sz);
+        bool send_del(std::string& src);
+
+    private:
         client* m_cl;
-        std::string src;
-        std::string dst;
+        std::string m_src;
+        std::string m_dst;
         int64_t m_search_id;
         hyperdex_client_returncode m_search_status;
         hyperdex_client_attribute* m_search_attrs;
