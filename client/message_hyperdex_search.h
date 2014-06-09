@@ -49,6 +49,8 @@ class message_hyperdex_search : public message
         int64_t send();
         hyperdex_client_attribute* attrs() { return m_attrs; }
         size_t attrs_sz() { return m_attrs_size; }
+        hyperdex_client_returncode status() { return m_status; }
+        int64_t reqid() { return m_reqid; }
 
     // refcount
     protected:

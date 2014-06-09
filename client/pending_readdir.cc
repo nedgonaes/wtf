@@ -113,7 +113,7 @@ pending_readdir :: try_op()
     regex += m_path;
 
 
-    e::intrusive_ptr<message_hyperdex_search> msg("wtf", "path", regex.c_str());
+    e::intrusive_ptr<message_hyperdex_search> msg = new message_hyperdex_search("wtf", "path", regex.c_str());
    
     if (msg->send() < 0)
     {
@@ -121,8 +121,9 @@ pending_readdir :: try_op()
     }
     else
     {
-        m_cl->add_hyperdex_op(ret, this);
-        handle_sent_to_hyperdex(msg);
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        pending_aggregation::handle_sent_to_hyperdex(m);
     }
 
     return true;
