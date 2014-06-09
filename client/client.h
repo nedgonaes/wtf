@@ -77,6 +77,7 @@ class coordinator_link;
 class mapper;
 class file;
 class pending_read;
+class pending_aggregation;
 
 class client
 {
@@ -209,6 +210,7 @@ class client
                                      wtf_client_returncode* status);
         int64_t get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
+        void add_hyperdex_op(int64_t reqid, pending* pending_op);
 
     private:
         wtf::coordinator_link m_coord;

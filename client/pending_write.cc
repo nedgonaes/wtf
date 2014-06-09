@@ -29,6 +29,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "client/client.h"
 #include "client/pending_write.h"
 #include "common/response_returncode.h"
 
@@ -162,13 +163,18 @@ metadata_update:
 
         wtf_client_returncode cstatus;
 
-        int64_t reqid = cl->update_file_metadata(m_file, reinterpret_cast<const char*>(m_old_blockmap->data()), 
-                                     m_old_blockmap->size(), &cstatus);
+        int64_t reqid = cl->update_file_metadata(m_file, 
+                            reinterpret_cast<const char*>(m_old_blockmap->data()), 
+                            m_old_blockmap->size(), &cstatus);
         if (reqid < 0)
         {
             CLIENT_ERROR(cstatus);
             return true;
         }
+
+        client::pending_server_pair psp(server_id(cl->m_hyperdex_client.poll_fd()), this);
+        this->handle_sent_to(server_id(cl->m_hyperdex_client.poll_fd()));
+        cl->m_pending_hyperdex_ops.insert(std::make_pair(reqid,psp));
 
         /*
          * Add the pending hyperdex op to our list to delay can_yeild from

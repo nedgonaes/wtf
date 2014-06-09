@@ -52,6 +52,7 @@
 #include "client/pending_write.h"
 #include "client/pending_del.h"
 #include "client/pending_read.h"
+#include "client/pending_rename.h"
 #include "visibility.h"
 
 #define ERROR(CODE) \
@@ -626,9 +627,6 @@ client :: rename(const char* src, const char* dst, wtf_client_returncode* status
 {
 	TRACE;
 
-    const struct hyperdex_client_attribute* attrs;
-    size_t attrs_sz;
-    hyperdex_client_returncode hstatus;
     char src_abspath[PATH_MAX];
 
     if (canon_path(src, src_abspath, PATH_MAX) != 0)
@@ -643,52 +641,19 @@ client :: rename(const char* src, const char* dst, wtf_client_returncode* status
         return -1;
     }
 
-    int64_t ret = m_hyperdex_client.get("wtf", src_abspath, strlen(src_abspath), &hstatus, &attrs, &attrs_sz);
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_rename> op;
+    op = new pending_rename(this, client_id, status, src_abspath, dst_abspath);
 
-    if (ret < 0)
+    if (op->try_op())
     {
-        ERROR(IO) << "Couldn't delete from HyperDex";
-        return -1;
+        return client_id;
     }
-
-    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
-    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
-    {
-        ERROR(NOTFOUND) << "path " << src_abspath << " not found in HyperDex.";
-        return -1;
-    }
-    else if (res < 0)
-    {
-        ERROR(IO) << "Couldn't get from HyperDex";
-        return -1;
-    }
-
-    ret = m_hyperdex_client.put("wtf", dst_abspath, strlen(dst_abspath), attrs, attrs_sz, &hstatus);
-
-    if (ret < 0)
-    {
-        ERROR(IO) << "Couldn't put to HyperDex";
-        return -1;
-    }
-
-    res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res < 0)
-    {
-        ERROR(IO) << "Couldn't put to HyperDex";
-        return -1;
-    }
-
-    ret = unlink(src_abspath, status);
-
-    if (ret < 0)
+    else
     {
         return -1;
     }
 
-    return 0;
 }
 
 void
@@ -1244,9 +1209,26 @@ client :: closedir(int fd)
 }
 
 int64_t 
-client :: readdir(int fd, char* e)
+client :: readdir(int fd, char* path, char** entry) 
 {
 	TRACE;
+
+    char abspath[PATH_MAX]; 
+    canon_path(path, abspath, PATH_MAX);
+   
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_readdir> op;
+    op = new pending_readdir(this, client_id, status, abspath, entry);
+
+    if (op->try_op())
+    {
+        return client_id;
+    }
+    else
+    {
+        return -1;
+    }
+
     return 0;
 }
 
@@ -1659,4 +1641,13 @@ client :: read_sync(int64_t fd, char* buf,
     }
 
     return reqid;
+}
+
+void
+client :: add_hyperdex_op(int64_t reqid, pending* pending_op)
+{
+    server_id HYPERDEX = server_id(m_hyperdex_client.poll_fd());
+    e::intrusive_ptr<pending> op = pending_op;
+    pending_server_pair psp(HYPERDEX, op);
+    m_pending_hyperdex_ops.insert(std::make_pair(ret, psp));
 }

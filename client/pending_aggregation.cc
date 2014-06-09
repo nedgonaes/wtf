@@ -33,7 +33,8 @@ using wtf::pending_aggregation;
 pending_aggregation :: pending_aggregation(uint64_t id,
                                            wtf_client_returncode* status)
     : pending(id, status)
-    , m_outstanding()
+    , m_outstanding_wtf()
+    , m_outstanding_hyperdex()
 {
 }
 
@@ -44,50 +45,92 @@ pending_aggregation :: ~pending_aggregation() throw ()
 bool
 pending_aggregation :: aggregation_done()
 {
-    return m_outstanding.empty();
+    return m_outstanding_wtf.empty() && m_outstanding_hyperdex.empty();
 }
 
 void
-pending_aggregation :: handle_sent_to(const server_id& si)
+pending_aggregation :: handle_sent_to_wtf(const server_id& si)
 {
-    m_outstanding.push_back(si);
+    m_outstanding_wtf.push_back(si);
 }
 
 void
-pending_aggregation :: handle_failure(const server_id& si)
+pending_aggregation :: handle_sent_to_hyperdex(e::intrusive_ptr<message>& msg)
 {
-    remove(si);
+    m_outstanding_hyperdex.push_back(msg);
+}
+
+void
+pending_aggregation :: handle_hyperdex_failure(int64_t reqid)
+{
+    remove_hyperdex_message(reqid);
+}
+
+void
+pending_aggregation :: handle_wtf_failure(const server_id& si)
+{
+    remove_wtf_message(si);
 }
 
 bool
-pending_aggregation :: handle_message(client*,
-                                      const server_id& si,
-                                      wtf_network_msgtype,
-                                      std::auto_ptr<e::buffer>,
-                                      e::unpacker,
-                                      wtf_client_returncode*,
-                                      e::error*)
+pending_aggregation :: handle_wtf_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer>,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
 {
-    remove(si);
+    remove_wtf_message(si);
+    return true;
+}
+
+bool
+pending_aggregation :: handle_hyperdex_message(client* cl,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
+{
+    remove_hyperdex_message(reqid);
     return true;
 }
 
 void
-pending_aggregation :: remove(const server_id& si)
+pending_aggregation :: remove_wtf_message(const server_id& si)
 {
-    for (size_t i = 0; i < m_outstanding.size(); ++i)
+    for (size_t i = 0; i < m_outstanding_wtf.size(); ++i)
     {
-        if (m_outstanding[i] != si)
+        if (m_outstanding_wtf[i] != si)
         {
             continue;
         }
 
-        for (size_t j = i; j + 1 < m_outstanding.size(); ++j)
+        for (size_t j = i; j + 1 < m_outstanding_wtf.size(); ++j)
         {
-            m_outstanding[j] = m_outstanding[j + 1];
+            m_outstanding_wtf[j] = m_outstanding_wtf[j + 1];
         }
 
-        m_outstanding.pop_back();
+        m_outstanding_wtf.pop_back();
+        return;
+    }
+}
+
+void
+pending_aggregation :: remove_hyperdex_message(int64_t reqid)
+{
+    for (size_t i = 0; i < m_outstanding_hyperdex.size(); ++i)
+    {
+        if (m_outstanding_hyperdex[i]->reqid() != reqid)
+        {
+            continue;
+        }
+
+        for (size_t j = i; j + 1 < m_outstanding_hyperdex.size(); ++j)
+        {
+            m_outstanding_hyperdex[j] = m_outstanding_hyperdex[j + 1];
+        }
+
+        m_outstanding_hyperdex.pop_back();
         return;
     }
 }

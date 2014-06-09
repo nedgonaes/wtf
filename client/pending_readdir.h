@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Cornell University
+// Copyright (c) 2012-2013, Cornell University
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -25,73 +25,63 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_client_pending_aggregation_h_
-#define wtf_client_pending_aggregation_h_
+#ifndef wtf_client_pending_readdir_h_
+#define wtf_client_pending_readdir_h_
 
 // STL
-#include <utility>
+#include <map>
 #include <vector>
 
-// E
-#include <e/intrusive_ptr.h>
-
 // WTF
-#include "client/pending.h"
-#include "client/message.h"
+#include "client/pending_aggregation.h"
+#include "client/file.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-
-class pending_aggregation : public pending
+class pending_readdir : public pending_aggregation
 {
     public:
-        pending_aggregation(uint64_t client_visible_id,
-                            wtf_client_returncode* status);
-        virtual ~pending_aggregation() throw ();
+        pending_readdir(client* cl, uint64_t client_visible_id,
+                          wtf_client_returncode* status,
+                          char* path, char** entry); 
+        virtual ~pending_readdir() throw ();
 
-    // handle aggregation across servers; must call handle_* messages from
-    // subclasses for this to work
+    // return to client
     public:
-        bool aggregation_done();
+        virtual bool can_yield();
+        virtual bool yield(wtf_client_returncode* status, e::error* error);
 
     // events
     public:
-        virtual void handle_sent_to_wtf(const server_id& si);
-        virtual void handle_sent_to_hyperdex(e::intrusive_ptr<message>& msg);
-        virtual void handle_wtf_failure(const server_id& si);
-        virtual void handle_hyperdex_failure(int64_t reqid);
-
-        // pass NULL for msg; we don't need it
-        virtual bool handle_wtf_message(client*,
+        virtual void handle_sent_to(const server_id& si);
+        virtual void handle_failure(const server_id& si);
+        virtual bool handle_message(client*,
                                     const server_id& si,
+                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* error);
+        bool try_op();
 
-        virtual bool handle_hyperdex_message(client* cl,
-                                    int64_t reqid,
-                                    hyperdex_client_returncode rc,
-                                    wtf_client_returncode* status,
-                                    e::error* error);
-    // refcount
-    protected:
-        friend class e::intrusive_ptr<pending_aggregation>;
+    friend class e::intrusive_ptr<pending>;
 
     // noncopyable
     private:
-        pending_aggregation(const pending_aggregation& other);
-        pending_aggregation& operator = (const pending_aggregation& rhs);
+        pending_readdir(const pending_readdir& other);
+        pending_readdir& operator = (const pending_readdir& rhs);
 
     private:
-        virtual void remove_wtf_message(const server_id& si);
-        virtual void remove_hyperdex_message(int64_t reqid);
-
-    private:
-        std::vector<server_id> m_outstanding_wtf;
-        std::vector<e::intrusive_ptr<message> > m_outstanding_hyperdex;
+        client* m_cl;
+        char** m_entry;
+        std::vector<std::string> m_results;
+        std::string m_path;
+        int64_t m_search_id;
+        hyperdex_client_returncode m_search_status;
+        hyperdex_client_attribute* m_search_attrs;
+        size_t m_search_attrs_sz;
 };
 
 }
 
-#endif // wtf_client_pending_aggregation_h_
+#endif // wtf_client_pending_readdir_h_
