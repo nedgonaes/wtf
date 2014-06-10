@@ -29,13 +29,13 @@
 #include <hyperdex/client.hpp>
 
 // WTF
-#include "client/pending_chmod.h"
+#include "client/pending_mkdir.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_put.h"
 
-using wtf::pending_chmod;
+using wtf::pending_mkdir;
 
-pending_chmod :: pending_chmod(client* cl, int64_t client_visible_id, 
+pending_mkdir :: pending_mkdir(client* cl, int64_t client_visible_id, 
                            wtf_client_returncode* status, std::string path,
                            mode_t mode)
     : pending_aggregation(client_visible_id, status) 
@@ -48,18 +48,18 @@ pending_chmod :: pending_chmod(client* cl, int64_t client_visible_id,
     set_error(e::error());
 }
 
-pending_chmod :: ~pending_chmod() throw ()
+pending_mkdir :: ~pending_mkdir() throw ()
 {
 }
 
 bool
-pending_chmod :: can_yield()
+pending_mkdir :: can_yield()
 {
     return this->aggregation_done() && !m_done;
 }
 
 bool
-pending_chmod :: yield(wtf_client_returncode* status, e::error* err)
+pending_mkdir :: yield(wtf_client_returncode* status, e::error* err)
 {
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -69,13 +69,13 @@ pending_chmod :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_chmod :: handle_hyperdex_failure(int64_t reqid)
+pending_mkdir :: handle_hyperdex_failure(int64_t reqid)
 {
     return pending_aggregation::handle_hyperdex_failure(reqid);
 }
 
 bool
-pending_chmod :: handle_hyperdex_message(client* cl,
+pending_mkdir :: handle_hyperdex_message(client* cl,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
@@ -93,7 +93,7 @@ pending_chmod :: handle_hyperdex_message(client* cl,
 }
 
 bool
-pending_chmod :: try_op()
+pending_mkdir :: try_op()
 {
     struct hyperdex_client_attribute attr;
     attr.attr = "mode";

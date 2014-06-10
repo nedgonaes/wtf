@@ -50,10 +50,12 @@
 #include "client/file.h"
 #include "common/coordinator_link.h"
 #include "client/pending_write.h"
+#include "client/pending_readdir.h"
 #include "client/pending_del.h"
 #include "client/pending_read.h"
 #include "client/pending_rename.h"
 #include "client/pending_chmod.h"
+#include "client/pending_mkdir.h"
 #include "visibility.h"
 
 #define ERROR(CODE) \
@@ -1114,9 +1116,16 @@ client :: chmod(const char* path, mode_t mode, wtf_client_returncode* status)
 {
 	TRACE;
 
+    char abspath[PATH_MAX]; 
+
+    if (canon_path(path, abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_chmod> op;
-    op = new pending_chmod(this, client_id, status, path, mode);
+    op = new pending_chmod(this, client_id, status, std::string(abspath), mode);
 
     if (op->try_op())
     {
@@ -1129,7 +1138,7 @@ client :: chmod(const char* path, mode_t mode, wtf_client_returncode* status)
 }
 
 int64_t
-client :: mkdir(const char* path, mode_t mode)
+client :: mkdir(const char* path, mode_t mode, wtf_client_returncode* status)
 {
 	TRACE;
 
@@ -1140,7 +1149,21 @@ client :: mkdir(const char* path, mode_t mode)
         return -1;
     }
 
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_mkdir> op;
+    op = new pending_mkdir(this, client_id, status, std::string(abspath), mode);
 
+    if (op->try_op())
+    {
+        return client_id;
+    }
+    else
+    {
+        return -1;
+    }
+
+/*
+    XXX
     hyperdex_client_returncode status;
     int64_t ret = -1;
     struct hyperdex_client_attribute attr[2];
@@ -1168,6 +1191,7 @@ client :: mkdir(const char* path, mode_t mode)
     {
         return 0;
     }
+    */
 }
 
 int64_t 
@@ -1186,7 +1210,7 @@ client :: closedir(int fd)
 }
 
 int64_t 
-client :: readdir(int fd, char* path, char** entry) 
+client :: readdir(int fd, char* path, char** entry, wtf_client_returncode* status) 
 {
 	TRACE;
 
@@ -1266,6 +1290,7 @@ client :: ls(const char* path)
 }
 
 /* HYPERDEX */
+/*
 int64_t
 client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
 {
@@ -1358,7 +1383,6 @@ client :: update_file_metadata(e::intrusive_ptr<file> f,
 
     typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
 
-    /* construct the attributes for the new metadata */
     uint64_t mode = f->mode;
     uint64_t directory = f->is_directory;
     std::auto_ptr<e::buffer> blockmap_update = f->serialize_blockmap();
@@ -1379,7 +1403,6 @@ client :: update_file_metadata(e::intrusive_ptr<file> f,
     update_attr[2].value_sz = blockmap_update->size();
     update_attr[2].datatype = HYPERDATATYPE_STRING;
 
-    /* construct the attributes for the cond_put condition */
     struct hyperdex_client_attribute_check cond_attr;
 
     cond_attr.attr = "blockmap";
@@ -1451,6 +1474,7 @@ client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *sta
 
     return ret;
 }
+*/
 
 /*
 XXX: make sure new inner_loop logic makes this unnecessary.
@@ -1621,7 +1645,7 @@ client :: read_sync(int64_t fd, char* buf,
 }
 
 void
-client :: add_hyperdex_op(int64_t reqid, pending* pending_op)
+client :: add_hyperdex_op(int64_t reqid, pending_aggregation* pending_op)
 {
     server_id HYPERDEX = server_id(m_hyperdex_client.poll_fd());
     e::intrusive_ptr<pending_aggregation> op = pending_op;

@@ -99,7 +99,7 @@ class client
         int64_t lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* status);
         void begin_tx();
         int64_t end_tx();
-        int64_t mkdir(const char* path, mode_t mode); 
+        int64_t mkdir(const char* path, mode_t mode, wtf_client_returncode* status); 
         int64_t chmod(const char* path, mode_t mode, wtf_client_returncode* status); 
         int64_t write(int64_t fd,
                       const char* buf,
@@ -115,7 +115,7 @@ class client
         int64_t truncate(int fd, off_t length);
         int64_t opendir(const char* path);
         int64_t closedir(int fd);
-        int64_t readdir(int fd, char* entry);
+        int64_t readdir(int fd, char* path, char** entry, wtf_client_returncode* status);
         const char* error_message();
         const char* error_location();
         void set_error_message(const char* msg);

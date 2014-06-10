@@ -237,7 +237,7 @@ WTF_API int64_t wtf_client_mkdir(wtf_client* _cl,
             const char* path, mode_t mode, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->mkdir(path, mode);
+        return cl->mkdir(path, mode, status);
     );
 
 }
@@ -319,10 +319,10 @@ WTF_API int64_t wtf_client_closedir(wtf_client* _cl,
 }
 
 WTF_API int64_t wtf_client_readdir(wtf_client* _cl, 
-            int64_t fd, char* entry, wtf_client_returncode* status)
+            int64_t fd, char* path, char** entry, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->readdir(fd, entry);
+        return cl->readdir(fd, path, entry, status);
     );
 
 }

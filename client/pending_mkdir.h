@@ -25,8 +25,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_client_pending_chmod_h_
-#define wtf_client_pending_chmod_h_
+#ifndef wtf_client_pending_mkdir_h_
+#define wtf_client_pending_mkdir_h_
 
 // STL
 #include <map>
@@ -37,13 +37,13 @@
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-class pending_chmod : public pending_aggregation
+class pending_mkdir : public pending_aggregation
 {
     public:
-        pending_chmod(client* cl, int64_t client_visible_id,
+        pending_mkdir(client* cl, int64_t client_visible_id,
                           wtf_client_returncode* status,
                           std::string path, mode_t mode);
-        virtual ~pending_chmod() throw ();
+        virtual ~pending_mkdir() throw ();
 
     // return to client
     public:
@@ -74,8 +74,8 @@ class pending_chmod : public pending_aggregation
 
     // noncopyable
     private:
-        pending_chmod(const pending_chmod& other);
-        pending_chmod& operator = (const pending_chmod& rhs);
+        pending_mkdir(const pending_mkdir& other);
+        pending_mkdir& operator = (const pending_mkdir& rhs);
 
     private:
         client* m_cl;
@@ -86,4 +86,4 @@ class pending_chmod : public pending_aggregation
 
 }
 
-#endif // wtf_client_pending_chmod_h_
+#endif // wtf_client_pending_mkdir_h_
