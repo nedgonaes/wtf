@@ -41,7 +41,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
 class message_hyperdex_del : public message
 {
     public:
-        message_hyperdex_del(const char* space,
+        message_hyperdex_del(client* cl, const char* space,
             const char* key);
         virtual ~message_hyperdex_del() throw ();
 

@@ -41,13 +41,13 @@ namespace wtf __attribute__ ((visibility("hidden")))
 class message_hyperdex_get : public message
 {
     public:
-        message_hyperdex_get(const char* space,
-            const char* key, size_t key_sz);
+        message_hyperdex_get(client* cl, const char* space,
+            const char* key);
         virtual ~message_hyperdex_get() throw ();
 
     public:
         int64_t send();
-        hyperdex_client_attribute* attrs() { return m_attrs; }
+        const hyperdex_client_attribute* attrs() { return m_attrs; }
         size_t attrs_sz() { return m_attrs_size; }
         hyperdex_client_returncode status() { return m_status; }
         int64_t reqid() { return m_reqid; }
@@ -66,10 +66,11 @@ class message_hyperdex_get : public message
 
     // operation state
     private:
+        client* m_cl;
         std::string m_space;
         std::string m_key;
         hyperdex_client_returncode m_status;
-        hyperdex_client_attribute* m_attrs;
+        const hyperdex_client_attribute* m_attrs;
         size_t m_attrs_size;
         int64_t m_reqid;
 };

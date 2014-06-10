@@ -57,11 +57,11 @@
 //wtf
 #include <wtf/client.h>
 #include "common/configuration.h"
+#include "common/network_msgtype.h"
 #include "common/coordinator_link.h"
 #include "common/ids.h"
 #include "common/block.h"
 #include "common/mapper.h"
-#include "client/pending.h"
 #include "client/pending_aggregation.h"
 #include "client/file.h"
 #include "common/block_location.h"
@@ -100,7 +100,7 @@ class client
         void begin_tx();
         int64_t end_tx();
         int64_t mkdir(const char* path, mode_t mode); 
-        int64_t chmod(const char* path, mode_t mode); 
+        int64_t chmod(const char* path, mode_t mode, wtf_client_returncode* status); 
         int64_t write(int64_t fd,
                       const char* buf,
                       size_t* buf_sz,
@@ -129,26 +129,32 @@ class client
                      char* data,
                      size_t *data_sz,
                      wtf_client_returncode* status);
+        int hyperdex_fd() { return m_hyperdex_client.poll_fd(); }
     private:
         struct pending_server_pair
         {
             pending_server_pair()
                 : si(), op() {}
             pending_server_pair(const server_id& s,
-                                const e::intrusive_ptr<pending>& o)
+                                const e::intrusive_ptr<pending_aggregation>& o)
                 : si(s), op(o) {}
             ~pending_server_pair() throw () {}
             server_id si;
-            e::intrusive_ptr<pending> op;
+            e::intrusive_ptr<pending_aggregation> op;
         };
 
         friend class pending_read;
+        friend class pending_chmod;
         friend class pending_write;
         friend class pending_readdir;
         friend class pending_rename;
+        friend class message_hyperdex_get;
+        friend class message_hyperdex_search;
+        friend class message_hyperdex_put;
+        friend class message_hyperdex_del;
         friend class rereplicate;
         typedef std::map<uint64_t, pending_server_pair> pending_map_t;
-        typedef std::map<uint64_t, e::intrusive_ptr<pending> > yieldable_map_t;
+        typedef std::map<uint64_t, e::intrusive_ptr<pending_aggregation> > yieldable_map_t;
         typedef std::list<pending_server_pair> pending_queue_t;
         typedef std::map<uint64_t, e::intrusive_ptr<file> > file_map_t;
 
@@ -158,7 +164,7 @@ class client
                   const server_id& to,
                   uint64_t nonce,
                   std::auto_ptr<e::buffer> msg,
-                  e::intrusive_ptr<pending> op,
+                  e::intrusive_ptr<pending_aggregation> op,
                   wtf_client_returncode* status);
 
         int64_t perform_aggregation(const std::vector<server_id>& servers,
@@ -212,7 +218,7 @@ class client
                                      wtf_client_returncode* status);
         int64_t get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create);
         hyperdex_client_returncode hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status);
-        void add_hyperdex_op(int64_t reqid, pending* pending_op);
+        void add_hyperdex_op(int64_t reqid, pending_aggregation* pending_op);
 
     private:
         wtf::coordinator_link m_coord;
@@ -226,8 +232,8 @@ class client
         pending_map_t m_pending_hyperdex_ops;
         pending_queue_t m_failed;
         yieldable_map_t m_yieldable;
-        e::intrusive_ptr<pending> m_yielding;
-        e::intrusive_ptr<pending> m_yielded;
+        e::intrusive_ptr<pending_aggregation> m_yielding;
+        e::intrusive_ptr<pending_aggregation> m_yielded;
         e::error m_last_error;
         hyperdex::Client m_hyperdex_client;
         uint64_t m_next_fileno;

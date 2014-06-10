@@ -25,20 +25,16 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_client_message_hyperdex_search_h_
-#define wtf_client_message_hyperdex_search_h_
-
 #include "client/message_hyperdex_search.h"
 
 using wtf::message_hyperdex_search;
 
-message_hyperdex_search :: message_hyperdex_search(wtf_client* cl,
+message_hyperdex_search :: message_hyperdex_search(client* cl,
                                              const char* space,
                                              const char* name,
                                              const char* regex)
-    : message(cl, OPCODE_HYPERDEX_GET, cl->m_hyperdex_client->poll_fd()) 
+    : message(cl, OPCODE_HYPERDEX_SEARCH) 
     , m_space(space)
-    , m_key(name)
     , m_regex(regex)
     , m_status(HYPERDEX_CLIENT_GARBAGE)
     , m_attrs(NULL)
@@ -58,21 +54,15 @@ message_hyperdex_search :: send()
     check.datatype = HYPERDATATYPE_STRING;
     check.predicate = HYPERPREDICATE_REGEX;
 
-    hyperdex::Client* hc = m_cl->m_hyperdex_client;
+    hyperdex::Client* hc = &m_cl->m_hyperdex_client;
 
     //XXX: begin transaction here
-    int64_t reqid = hc->search("wtf", 
+    m_reqid = hc->search("wtf", 
                                &check, 
                                1, 
                                &m_status, 
                                &m_attrs,
-                               &m_attrs_sz);
-
-    if (ret < 0)
-    {
-        PENDING_ERROR(IO) << "Couldn't delete from HyperDex";
-        return false;
-    }
+                               &m_attrs_size);
 
     return m_reqid;
 }

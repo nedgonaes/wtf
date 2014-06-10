@@ -32,9 +32,11 @@ using wtf::pending_aggregation;
 
 pending_aggregation :: pending_aggregation(uint64_t id,
                                            wtf_client_returncode* status)
-    : pending(id, status)
-    , m_outstanding_wtf()
+    : m_outstanding_wtf()
     , m_outstanding_hyperdex()
+    , m_client_visible_id(id)
+    , m_status(status)
+    , m_error()
 {
 }
 
@@ -133,4 +135,17 @@ pending_aggregation :: remove_hyperdex_message(int64_t reqid)
         m_outstanding_hyperdex.pop_back();
         return;
     }
+}
+
+std::ostream&
+pending_aggregation :: error(const char* file, size_t line)
+{
+    m_error.set_loc(file, line);
+    return m_error.set_msg();
+}
+
+void
+pending_aggregation :: set_error(const e::error& err)
+{
+    m_error = err;
 }

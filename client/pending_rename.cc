@@ -95,7 +95,7 @@ pending_rename :: handle_hyperdex_message(client* cl,
 }
 
 typedef struct hyperdex_ds_arena* arena_t;
-typedef struct hyperdex_client_attribute* attr_t;
+typedef const struct hyperdex_client_attribute* attr_t;
 
 attr_t 
 change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst)
@@ -105,10 +105,10 @@ change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst)
 }
 
 bool
-pending_rename :: send_put(std::string& dst, hyperdex_client_attribute* attrs, size_t attrs_sz)
+pending_rename :: send_put(std::string& dst, const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put("wtf", dst.c_str(), attrs, attrs_sz);
+        new message_hyperdex_put(m_cl, "wtf", dst.c_str(), attrs, attrs_sz);
 
     if (msg->send() < 0)
     {
@@ -144,7 +144,7 @@ pending_rename :: handle_search(client* cl,
     {
         e::intrusive_ptr<message_hyperdex_search> msg = 
             dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
-        hyperdex_client_attribute* search_attrs = msg->attrs();
+        const hyperdex_client_attribute* search_attrs = msg->attrs();
         size_t sz = msg->attrs_sz();
 
 
@@ -200,7 +200,7 @@ pending_rename :: handle_put_and_delete(client* cl,
 bool
 pending_rename :: send_del(std::string& src)
 {
-    e::intrusive_ptr<message_hyperdex_del> msg = new message_hyperdex_del("wtf", src.c_str());
+    e::intrusive_ptr<message_hyperdex_del> msg = new message_hyperdex_del(m_cl, "wtf", src.c_str());
 
     if (msg->send() < 0)
     {
@@ -224,7 +224,7 @@ pending_rename :: try_op()
 
 
     e::intrusive_ptr<message_hyperdex_search> msg = 
-        new message_hyperdex_search("wtf", "path", regex.c_str());
+        new message_hyperdex_search(m_cl, "wtf", "path", regex.c_str());
    
     if (msg->send() < 0)
     {

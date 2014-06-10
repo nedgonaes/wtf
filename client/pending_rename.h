@@ -74,9 +74,9 @@ class pending_rename : public pending_aggregation
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
-        bool try_op();
+        virtual bool try_op();
 
-    friend class e::intrusive_ptr<pending>;
+    friend class e::intrusive_ptr<pending_aggregation>;
 
     // noncopyable
     private:
@@ -84,7 +84,7 @@ class pending_rename : public pending_aggregation
         pending_rename& operator = (const pending_rename& rhs);
 
     private:
-        bool send_put(std::string& dst, hyperdex_client_attribute* attrs, size_t attrs_sz);
+        bool send_put(std::string& dst, const hyperdex_client_attribute* attrs, size_t attrs_sz);
         bool send_del(std::string& src);
 
     private:

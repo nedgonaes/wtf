@@ -28,22 +28,15 @@
 #ifndef wtf_client_pending_h_
 #define wtf_client_pending_h_
 
-// STL
-#include <memory>
-
 // e
 #include <e/error.h>
-#include <e/intrusive_ptr.h>
 
 //WTF  
-#include <wtf/client.h>
-#include "common/configuration.h"
-#include "common/ids.h"
-#include "common/network_msgtype.h"
+#include "client/client.h"
+#include "client/message.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-class client;
     
 class pending
 {
@@ -64,13 +57,20 @@ class pending
 
     // events
     public:
-        virtual void handle_sent_to(const server_id& si) = 0;
-        virtual void handle_failure(const server_id& si) = 0;
-        virtual bool handle_message(client* cl,
+        virtual bool try_op() = 0;
+        virtual void handle_sent_to_wtf(const server_id& si) = 0;
+        virtual void handle_sent_to_hyperdex(e::intrusive_ptr<message>& msg) = 0;
+        virtual void handle_failure_wtf(const server_id& si) = 0;
+        virtual void handle_failure_hyperdex(int64_t reqid) = 0;
+        virtual bool handle_wtf_message(client* cl,
                                     const server_id& si,
-                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* error) = 0;
+        virtual bool handle_hyperdex_message(client* cl,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error) = 0;
 

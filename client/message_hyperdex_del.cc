@@ -25,19 +25,14 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_client_message_hyperdex_del_h_
-#define wtf_client_message_hyperdex_del_h_
-
 #include "client/message_hyperdex_del.h"
 
 using wtf::message_hyperdex_del;
 
-message_hyperdex_del :: message_hyperdex_del(wtf_client* cl,
+message_hyperdex_del :: message_hyperdex_del(client* cl,
                                              const char* space,
-                                             const char* key,
-                                             hyperdex_client_attribute* attrs
-                                             size_t attrs_sz)
-    : message(cl, OPCODE_HYPERDEX_GET, cl->m_hyperdex_client->poll_fd()) 
+                                             const char* key)
+    : message(cl, OPCODE_HYPERDEX_DEL) 
     , m_space(space)
     , m_key(key)
     , m_status(HYPERDEX_CLIENT_GARBAGE)
@@ -48,7 +43,7 @@ message_hyperdex_del :: message_hyperdex_del(wtf_client* cl,
 int64_t
 message_hyperdex_del :: send()
 {
-    hyperdex::Client* hc = m_cl->m_hyperdex_client;
+    hyperdex::Client* hc = &m_cl->m_hyperdex_client;
     m_reqid = hc->del(m_space.c_str(), m_key.data(), m_key.size(),
             &m_status);
     return m_reqid;

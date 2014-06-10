@@ -41,15 +41,16 @@ namespace wtf __attribute__ ((visibility("hidden")))
 class message_hyperdex_put : public message
 {
     public:
-        message_hyperdex_put(const char* space,
+        message_hyperdex_put(client* cl,
+            const char* space,
             const char* key,
-            hyperdex_client_attribute* attrs, 
+            const hyperdex_client_attribute* attrs, 
             size_t attrs_sz);
         virtual ~message_hyperdex_put() throw ();
 
     public:
         int64_t send();
-        hyperdex_client_attribute* attrs() { return m_attrs; }
+        const hyperdex_client_attribute* attrs() { return m_attrs; }
         size_t attrs_sz() { return m_attrs_size; }
         hyperdex_client_returncode status() { return m_status; }
         int64_t reqid() { return m_reqid; }
@@ -71,7 +72,7 @@ class message_hyperdex_put : public message
         std::string m_space;
         std::string m_key;
         hyperdex_client_returncode m_status;
-        hyperdex_client_attribute* m_attrs;
+        const hyperdex_client_attribute* m_attrs;
         size_t m_attrs_size;
         int64_t m_reqid;
 };

@@ -53,6 +53,7 @@
 #include "client/pending_del.h"
 #include "client/pending_read.h"
 #include "client/pending_rename.h"
+#include "client/pending_chmod.h"
 #include "visibility.h"
 
 #define ERROR(CODE) \
@@ -186,7 +187,7 @@ client :: perform_aggregation(const std::vector<server_id>& servers,
                               wtf_client_returncode* status)
 {
 	TRACE;
-    e::intrusive_ptr<pending> op(_op.get());
+    e::intrusive_ptr<pending_aggregation> op(_op.get());
 
     for (size_t i = 0; i < servers.size(); ++i)
     {
@@ -208,7 +209,7 @@ client :: send(wtf_network_msgtype mt,
                const server_id& to,
                uint64_t nonce,
                std::auto_ptr<e::buffer> msg,
-               e::intrusive_ptr<pending> op,
+               e::intrusive_ptr<pending_aggregation> op,
                wtf_client_returncode* status)
 {
 	TRACE;
@@ -223,7 +224,7 @@ client :: send(wtf_network_msgtype mt,
     switch (rc)
     {
         case BUSYBEE_SUCCESS:
-            op->handle_sent_to(to);
+            op->handle_sent_to_wtf(to);
             m_pending_ops.insert(std::make_pair(nonce, pending_server_pair(to, op)));
             return true;
         case BUSYBEE_DISRUPTED:
@@ -329,8 +330,8 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         else if (!m_failed.empty())
         {
             const pending_server_pair& psp(m_failed.front());
-            e::intrusive_ptr<pending> op = psp.op;
-            op->handle_failure(psp.si);
+            e::intrusive_ptr<pending_aggregation> op = psp.op;
+            op->handle_wtf_failure(psp.si);
             
             if (wait_for > 0 && wait_for != op->client_visible_id())
             {
@@ -444,16 +445,11 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             }
 
             const pending_server_pair psp(it->second);
-            e::intrusive_ptr<pending> op = psp.op;
+            e::intrusive_ptr<pending_aggregation> op = psp.op;
             m_pending_hyperdex_ops.erase(it);
 
-            wtf_network_msgtype msg_type = HYPERDEX_RESPONSE;
-            msg.reset(e::buffer::create(sizeof(reqid) + sizeof(uint64_t)));
-            *msg << reqid << (int)hstatus;
-            e::unpacker up = msg->unpack_from(0);
-
-            if (!op->handle_message(this, id, msg_type, 
-                                    msg, up, status, &m_last_error))
+            if (!op->handle_hyperdex_message(this, reqid, hstatus,
+                                    status, &m_last_error))
             {
                 return -1;
             }
@@ -493,7 +489,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         }
 
         const pending_server_pair psp(it->second);
-        e::intrusive_ptr<pending> op = psp.op;
+        e::intrusive_ptr<pending_aggregation> op = psp.op;
         m_pending_ops.erase(it);
 
         if (msg_type == CONFIGMISMATCH)
@@ -505,7 +501,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         if (id == psp.si &&
             m_coord.config()->exists(id))
         {
-            if (!op->handle_message(this, id, msg_type, 
+            if (!op->handle_wtf_message(this, id, 
                                     msg, up, status, &m_last_error))
             {
                 return -1;
@@ -600,26 +596,17 @@ client :: unlink(const char* path, wtf_client_returncode* status)
     std::vector<std::string> files = ls(abspath);
 
     int64_t client_id = m_next_client_id++;
-    e::intrusive_ptr<pending> op;
-    op = new pending_del(client_id, status);
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_del(this, client_id, status);
 
-    for (std::vector<std::string>::iterator it = files.begin();
-        it != files.end(); ++it)
+    if (op->try_op())
     {
-        int64_t ret = m_hyperdex_client.del("wtf", it->c_str(), it->size(), &hstatus);
-
-        if (ret < 0)
-        {
-            ERROR(IO) << "Couldn't delete from HyperDex";
-            return -1;
-        }
-
-        pending_server_pair psp(server_id(m_hyperdex_client.poll_fd()), op);
-        op->handle_sent_to(server_id(m_hyperdex_client.poll_fd()));
-        m_pending_hyperdex_ops.insert(std::make_pair(ret,psp));
+        return client_id;
     }
-
-    return client_id;
+    else
+    {
+        return -1;
+    }
 }
 
 int64_t
@@ -1123,32 +1110,22 @@ client :: chdir(char* path)
 }
 
 int64_t
-client :: chmod(const char* path, mode_t mode)
+client :: chmod(const char* path, mode_t mode, wtf_client_returncode* status)
 {
 	TRACE;
-    hyperdex_client_returncode status;
-    int64_t ret = -1;
-    uint64_t val = mode;
-    struct hyperdex_client_attribute attr;
-    attr.attr = "mode";
-    attr.value = (const char*)&val;
-    attr.value_sz = sizeof(val);
-    attr.datatype = HYPERDATATYPE_INT64;
 
- 
-    ret = m_hyperdex_client.put("wtf", path, strlen(path), &attr, 1, &status);
-    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
-    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_chmod> op;
+    op = new pending_chmod(this, client_id, status, path, mode);
 
-    if (res != HYPERDEX_CLIENT_SUCCESS)
+    if (op->try_op())
     {
-        return -1;
+        return client_id;
     }
     else
     {
-        return 0;
+        return -1;
     }
-
 }
 
 int64_t
@@ -1647,7 +1624,7 @@ void
 client :: add_hyperdex_op(int64_t reqid, pending* pending_op)
 {
     server_id HYPERDEX = server_id(m_hyperdex_client.poll_fd());
-    e::intrusive_ptr<pending> op = pending_op;
+    e::intrusive_ptr<pending_aggregation> op = pending_op;
     pending_server_pair psp(HYPERDEX, op);
     m_pending_hyperdex_ops.insert(std::make_pair(ret, psp));
 }

@@ -53,13 +53,10 @@ class message
 {
     public:
         message(client* cl,
-                wtf_opcode oc, 
-                server_id sid,
-                int64_t reqid) 
+                wtf_opcode oc)
             : m_oc(oc) 
             , m_cl(cl)
-            , m_sid(sid)
-            , m_reqid(reqid) {};
+            , m_reqid(0) {};
         virtual ~message() throw ();
         wtf_opcode opcode() { return m_oc; }
         int64_t reqid() { return m_reqid; }
@@ -77,10 +74,9 @@ class message
         message& operator = (const message& rhs);
 
     // operation state
-    private:
+    protected:
         client* m_cl;
         wtf_opcode m_oc;
-        server_id m_sid;
         int64_t m_reqid;
 };
 

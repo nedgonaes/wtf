@@ -90,7 +90,7 @@ pending_readdir :: handle_hyperdex_message(client* cl,
     {
         e::intrusive_ptr<message_hyperdex_search> msg = 
             dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
-        hyperdex_client_attribute* attrs = msg->attrs();
+        const hyperdex_client_attribute* attrs = msg->attrs();
         size_t sz = msg->attrs_sz();
 
         for (int i = 0; i < sz; ++i)
@@ -113,7 +113,7 @@ pending_readdir :: try_op()
     regex += m_path;
 
 
-    e::intrusive_ptr<message_hyperdex_search> msg = new message_hyperdex_search("wtf", "path", regex.c_str());
+    e::intrusive_ptr<message_hyperdex_search> msg = new message_hyperdex_search(m_cl, "wtf", "path", regex.c_str());
    
     if (msg->send() < 0)
     {

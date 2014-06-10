@@ -246,7 +246,7 @@ WTF_API int64_t wtf_client_chmod(wtf_client* _cl,
             const char* path, mode_t mode, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->chmod(path, mode);
+        return cl->chmod(path, mode, status);
     );
 
 }

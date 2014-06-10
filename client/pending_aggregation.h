@@ -32,17 +32,14 @@
 #include <utility>
 #include <vector>
 
-// E
-#include <e/intrusive_ptr.h>
-
-// WTF
-#include "client/pending.h"
+//WTF
+#include "client/client.h"
 #include "client/message.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
 
-class pending_aggregation : public pending
+class pending_aggregation
 {
     public:
         pending_aggregation(uint64_t client_visible_id,
@@ -53,6 +50,14 @@ class pending_aggregation : public pending
     // subclasses for this to work
     public:
         bool aggregation_done();
+        int64_t client_visible_id() const { return m_client_visible_id; }
+        void set_status(wtf_client_returncode status) { *m_status = status; }
+        e::error error() const { return m_error; }
+
+    // return to client
+    public:
+        virtual bool can_yield() = 0;
+        virtual bool yield(wtf_client_returncode* status, e::error* error) = 0;
 
     // events
     public:
@@ -74,9 +79,19 @@ class pending_aggregation : public pending
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
+        virtual bool try_op();
+
     // refcount
     protected:
         friend class e::intrusive_ptr<pending_aggregation>;
+        void inc() { ++m_ref; }
+        void dec() { if (--m_ref == 0) delete this; }
+        size_t m_ref;
+
+    protected:
+        std::ostream& error(const char* file, size_t line);
+        void set_error(const e::error& err);
+
 
     // noncopyable
     private:
@@ -90,7 +105,19 @@ class pending_aggregation : public pending
     protected:
         std::vector<server_id> m_outstanding_wtf;
         std::vector<e::intrusive_ptr<message> > m_outstanding_hyperdex;
+        uint64_t m_client_visible_id;
+        wtf_client_returncode* m_status;
+        e::error m_error;
 };
+
+#define PENDING_ERROR(CODE) \
+    this->set_status(WTF_CLIENT_ ## CODE); \
+    this->error(__FILE__, __LINE__)
+
+#define CLIENT_ERROR(CODE) \
+    this->set_status(CODE); \
+    this->set_error(cl->m_last_error)
+
 
 }
 

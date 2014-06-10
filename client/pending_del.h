@@ -40,7 +40,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
 class pending_del : public pending_aggregation
 {
     public:
-        pending_del(uint64_t client_visible_id,
+        pending_del(client* cl, uint64_t client_visible_id,
                           wtf_client_returncode* status);
         virtual ~pending_del() throw ();
 
@@ -51,17 +51,25 @@ class pending_del : public pending_aggregation
 
     // events
     public:
-        virtual void handle_sent_to(const server_id& si);
-        virtual void handle_failure(const server_id& si);
-        virtual bool handle_message(client*,
+        virtual void handle_sent_to_wtf(const server_id& si);
+        virtual void handle_sent_to_hyperdex(int64_t reqid);
+        virtual void handle_failure_wtf(const server_id& si);
+        virtual void handle_failure_hyperdex(int64_t reqid);
+
+        virtual bool handle_wtf_message(client*,
                                     const server_id& si,
-                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer> msg,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* error);
+        virtual bool handle_hyperdex_message(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
+        bool try_op();
 
-    friend class e::intrusive_ptr<pending>;
+   friend class e::intrusive_ptr<pending_aggregation>;
 
     // noncopyable
     private:
@@ -69,6 +77,7 @@ class pending_del : public pending_aggregation
         pending_del& operator = (const pending_del& rhs);
 
     private:
+        client* m_cl;
         bool m_done;
 };
 

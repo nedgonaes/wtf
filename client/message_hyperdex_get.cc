@@ -29,10 +29,10 @@
 
 using wtf::message_hyperdex_get;
 
-message_hyperdex_get :: message_hyperdex_get(wtf_client* cl,
+message_hyperdex_get :: message_hyperdex_get(client* cl,
                                              const char* space,
                                              const char* key)
-    : message(cl, OPCODE_HYPERDEX_GET, cl->m_hyperdex_client->poll_fd()) 
+    : message(cl, OPCODE_HYPERDEX_GET) 
     , m_space(space)
     , m_key(key)
     , m_status(HYPERDEX_CLIENT_GARBAGE)
@@ -45,8 +45,8 @@ message_hyperdex_get :: message_hyperdex_get(wtf_client* cl,
 int64_t
 message_hyperdex_get :: send()
 {
-    hyperdex::Client* hc = m_cl->m_hyperdex_client;
+    hyperdex::Client* hc = &m_cl->m_hyperdex_client;
     m_reqid = hc->get(m_space.c_str(), m_key.data(), m_key.size(),
-            &m_status, &m_attrs_size);
+            &m_status, &m_attrs, &m_attrs_size);
     return m_reqid;
 }

@@ -25,12 +25,11 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_client_pending_readdir_h_
-#define wtf_client_pending_readdir_h_
+#ifndef wtf_client_pending_chmod_h_
+#define wtf_client_pending_chmod_h_
 
 // STL
 #include <map>
-#include <vector>
 
 // WTF
 #include "client/pending_aggregation.h"
@@ -38,13 +37,13 @@
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-class pending_readdir : public pending_aggregation
+class pending_chmod : public pending_aggregation
 {
     public:
-        pending_readdir(client* cl, uint64_t client_visible_id,
+        pending_chmod(client* cl, uint64_t client_visible_id,
                           wtf_client_returncode* status,
-                          char* path, char** entry); 
-        virtual ~pending_readdir() throw ();
+                          std::string& path, mode_t mode);
+        virtual ~pending_chmod() throw ();
 
     // return to client
     public:
@@ -53,6 +52,11 @@ class pending_readdir : public pending_aggregation
 
     // events
     public:
+        virtual void handle_sent_to_wtf(const server_id& si);
+        virtual void handle_sent_to_hyperdex(int64_t reqid);
+        virtual void handle_wtf_failure(const server_id& si);
+        virtual void handle_hyperdex_failure(int64_t reqid);
+
         virtual bool handle_wtf_message(client*,
                                     const server_id& si,
                                     std::auto_ptr<e::buffer> msg,
@@ -66,20 +70,20 @@ class pending_readdir : public pending_aggregation
                                     e::error* error);
         bool try_op();
 
-    friend class e::intrusive_ptr<pending_aggregation>;
+   friend class e::intrusive_ptr<pending_aggregation>;
 
     // noncopyable
     private:
-        pending_readdir(const pending_readdir& other);
-        pending_readdir& operator = (const pending_readdir& rhs);
+        pending_chmod(const pending_chmod& other);
+        pending_chmod& operator = (const pending_chmod& rhs);
 
     private:
         client* m_cl;
-        char** m_entry;
-        std::vector<std::string> m_results;
         std::string m_path;
+        mode_t m_mode;
+        bool m_done;
 };
 
 }
 
-#endif // wtf_client_pending_readdir_h_
+#endif // wtf_client_pending_chmod_h_

@@ -67,33 +67,36 @@ pending_read :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_read :: handle_failure(const server_id& si)
+pending_read :: handle_wtf_failure(const server_id& si)
 {
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
                                << "/" << si;
-    return pending_aggregation::handle_failure(si);
+    return pending_aggregation::handle_wtf_failure(si);
+}
+
+bool 
+pending_read :: handle_hyperdex_message(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* error)
+{
+    return false;
 }
 
 bool
-pending_read :: handle_message(client* cl,
+pending_read :: handle_wtf_message(client* cl,
                                     const server_id& si,
-                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer>,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
+    bool handled = pending_aggregation::handle_wtf_message(cl, si, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
-
-    if (mt != RESP_GET)
-    {
-        PENDING_ERROR(SERVERERROR) << "server " <<  si << " responded to GET with " << mt;
-        return true;
-    }
 
     /* Put data in client's buffer. */
     uint64_t bi;

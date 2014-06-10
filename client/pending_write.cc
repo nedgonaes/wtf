@@ -67,23 +67,22 @@ pending_write :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_write :: handle_failure(const server_id& si)
+pending_write :: handle_wtf_failure(const server_id& si)
 {
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
                                << si;
-    return pending_aggregation::handle_failure(si);
+    return pending_aggregation::handle_wtf_failure(si);
 }
 
 bool
-pending_write :: handle_message(client* cl,
+pending_write :: handle_wtf_message(client* cl,
                                     const server_id& si,
-                                    wtf_network_msgtype mt,
                                     std::auto_ptr<e::buffer>,
                                     e::unpacker up,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
+    bool handled = pending_aggregation::handle_wtf_message(cl, si, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
     changeset_t::iterator it;
@@ -94,7 +93,7 @@ pending_write :: handle_message(client* cl,
      * If the response is successful, the operation is complete and we're done.  If not, we
      * should retry.
      */
-    if (mt == HYPERDEX_RESPONSE)
+    if (/*XXX mt == HYPERDEX_RESPONSE*/ true)
     {
         int rc;
         int64_t reqid = 0;
@@ -130,9 +129,9 @@ pending_write :: handle_message(client* cl,
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
 
-    if (mt != RESP_UPDATE)
+    if (/*XXX mt != RESP_UPDATE*/ true)
     {
-        PENDING_ERROR(SERVERERROR) << "server " << si << " responded to UPDATE with " << mt;
+        PENDING_ERROR(SERVERERROR) << "server " << si << " responded to UPDATE with "; //XXX << mt;
         return true;
     }
 
@@ -173,14 +172,14 @@ metadata_update:
         }
 
         client::pending_server_pair psp(server_id(cl->m_hyperdex_client.poll_fd()), this);
-        this->handle_sent_to(server_id(cl->m_hyperdex_client.poll_fd()));
+        this->handle_sent_to_wtf(server_id(cl->hyperdex_fd()));
         cl->m_pending_hyperdex_ops.insert(std::make_pair(reqid,psp));
 
         /*
          * Add the pending hyperdex op to our list to delay can_yeild from
          * returning true until after we hear back from hyperdex.
          */
-        this->handle_sent_to(server_id(cl->m_hyperdex_client.poll_fd()));
+        this->handle_sent_to_wtf(server_id(cl->hyperdex_fd()));
     }
 
     return true;

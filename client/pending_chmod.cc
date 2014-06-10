@@ -29,33 +29,37 @@
 #include <hyperdex/client.hpp>
 
 // WTF
-#include "client/pending_del.h"
+#include "client/pending_chmod.h"
 #include "common/response_returncode.h"
+#include "client/message_hyperdex_put.h"
 
-using wtf::pending_del;
+using wtf::pending_chmod;
 
-pending_del :: pending_del(client* cl, uint64_t client_visible_id, 
-                           wtf_client_returncode* status)
+pending_chmod :: pending_chmod(client* cl, uint64_t client_visible_id, 
+                           wtf_client_returncode* status, std::string& path,
+                           mode_t mode)
     : pending_aggregation(client_visible_id, status) 
     , m_cl(cl)
+    , m_path(path)
+    , m_mode(mode)
     , m_done(false)
 {
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
-pending_del :: ~pending_del() throw ()
+pending_chmod :: ~pending_chmod() throw ()
 {
 }
 
 bool
-pending_del :: can_yield()
+pending_chmod :: can_yield()
 {
     return this->aggregation_done() && !m_done;
 }
 
 bool
-pending_del :: yield(wtf_client_returncode* status, e::error* err)
+pending_chmod :: yield(wtf_client_returncode* status, e::error* err)
 {
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -65,26 +69,20 @@ pending_del :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 void
-pending_del :: handle_hyperdex_failure(int64_t reqid)
+pending_chmod :: handle_hyperdex_failure(int64_t reqid)
 {
     return pending_aggregation::handle_hyperdex_failure(reqid);
 }
 
 bool
-pending_del :: handle_message(client* cl,
-                                    const server_id& si,
-                                    wtf_network_msgtype mt,
-                                    std::auto_ptr<e::buffer>,
-                                    e::unpacker up,
+pending_chmod :: handle_hyperdex_message(client* cl,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
+    bool handled = pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     assert(handled);
-
-    int rc;
-    int64_t reqid = 0;
-    up = up >> reqid >> rc; 
 
     if (rc != HYPERDEX_CLIENT_SUCCESS)
     {
@@ -94,8 +92,27 @@ pending_del :: handle_message(client* cl,
     return true;
 }
 
-int64_t try_op()
+bool
+pending_chmod :: try_op()
 {
-    //XXX
-    return 0;
+    struct hyperdex_client_attribute attr;
+    attr.attr = "mode";
+    attr.value = (const char*)&m_mode;
+    attr.value_sz = sizeof(mode_t);
+    attr.datatype = HYPERDATATYPE_INT64;
+
+    e::intrusive_ptr<message_hyperdex_put> msg = 
+        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), &attr, 1);
+
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
+    }
+    else
+    {
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        pending_aggregation::handle_sent_to_hyperdex(m);
+    }
+    return true;
 }
