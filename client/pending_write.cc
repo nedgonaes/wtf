@@ -36,8 +36,11 @@
 using wtf::pending_write;
 
 pending_write :: pending_write(uint64_t id, e::intrusive_ptr<file> f,
-                                       wtf_client_returncode* status)
+                               const char* buf, size_t* buf_sz, 
+                               wtf_client_returncode* status)
     : pending_aggregation(id, status)
+    , m_buf(buf)
+    , m_buf_sz(buf_sz)
     , m_old_blockmap(f->serialize_blockmap())
     , m_file(f)
     , m_done(false)
@@ -85,37 +88,8 @@ pending_write :: handle_wtf_message(client* cl,
     bool handled = pending_aggregation::handle_wtf_message(cl, si, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
-    changeset_t::iterator it;
-    e::intrusive_ptr<block> bl;
-
-    /*
-     * If the response is from hyperdex, we can assume all daemon messages are finished.
-     * If the response is successful, the operation is complete and we're done.  If not, we
-     * should retry.
-     */
-    if (/*XXX mt == HYPERDEX_RESPONSE*/ true)
-    {
-        int rc;
-        int64_t reqid = 0;
-        up = up >> reqid >> rc; 
-
-        if (rc != HYPERDEX_CLIENT_SUCCESS)
-        {
-            if (rc == HYPERDEX_CLIENT_CMPFAIL)
-            {
-                cl->get_file_metadata(m_file->path().get(), m_file, false);
-                goto metadata_update;
-            }
-                
-            PENDING_ERROR(SERVERERROR) << "hyperdex returned " << rc;
-        }
-
-        return true;
-    }
-
     /* 
-     * If the respons isn't from hyperdex, we're still processing the daemon
-     * work.  We take those messages until the last one is received, then request to update
+     * We take these messages until the last one is received, then request to update
      * the metadata from hyperdex.
      */
 
@@ -128,12 +102,6 @@ pending_write :: handle_wtf_message(client* cl,
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
-
-    if (/*XXX mt != RESP_UPDATE*/ true)
-    {
-        PENDING_ERROR(SERVERERROR) << "server " << si << " responded to UPDATE with "; //XXX << mt;
-        return true;
-    }
 
     it = m_changeset.find(file_offset);
 
@@ -157,29 +125,127 @@ pending_write :: handle_wtf_message(client* cl,
            should be done atomically so that no other op
            can modify the metadata after we apply our changes
            but before we update hyperdex */ 
-metadata_update: 
-        m_file->apply_changeset(m_changeset);
+          send_metadata_update(); 
+   }
 
-        wtf_client_returncode cstatus;
+    return true;
+}
 
-        int64_t reqid = cl->update_file_metadata(m_file, 
-                            reinterpret_cast<const char*>(m_old_blockmap->data()), 
-                            m_old_blockmap->size(), &cstatus);
-        if (reqid < 0)
+bool
+pending_write :: try_op()
+{
+    e::intrusive_ptr<message_hyperdex_get> msg =
+        new message_hyperdex_get(m_cl, "wtf", m_path.c_str());
+       
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
+    }
+    else
+    {
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        handle_sent_to_hyperdex(m);
+    }
+
+    return true;
+}
+
+pending_write :: handle_hyperdex_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer>,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
+{
+    //response from initial get
+    if (m_state == 0)
+    {
+
+        size_t rem = *m_buf_sz;
+        size_t next_buf_offset = 0;
+
+        while(rem > 0)
         {
-            CLIENT_ERROR(cstatus);
-            return true;
+            std::vector<block_location> bl;
+            size_t buf_offset = next_buf_offset;
+            uint32_t block_offset;
+            uint32_t block_capacity;
+            uint64_t file_offset;
+            size_t slice_len;
+            prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
+            e::slice data = e::slice(buf + buf_offset, slice_len);
+
+            for (size_t i = 0; i < bl.size(); ++i)
+            {
+                size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                    + sizeof(uint64_t) // bl.bi (remote block number) 
+                    + sizeof(uint32_t) // block_offset (remote block offset) 
+                    + sizeof(uint32_t) // block_capacity 
+                    + sizeof(uint64_t) // file_offset 
+                    + data.size();     // user data 
+                std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+                e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+                pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
+                pa.copy(data);
+
+                std::vector<server_id> servers;
+                servers.push_back(server_id(bl[i].si));
+
+                //SEND
+                perform_aggregation(servers, op, REQ_UPDATE, msg, status);
+            }
         }
 
-        client::pending_server_pair psp(server_id(cl->m_hyperdex_client.poll_fd()), this);
-        this->handle_sent_to_wtf(server_id(cl->hyperdex_fd()));
-        cl->m_pending_hyperdex_ops.insert(std::make_pair(reqid,psp));
+        m_state = 1;
+    }
+    //response from final metadata update
+    else
+    {
+    }
+}
 
-        /*
-         * Add the pending hyperdex op to our list to delay can_yeild from
-         * returning true until after we hear back from hyperdex.
-         */
-        this->handle_sent_to_wtf(server_id(cl->hyperdex_fd()));
+
+void
+pending_write :: prepare_write_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              std::vector<block_location>& bl,
+                              size_t& buf_offset,
+                              uint32_t& block_offset,
+                              uint32_t& block_capacity,
+                              uint64_t& file_offset,
+                              size_t& slice_len)
+{
+	TRACE;
+    f->copy_current_block_locations(bl);
+    m_coord.config()->assign_random_block_locations(bl);
+    block_offset = f->current_block_offset();
+    block_capacity = f->current_block_capacity();
+    file_offset = f->current_block_start();
+    slice_len = f->advance_to_end_of_block(rem);
+    buf_offset += slice_len;
+    rem -= slice_len;
+}
+
+void
+pending_write :: send_metadata_update()
+{
+    m_file->apply_changeset(m_changeset);
+    //XXX set attrs and attrs_sz to file metadata with new changes
+    // see update_file_metadata in client.cc
+
+    e::intrusive_ptr<message_hyperdex_put> msg = 
+        new message_hyperdex_put(m_cl, "wtf", dst.c_str(), attrs, attrs_sz);
+
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
+    }
+    else
+    {
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        pending_aggregation::handle_sent_to_hyperdex(m);
     }
 
     return true;

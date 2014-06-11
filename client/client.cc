@@ -721,68 +721,9 @@ client :: write(int64_t fd, const char* buf,
     e::intrusive_ptr<pending_aggregation> op;
     op = new pending_write(client_id, f, status);
     f->add_pending_op(client_id);
-
-    size_t rem = *buf_sz;
-    size_t next_buf_offset = 0;
-
-    while(rem > 0)
-    {
-        std::vector<block_location> bl;
-        size_t buf_offset = next_buf_offset;
-        uint32_t block_offset;
-        uint32_t block_capacity;
-        uint64_t file_offset;
-        size_t slice_len;
-        prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
-        e::slice data = e::slice(buf + buf_offset, slice_len);
-
-        for (size_t i = 0; i < bl.size(); ++i)
-        {
-            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                + sizeof(uint64_t) // bl.bi (remote block number) 
-                + sizeof(uint32_t) // block_offset (remote block offset) 
-                + sizeof(uint32_t) // block_capacity 
-                + sizeof(uint64_t) // file_offset 
-                + data.size();     // user data 
-            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-                pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
-            pa.copy(data);
-
-            if (!maintain_coord_connection(status))
-            {
-                return -1;
-            }
-
-            std::vector<server_id> servers;
-            servers.push_back(server_id(bl[i].si));
-            perform_aggregation(servers, op, REQ_UPDATE, msg, status);
-        }
-    }
-
     return client_id;
 }
 
-void
-client :: prepare_write_op(e::intrusive_ptr<file> f, 
-                              size_t& rem, 
-                              std::vector<block_location>& bl,
-                              size_t& buf_offset,
-                              uint32_t& block_offset,
-                              uint32_t& block_capacity,
-                              uint64_t& file_offset,
-                              size_t& slice_len)
-{
-	TRACE;
-    f->copy_current_block_locations(bl);
-    m_coord.config()->assign_random_block_locations(bl);
-    block_offset = f->current_block_offset();
-    block_capacity = f->current_block_capacity();
-    file_offset = f->current_block_start();
-    slice_len = f->advance_to_end_of_block(rem);
-    buf_offset += slice_len;
-    rem -= slice_len;
-}
 
 int64_t
 client :: read(int64_t fd, char* buf,
@@ -1650,5 +1591,5 @@ client :: add_hyperdex_op(int64_t reqid, pending_aggregation* pending_op)
     server_id HYPERDEX = server_id(m_hyperdex_client.poll_fd());
     e::intrusive_ptr<pending_aggregation> op = pending_op;
     pending_server_pair psp(HYPERDEX, op);
-    m_pending_hyperdex_ops.insert(std::make_pair(ret, psp));
+    m_pending_hyperdex_ops.insert(std::make_pair(reqid, psp));
 }

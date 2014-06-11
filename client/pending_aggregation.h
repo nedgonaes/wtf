@@ -38,6 +38,13 @@
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
+class pending_rename;
+class pending_chmod;
+class pending_del;
+class pending_write;
+class pending_read;
+class pending_readdir;
+class pending_mkdir;
 
 class pending_aggregation
 {
@@ -84,6 +91,13 @@ class pending_aggregation
     // refcount
     protected:
         friend class e::intrusive_ptr<pending_aggregation>;
+        friend class e::intrusive_ptr<pending_rename>;
+        friend class e::intrusive_ptr<pending_chmod>;
+        friend class e::intrusive_ptr<pending_del>;
+        friend class e::intrusive_ptr<pending_write>;
+        friend class e::intrusive_ptr<pending_read>;
+        friend class e::intrusive_ptr<pending_readdir>;
+        friend class e::intrusive_ptr<pending_mkdir>;
         void inc() { ++m_ref; }
         void dec() { if (--m_ref == 0) delete this; }
         size_t m_ref;
