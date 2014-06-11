@@ -206,6 +206,27 @@ client :: perform_aggregation(const std::vector<server_id>& servers,
     return op->client_visible_id();
 }
 
+void
+client :: prepare_write_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              std::vector<block_location>& bl,
+                              size_t& buf_offset,
+                              uint32_t& block_offset,
+                              uint32_t& block_capacity,
+                              uint64_t& file_offset,
+                              size_t& slice_len)
+{
+    f->copy_current_block_locations(bl);
+    m_coord.config()->assign_random_block_locations(bl);
+    block_offset = f->current_block_offset();
+    block_capacity = f->current_block_capacity();
+    file_offset = f->current_block_start();
+    slice_len = f->advance_to_end_of_block(rem);
+    buf_offset += slice_len;
+    rem -= slice_len;
+}
+
+
 bool
 client :: send(wtf_network_msgtype mt,
                const server_id& to,
@@ -703,10 +724,6 @@ client :: write(int64_t fd, const char* buf,
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
-    get_file_metadata(f->path().get(), f, false);
-    
-    std::cerr << "at position " << f->offset() << std::endl;
-
     /* The op object here is created once and a reference to it
      * is inserted into the m_pending list for each send operation,
      * which is called from perform_aggregation.  The pending_aggregation
@@ -719,7 +736,7 @@ client :: write(int64_t fd, const char* buf,
     
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_aggregation> op;
-    op = new pending_write(client_id, f, status);
+    op = new pending_write(this, client_id, f, buf, buf_sz, status);
     f->add_pending_op(client_id);
     return client_id;
 }
@@ -731,7 +748,7 @@ client :: read(int64_t fd, char* buf,
                    wtf_client_returncode* status)
 {
 	TRACE;
-    if (m_fds.find(fd) == m_fds.end())
+/*    if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
@@ -741,16 +758,6 @@ client :: read(int64_t fd, char* buf,
 
     get_file_metadata(f->path().get(), f, false);
 
-    /* The op object here is created once and a reference to it
-     * is inserted into the m_pending list for each send operation,
-     * which is called from perform_aggregation.  The pending_aggregation
-     * also has an internal list of server_ids it is waiting to hear back
-     * from, which is also appended to for each send op. As servers return
-     * acknowledgements, items are removed from both lists.  When the last
-     * server_id is removed from the list inside the op, it will be marked
-     * as can_yield, which will cause the loop() operation to return the
-     * client_id of the op. */
-    
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_read> op;
     op = new pending_read(client_id, status, buf, buf_sz);
@@ -782,6 +789,8 @@ client :: read(int64_t fd, char* buf,
     }
 
     return client_id;
+    */
+    return 0;
 }
 
 void
@@ -992,6 +1001,7 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa)
 int64_t
 client :: chdir(char* path)
 {
+    /*
 	TRACE;
     char abspath[PATH_MAX]; 
     if (canon_path(path, abspath, PATH_MAX) != 0)
@@ -1049,6 +1059,7 @@ client :: chdir(char* path)
     }
     
     m_cwd = abspath;
+    */
     return 0;
 }
 

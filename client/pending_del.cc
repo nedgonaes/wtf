@@ -71,20 +71,14 @@ pending_del :: handle_hyperdex_failure(int64_t reqid)
 }
 
 bool
-pending_del :: handle_message(client* cl,
-                                    const server_id& si,
-                                    wtf_network_msgtype mt,
-                                    std::auto_ptr<e::buffer>,
-                                    e::unpacker up,
+pending_del :: handle_hyperdex_message(client* cl,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    bool handled = pending_aggregation::handle_message(cl, si, mt, std::auto_ptr<e::buffer>(), up, status, err);
+    bool handled = pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     assert(handled);
-
-    int rc;
-    int64_t reqid = 0;
-    up = up >> reqid >> rc; 
 
     if (rc != HYPERDEX_CLIENT_SUCCESS)
     {

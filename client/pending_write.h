@@ -34,14 +34,16 @@
 // WTF
 #include "client/pending_aggregation.h"
 #include "client/file.h"
+#include "client/client.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
 class pending_write : public pending_aggregation
 {
     public:
-        pending_write(uint64_t client_visible_id, e::intrusive_ptr<file> f,
-                          wtf_client_returncode* status);
+        pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
+                               const char* buf, size_t* buf_sz, 
+                               wtf_client_returncode* status);
         virtual ~pending_write() throw ();
 
     // return to client
@@ -66,6 +68,7 @@ class pending_write : public pending_aggregation
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
+        virtual bool try_op();
 
     // noncopyable
     private:
@@ -74,10 +77,26 @@ class pending_write : public pending_aggregation
         typedef std::map<uint64_t, e::intrusive_ptr<block> > changeset_t;
 
     private:
+        void send_metadata_update();
+        void prepare_write_op(e::intrusive_ptr<file> f, 
+                              size_t& rem, 
+                              std::vector<block_location>& bl,
+                              size_t& buf_offset,
+                              uint32_t& block_offset,
+                              uint32_t& block_capacity,
+                              uint64_t& file_offset,
+                              size_t& slice_len);
+
+    private:
+        client* m_cl;
+        const char* m_buf;
+        const size_t* m_buf_sz;
         e::intrusive_ptr<file> m_file;
+        std::string m_path;
         std::auto_ptr<e::buffer> m_old_blockmap;
         changeset_t m_changeset;
         bool m_done;
+        int m_state;
 };
 
 }

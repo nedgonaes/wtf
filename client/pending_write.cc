@@ -29,21 +29,27 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "client/constants.h"
 #include "client/client.h"
+#include "common/block.h"
 #include "client/pending_write.h"
 #include "common/response_returncode.h"
+#include "client/message_hyperdex_get.h"
+#include "client/message_hyperdex_put.h"
 
 using wtf::pending_write;
 
-pending_write :: pending_write(uint64_t id, e::intrusive_ptr<file> f,
+pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
                                const char* buf, size_t* buf_sz, 
                                wtf_client_returncode* status)
     : pending_aggregation(id, status)
+    , m_cl(cl)
     , m_buf(buf)
     , m_buf_sz(buf_sz)
     , m_old_blockmap(f->serialize_blockmap())
     , m_file(f)
     , m_done(false)
+    , m_state(0)
 {
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
@@ -97,13 +103,14 @@ pending_write :: handle_wtf_message(client* cl,
     uint64_t file_offset;
     uint32_t block_capacity;
     uint64_t block_length;
+    e::intrusive_ptr<block> bl;
     response_returncode rc;
     up = up >> rc >> bi >> file_offset >> block_capacity >> block_length;
 
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
 
-    it = m_changeset.find(file_offset);
+    changeset_t::iterator it = m_changeset.find(file_offset);
 
     if (it == m_changeset.end())
     {
@@ -135,7 +142,7 @@ bool
 pending_write :: try_op()
 {
     e::intrusive_ptr<message_hyperdex_get> msg =
-        new message_hyperdex_get(m_cl, "wtf", m_path.c_str());
+        new message_hyperdex_get(m_cl, "wtf", m_file->path().get());
        
     if (msg->send() < 0)
     {
@@ -151,10 +158,10 @@ pending_write :: try_op()
     return true;
 }
 
+bool
 pending_write :: handle_hyperdex_message(client* cl,
-                                    const server_id& si,
-                                    std::auto_ptr<e::buffer>,
-                                    e::unpacker up,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
@@ -173,8 +180,8 @@ pending_write :: handle_hyperdex_message(client* cl,
             uint32_t block_capacity;
             uint64_t file_offset;
             size_t slice_len;
-            prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
-            e::slice data = e::slice(buf + buf_offset, slice_len);
+            m_cl->prepare_write_op(m_file, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
+            e::slice data = e::slice(m_buf + buf_offset, slice_len);
 
             for (size_t i = 0; i < bl.size(); ++i)
             {
@@ -193,7 +200,7 @@ pending_write :: handle_hyperdex_message(client* cl,
                 servers.push_back(server_id(bl[i].si));
 
                 //SEND
-                perform_aggregation(servers, op, REQ_UPDATE, msg, status);
+                m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, status);
             }
         }
 
@@ -207,35 +214,17 @@ pending_write :: handle_hyperdex_message(client* cl,
 
 
 void
-pending_write :: prepare_write_op(e::intrusive_ptr<file> f, 
-                              size_t& rem, 
-                              std::vector<block_location>& bl,
-                              size_t& buf_offset,
-                              uint32_t& block_offset,
-                              uint32_t& block_capacity,
-                              uint64_t& file_offset,
-                              size_t& slice_len)
-{
-	TRACE;
-    f->copy_current_block_locations(bl);
-    m_coord.config()->assign_random_block_locations(bl);
-    block_offset = f->current_block_offset();
-    block_capacity = f->current_block_capacity();
-    file_offset = f->current_block_start();
-    slice_len = f->advance_to_end_of_block(rem);
-    buf_offset += slice_len;
-    rem -= slice_len;
-}
-
-void
 pending_write :: send_metadata_update()
 {
     m_file->apply_changeset(m_changeset);
     //XXX set attrs and attrs_sz to file metadata with new changes
     // see update_file_metadata in client.cc
 
+    hyperdex_client_attribute* attrs = NULL; 
+    size_t attrs_sz;
+
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", dst.c_str(), attrs, attrs_sz);
+        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), attrs, attrs_sz);
 
     if (msg->send() < 0)
     {
@@ -247,6 +236,4 @@ pending_write :: send_metadata_update()
         e::intrusive_ptr<message> m = msg.get();
         pending_aggregation::handle_sent_to_hyperdex(m);
     }
-
-    return true;
 }

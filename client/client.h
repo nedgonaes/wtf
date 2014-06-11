@@ -148,6 +148,7 @@ class client
         friend class pending_write;
         friend class pending_readdir;
         friend class pending_rename;
+        friend class pending_mkdir;
         friend class message_hyperdex_get;
         friend class message_hyperdex_search;
         friend class message_hyperdex_put;

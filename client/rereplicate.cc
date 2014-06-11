@@ -145,7 +145,7 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
 
                 // Write block
                 reqid = wc->m_next_client_id++;
-                e::intrusive_ptr<pending_aggregation> write_op = new pending_write(reqid, f, &w_status);
+                e::intrusive_ptr<pending_aggregation> write_op = new pending_write(wc, reqid, f, buf, &buf_sz, &w_status);
                 pending_write* write_op_downcasted = static_cast<pending_write*>(write_op.get());
                 uint32_t block_capacity = 4096;
                 uint64_t file_offset = it->second->offset();
