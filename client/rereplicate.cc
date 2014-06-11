@@ -69,7 +69,8 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
     e::intrusive_ptr<wtf::file> f = new wtf::file(path, 0, CHUNKSIZE);
     while (true)
     {
-        ret = wc->get_file_metadata(f->path().get(), f, false);
+        //XXX
+        //ret = wc->get_file_metadata(f->path().get(), f, false);
 
         if (ret < 0)
         {
@@ -209,7 +210,8 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
                     bl->add_replica(*location_set_it);
                 }
                 f->apply_changeset(write_op_downcasted->m_changeset);
-                wc->update_file_metadata(f, reinterpret_cast<const char*>(old_blockmap->data()), old_blockmap->size(), &w_status);
+                //XXX
+                //wc->update_file_metadata(f, reinterpret_cast<const char*>(old_blockmap->data()), old_blockmap->size(), &w_status);
 
                 // Re-replicate one block, commit, and repeat
                 break;

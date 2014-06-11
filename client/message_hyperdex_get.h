@@ -43,7 +43,7 @@ class message_hyperdex_get : public message
     public:
         message_hyperdex_get(client* cl, const char* space,
             const char* key);
-        virtual ~message_hyperdex_get() throw ();
+        virtual ~message_hyperdex_get() throw (); 
 
     public:
         int64_t send();
@@ -66,13 +66,11 @@ class message_hyperdex_get : public message
 
     // operation state
     private:
-        client* m_cl;
         std::string m_space;
         std::string m_key;
         hyperdex_client_returncode m_status;
         const hyperdex_client_attribute* m_attrs;
         size_t m_attrs_size;
-        int64_t m_reqid;
 };
 
 }

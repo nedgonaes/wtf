@@ -57,7 +57,7 @@ class message
             : m_oc(oc) 
             , m_cl(cl)
             , m_reqid(0) {};
-        virtual ~message() throw ();
+        virtual ~message() throw () {};
         wtf_opcode opcode() { return m_oc; }
         int64_t reqid() { return m_reqid; }
 

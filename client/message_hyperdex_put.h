@@ -74,7 +74,6 @@ class message_hyperdex_put : public message
         hyperdex_client_returncode m_status;
         const hyperdex_client_attribute* m_attrs;
         size_t m_attrs_size;
-        int64_t m_reqid;
 };
 
 }

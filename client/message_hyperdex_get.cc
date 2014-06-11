@@ -38,7 +38,10 @@ message_hyperdex_get :: message_hyperdex_get(client* cl,
     , m_status(HYPERDEX_CLIENT_GARBAGE)
     , m_attrs(NULL)
     , m_attrs_size(0)
-    , m_reqid(0)
+{
+}
+
+message_hyperdex_get :: ~message_hyperdex_get() throw()
 {
 }
 

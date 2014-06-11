@@ -40,7 +40,10 @@ message_hyperdex_put :: message_hyperdex_put(client* cl,
     , m_status(HYPERDEX_CLIENT_GARBAGE)
     , m_attrs(attrs)
     , m_attrs_size(attrs_sz)
-    , m_reqid(0)
+{
+}
+
+message_hyperdex_put :: ~message_hyperdex_put() throw()
 {
 }
 

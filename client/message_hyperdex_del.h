@@ -67,7 +67,6 @@ class message_hyperdex_del : public message
         std::string m_space;
         std::string m_key;
         hyperdex_client_returncode m_status;
-        int64_t m_reqid;
 };
 
 }

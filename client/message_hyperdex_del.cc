@@ -36,7 +36,10 @@ message_hyperdex_del :: message_hyperdex_del(client* cl,
     , m_space(space)
     , m_key(key)
     , m_status(HYPERDEX_CLIENT_GARBAGE)
-    , m_reqid(0)
+{
+}
+
+message_hyperdex_del :: ~message_hyperdex_del() throw()
 {
 }
 
