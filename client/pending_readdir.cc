@@ -71,6 +71,28 @@ pending_readdir :: yield(wtf_client_returncode* status, e::error* err)
     return true;
 }
 
+void
+pending_readdir :: handle_hyperdex_failure(int64_t reqid)
+{
+    return pending_aggregation::handle_hyperdex_failure(reqid);
+}
+
+void
+pending_readdir :: handle_wtf_failure(const server_id& sid)
+{
+    pending_aggregation::handle_wtf_failure(sid);
+}
+
+bool
+pending_readdir :: handle_wtf_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer> msg,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* error)
+{
+}
+
 bool
 pending_readdir :: handle_hyperdex_message(client* cl,
                                     int64_t reqid,

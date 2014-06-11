@@ -149,3 +149,8 @@ pending_aggregation :: set_error(const e::error& err)
 {
     m_error = err;
 }
+
+bool
+pending_aggregation :: try_op()
+{
+}

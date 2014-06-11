@@ -94,6 +94,16 @@ pending_rename :: handle_hyperdex_message(client* cl,
     }
 }
 
+bool
+pending_rename :: handle_wtf_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer> msg,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* error)
+{
+}
+ 
 typedef struct hyperdex_ds_arena* arena_t;
 typedef const struct hyperdex_client_attribute* attr_t;
 
@@ -214,6 +224,30 @@ pending_rename :: send_del(std::string& src)
     }
 
     return true;
+}
+
+void
+pending_rename :: handle_sent_to_hyperdex(e::intrusive_ptr<message> msg)
+{
+    pending_aggregation::handle_sent_to_hyperdex(msg);
+}
+
+void
+pending_rename :: handle_sent_to_wtf(const server_id& sid)
+{
+    pending_aggregation::handle_sent_to_wtf(sid);
+}
+
+void
+pending_rename :: handle_hyperdex_failure(int64_t reqid)
+{
+    return pending_aggregation::handle_hyperdex_failure(reqid);
+}
+
+void
+pending_rename :: handle_wtf_failure(const server_id& sid)
+{
+    pending_aggregation::handle_wtf_failure(sid);
 }
 
 bool

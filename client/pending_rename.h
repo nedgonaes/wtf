@@ -53,6 +53,11 @@ class pending_rename : public pending_aggregation
 
     // events
     public:
+        virtual void handle_sent_to_wtf(const server_id& si);
+        virtual void handle_sent_to_hyperdex(e::intrusive_ptr<message> msg);
+        virtual void handle_wtf_failure(const server_id& si);
+        virtual void handle_hyperdex_failure(int64_t reqid);
+
         virtual bool handle_wtf_message(client*,
                                     const server_id& si,
                                     std::auto_ptr<e::buffer> msg,
