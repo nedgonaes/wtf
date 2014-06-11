@@ -56,6 +56,8 @@
 #include "client/pending_rename.h"
 #include "client/pending_chmod.h"
 #include "client/pending_mkdir.h"
+#include "client/pending_creat.h"
+#include "client/pending_open.h"
 #include "visibility.h"
 
 #define ERROR(CODE) \
@@ -561,12 +563,16 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 }
 
 int64_t
-client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size)
+client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size,
+               int64_t* fd, wtf_client_returncode* status)
 {
 	TRACE;
-    wtf_client_returncode lstatus;
-    wtf_client_returncode* status = &lstatus;
 
+    /* 
+    open will try to get metadata from hyperdex or create a new file object and put to
+    hyperdex.  It returns the operation ID, and when the operation is complete, the int64_t
+    pointed to by fd will be populated by a valid file descriptor for the file.
+    */
     int64_t client_id = m_next_client_id++;
 
     if (!maintain_coord_connection(status))
@@ -588,7 +594,8 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         m_fds[m_next_fileno] = f; 
         f->flags = flags;
         f->mode = mode;
-        e::intrusive_ptr<pending_create> op = new pending_create(this, 
+        e::intrusive_ptr<pending_creat> op = new pending_creat(this, client_id, status, f, fd);
+        return op->try_op();
     }
     else
     {
@@ -596,13 +603,9 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[m_next_fileno] = f; 
         f->flags = flags;
-        if (get_file_metadata(abspath, f, false) != 0)
-        {
-            return -1;
-        }
+        e::intrusive_ptr<pending_open> op = new pending_open(this, client_id, status, f, fd);
+        return op->try_op();
     }
-
-    return m_next_fileno++;
 }
 
 int64_t
@@ -981,12 +984,15 @@ client :: getcwd(char* c, size_t len)
 int64_t
 client :: getattr(const char* path, struct wtf_file_attrs* fa)
 {
+    /*
 	TRACE;
     wtf_client_returncode status;
+    wtf_client_returncode lstatus;
 
-    int64_t fd = open(path, O_RDONLY, 0, 0, 0);
+    int64_t fd = 0;
+    int64_t reqid = open(path, O_RDONLY, 0, 0, 0, &fd, &status);
 
-    if (fd < 0)
+    if (reqid < 0)
     {
         return -1;
     }
@@ -997,6 +1003,7 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa)
     fa->mode = f->mode;
     fa->flags = f->flags;
     close(fd, &status);
+    */
     return 0;
 }
 

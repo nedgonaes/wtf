@@ -98,7 +98,7 @@ extern "C"
             char* path, wtf_client_returncode* status);
     int64_t wtf_client_open(struct wtf_client* m_cl, 
             const char* path, int flags, mode_t mode, size_t num_replicas,
-            size_t block_size, wtf_client_returncode* status);
+            size_t block_size, int64_t* fd, wtf_client_returncode* status);
     int64_t wtf_client_unlink(struct wtf_client* m_cl, const char* path,
             wtf_client_returncode* status);
     int64_t wtf_client_rename(struct wtf_client* m_cl, const char* src,

@@ -25,8 +25,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef wtf_client_pending_creat_h_
-#define wtf_client_pending_creat_h_
+#ifndef wtf_client_pending_open_h_
+#define wtf_client_pending_open_h_
 
 // STL
 #include <map>
@@ -38,13 +38,13 @@
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-class pending_creat : public pending_aggregation
+class pending_open : public pending_aggregation
 {
     public:
-        pending_creat(client* cl, uint64_t client_visible_id,
+        pending_open(client* cl, uint64_t client_visible_id,
                           wtf_client_returncode* status,
                           e::intrusive_ptr<file> f, int64_t* fd); 
-        virtual ~pending_creat() throw ();
+        virtual ~pending_open() throw ();
 
     // return to client
     public:
@@ -70,8 +70,8 @@ class pending_creat : public pending_aggregation
 
     // noncopyable
     private:
-        pending_creat(const pending_creat& other);
-        pending_creat& operator = (const pending_creat& rhs);
+        pending_open(const pending_open& other);
+        pending_open& operator = (const pending_open& rhs);
 
     private:
         bool send_put(std::string& dst, const hyperdex_client_attribute* attrs, size_t attrs_sz);
@@ -85,4 +85,4 @@ class pending_creat : public pending_aggregation
 
 }
 
-#endif // wtf_client_pending_creat_h_
+#endif // wtf_client_pending_open_h_

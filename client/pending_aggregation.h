@@ -45,6 +45,8 @@ class pending_write;
 class pending_read;
 class pending_readdir;
 class pending_mkdir;
+class pending_creat;
+class pending_open;
 
 class pending_aggregation
 {
@@ -98,6 +100,8 @@ class pending_aggregation
         friend class e::intrusive_ptr<pending_read>;
         friend class e::intrusive_ptr<pending_readdir>;
         friend class e::intrusive_ptr<pending_mkdir>;
+        friend class e::intrusive_ptr<pending_creat>;
+        friend class e::intrusive_ptr<pending_open>;
         void inc() { ++m_ref; }
         void dec() { if (--m_ref == 0) delete this; }
         size_t m_ref;

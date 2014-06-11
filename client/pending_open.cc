@@ -30,16 +30,16 @@
 #include <hyperdex/client.hpp>
 
 // WTF
-#include "client/pending_creat.h"
+#include "client/pending_open.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_search.h"
 #include "client/message_hyperdex_put.h"
 #include "client/message_hyperdex_del.h"
 
-using wtf::pending_creat;
+using wtf::pending_open;
 using wtf::message_hyperdex_put;
 
-pending_creat :: pending_creat(client* cl, uint64_t client_visible_id, 
+pending_open :: pending_open(client* cl, uint64_t client_visible_id, 
                            wtf_client_returncode* status, e::intrusive_ptr<file> f,
                            int64_t* fd)
     : pending_aggregation(client_visible_id, status) 
@@ -52,18 +52,18 @@ pending_creat :: pending_creat(client* cl, uint64_t client_visible_id,
     set_error(e::error());
 }
 
-pending_creat :: ~pending_creat() throw ()
+pending_open :: ~pending_open() throw ()
 {
 }
 
 bool
-pending_creat :: can_yield()
+pending_open :: can_yield()
 {
     return this->aggregation_done() && !m_done;
 }
 
 bool
-pending_creat :: yield(wtf_client_returncode* status, e::error* err)
+pending_open :: yield(wtf_client_returncode* status, e::error* err)
 {
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
@@ -73,7 +73,7 @@ pending_creat :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 bool
-pending_creat :: handle_hyperdex_message(client* cl,
+pending_open :: handle_hyperdex_message(client* cl,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
@@ -86,7 +86,7 @@ typedef struct hyperdex_ds_arena* arena_t;
 typedef const struct hyperdex_client_attribute* attr_t;
 
 bool
-pending_creat :: send_put(std::string& path, const hyperdex_client_attribute* attrs, size_t attrs_sz)
+pending_open :: send_put(std::string& path, const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
     e::intrusive_ptr<message_hyperdex_put> msg = 
         new message_hyperdex_put(m_cl, "wtf", path.c_str(), attrs, attrs_sz);
@@ -106,7 +106,7 @@ pending_creat :: send_put(std::string& path, const hyperdex_client_attribute* at
 }
 
 bool
-pending_creat :: try_op()
+pending_open :: try_op()
 {
     int64_t ret = -1;
     int i = 0;

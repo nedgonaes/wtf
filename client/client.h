@@ -90,7 +90,7 @@ class client
         int64_t canon_path(const char* rel, char* abspath, size_t abspath_sz);
         int64_t getcwd(char* c, size_t len);
         int64_t chdir(char* path);
-        int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size);
+        int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size, int64_t* fd, wtf_client_returncode* status);
         int64_t unlink(const char* path, wtf_client_returncode* status);
         int64_t rename(const char* src, const char* dst, wtf_client_returncode* status);
         int64_t getattr(const char* path, struct wtf_file_attrs* fa);
@@ -149,6 +149,7 @@ class client
         friend class pending_readdir;
         friend class pending_rename;
         friend class pending_mkdir;
+        friend class pending_creat;
         friend class message_hyperdex_get;
         friend class message_hyperdex_search;
         friend class message_hyperdex_put;
