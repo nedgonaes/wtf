@@ -567,6 +567,8 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     wtf_client_returncode lstatus;
     wtf_client_returncode* status = &lstatus;
 
+    int64_t client_id = m_next_client_id++;
+
     if (!maintain_coord_connection(status))
     {
         return -1;
@@ -586,7 +588,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         m_fds[m_next_fileno] = f; 
         f->flags = flags;
         f->mode = mode;
-        put_file_metadata(f, status);
+        e::intrusive_ptr<pending_create> op = new pending_create(this, 
     }
     else
     {
