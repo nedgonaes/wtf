@@ -68,12 +68,6 @@ pending_mkdir :: yield(wtf_client_returncode* status, e::error* err)
     return true;
 }
 
-void
-pending_mkdir :: handle_hyperdex_failure(int64_t reqid)
-{
-    return pending_aggregation::handle_hyperdex_failure(reqid);
-}
-
 bool
 pending_mkdir :: handle_hyperdex_message(client* cl,
                                     int64_t reqid,

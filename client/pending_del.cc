@@ -88,7 +88,8 @@ pending_del :: handle_hyperdex_message(client* cl,
     return true;
 }
 
-int64_t try_op()
+bool
+pending_del :: try_op()
 {
     //XXX
     return 0;

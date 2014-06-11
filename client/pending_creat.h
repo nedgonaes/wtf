@@ -53,12 +53,6 @@ class pending_creat : public pending_aggregation
 
     // events
     public:
-        virtual bool handle_wtf_message(client*,
-                                    const server_id& si,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up,
-                                    wtf_client_returncode* status,
-                                    e::error* error);
         virtual bool handle_hyperdex_message(client*,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,

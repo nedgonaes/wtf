@@ -51,17 +51,7 @@ class pending_del : public pending_aggregation
 
     // events
     public:
-        virtual void handle_sent_to_wtf(const server_id& si);
-        virtual void handle_sent_to_hyperdex(int64_t reqid);
-        virtual void handle_wtf_failure(const server_id& si);
         virtual void handle_hyperdex_failure(int64_t reqid);
-
-        virtual bool handle_wtf_message(client*,
-                                    const server_id& si,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up,
-                                    wtf_client_returncode* status,
-                                    e::error* error);
         virtual bool handle_hyperdex_message(client*,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,
