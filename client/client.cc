@@ -1171,7 +1171,7 @@ client :: closedir(int fd)
 }
 
 int64_t 
-client :: readdir(int fd, char* path, char** entry, wtf_client_returncode* status) 
+client :: readdir(char* path, char** entry, wtf_client_returncode* status) 
 {
 	TRACE;
 

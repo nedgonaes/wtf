@@ -93,7 +93,7 @@ noinst_HEADERS += blockstore/disk.h
 noinst_HEADERS += visibility.h
 
 noinst_PROGRAMS += wtf-stat
-noinst_PROGRAMS += wtf-backup
+#noinst_PROGRAMS += wtf-backup
 
 bin_PROGRAMS += wtf
 
@@ -376,27 +376,27 @@ wtf_stat_SOURCES += tools/stat.cc
 wtf_stat_LDADD = libwtf-admin.la $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
 
 # wtf-backup (rereplicate file block)
-wtf_backup_SOURCES =
-wtf_backup_SOURCES += common/server.cc
-wtf_backup_SOURCES += common/ids.cc
-wtf_backup_SOURCES += common/block_location.cc
-wtf_backup_SOURCES += common/configuration.cc
-wtf_backup_SOURCES += common/mapper.cc
-wtf_backup_SOURCES += common/network_msgtype.cc
-wtf_backup_SOURCES += common/packing.cc
-wtf_backup_SOURCES += common/response_returncode.cc
-wtf_backup_SOURCES += common/block.cc
-wtf_backup_SOURCES += client/pending.cc
-wtf_backup_SOURCES += client/pending_aggregation.cc
-wtf_backup_SOURCES += client/pending_read.cc
-wtf_backup_SOURCES += client/pending_write.cc
-wtf_backup_SOURCES += common/coordinator_link.cc
-wtf_backup_SOURCES += client/file.cc
-wtf_backup_SOURCES += client/client.cc
-wtf_backup_SOURCES += client/rereplicate.cc
-wtf_backup_SOURCES += tools/backup.cc
-wtf_backup_LDADD = $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS)
-wtf_backup_CPPFLAGS = -I.
+#wtf_backup_SOURCES =
+#wtf_backup_SOURCES += common/server.cc
+#wtf_backup_SOURCES += common/ids.cc
+#wtf_backup_SOURCES += common/block_location.cc
+#wtf_backup_SOURCES += common/configuration.cc
+#wtf_backup_SOURCES += common/mapper.cc
+#wtf_backup_SOURCES += common/network_msgtype.cc
+#wtf_backup_SOURCES += common/packing.cc
+#wtf_backup_SOURCES += common/response_returncode.cc
+#wtf_backup_SOURCES += common/block.cc
+#wtf_backup_SOURCES += client/pending.cc
+#wtf_backup_SOURCES += client/pending_aggregation.cc
+#wtf_backup_SOURCES += client/pending_read.cc
+#wtf_backup_SOURCES += client/pending_write.cc
+#wtf_backup_SOURCES += common/coordinator_link.cc
+#wtf_backup_SOURCES += client/file.cc
+#wtf_backup_SOURCES += client/client.cc
+#wtf_backup_SOURCES += client/rereplicate.cc
+#wtf_backup_SOURCES += tools/backup.cc
+#wtf_backup_LDADD = $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) libwtf-client.la
+#wtf_backup_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
 ################################################################################
 ################################## bindings ####################################

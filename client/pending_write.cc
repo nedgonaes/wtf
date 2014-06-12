@@ -141,8 +141,9 @@ pending_write :: handle_wtf_message(client* cl,
 bool
 pending_write :: try_op()
 {
+    const char* path = m_file->path().get();
     e::intrusive_ptr<message_hyperdex_get> msg =
-        new message_hyperdex_get(m_cl, "wtf", m_file->path().get());
+        new message_hyperdex_get(m_cl, "wtf", path); 
        
     if (msg->send() < 0)
     {

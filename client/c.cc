@@ -300,29 +300,11 @@ WTF_API int64_t wtf_client_truncate(wtf_client* _cl,
 
 }
 
-WTF_API int64_t wtf_client_opendir(wtf_client* _cl, 
-            const char* path, wtf_client_returncode* status)
-{
-    C_WRAP_EXCEPT(
-        return cl->opendir(path);
-    );
-
-}
-
-WTF_API int64_t wtf_client_closedir(wtf_client* _cl, 
-            int64_t fd, wtf_client_returncode* status)
-{
-    C_WRAP_EXCEPT(
-        return cl->closedir(fd);
-    );
-
-}
-
 WTF_API int64_t wtf_client_readdir(wtf_client* _cl, 
-            int64_t fd, char* path, char** entry, wtf_client_returncode* status)
+            char* path, char** entry, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->readdir(fd, path, entry, status);
+        return cl->readdir(path, entry, status);
     );
 
 }

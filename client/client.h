@@ -115,7 +115,7 @@ class client
         int64_t truncate(int fd, off_t length);
         int64_t opendir(const char* path);
         int64_t closedir(int fd);
-        int64_t readdir(int fd, char* path, char** entry, wtf_client_returncode* status);
+        int64_t readdir(char* path, char** entry, wtf_client_returncode* status);
         const char* error_message();
         const char* error_location();
         void set_error_message(const char* msg);

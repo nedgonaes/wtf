@@ -63,8 +63,8 @@ class Client
         int64_t chdir(char* path, wtf_client_returncode* status)
             { return wtf_client_chdir(m_cl, path, status); }
         int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, 
-                     size_t block_length, wtf_client_returncode* status)
-            { return wtf_client_open(m_cl, path, flags, mode, num_replicas, block_length, status); }
+                     size_t block_length, int64_t* fd, wtf_client_returncode* status)
+            { return wtf_client_open(m_cl, path, flags, mode, num_replicas, block_length, fd, status); }
         int64_t unlink(const char* path, wtf_client_returncode* status)
             { return wtf_client_unlink(m_cl, path, status); }
         int64_t rename(const char* src, const char* dst, wtf_client_returncode* status)
@@ -100,12 +100,8 @@ class Client
             { return wtf_client_loop(m_cl, id, timeout, status); }
         int64_t truncate(int fd, size_t length, wtf_client_returncode* status)
             { return wtf_client_truncate(m_cl, fd, length, status); }
-        int64_t opendir(const char* path, wtf_client_returncode* status)
-            { return wtf_client_opendir(m_cl, path, status); }
-        int64_t closedir(int fd, wtf_client_returncode* status)
-            { return wtf_client_closedir(m_cl, fd, status); }
-        int64_t readdir(int fd, char* entry, wtf_client_returncode* status)
-            { return wtf_client_readdir(m_cl, fd, entry, status); }
+        int64_t readdir(char* path, char** entry, wtf_client_returncode* status)
+            { return wtf_client_readdir(m_cl, path, entry, status); }
 
         int64_t write_sync(int64_t fd,
                       const char* data,
