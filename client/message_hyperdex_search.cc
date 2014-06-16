@@ -25,6 +25,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include "common/macros.h"
 #include "client/message_hyperdex_search.h"
 
 using wtf::message_hyperdex_search;
@@ -40,15 +41,18 @@ message_hyperdex_search :: message_hyperdex_search(client* cl,
     , m_attrs(NULL)
     , m_attrs_size(0)
 {
+    TRACE;
 }
 
 message_hyperdex_search :: ~message_hyperdex_search() throw()
 {
+    TRACE;
 }
 
 int64_t
 message_hyperdex_search :: send()
 {
+    TRACE;
     struct hyperdex_client_attribute_check check;
 
     check.attr = m_name.c_str();

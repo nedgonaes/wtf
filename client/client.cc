@@ -732,16 +732,13 @@ client :: write(int64_t fd, const char* buf,
     
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_aggregation> op;
+
+	TRACE;
     op = new pending_write(this, client_id, f, buf, buf_sz, status);
     f->add_pending_op(client_id);
-    if (op->try_op())
-    {
-        return client_id;
-    }
-    else
-    {
-        return -1;
-    }
+    bool result = op->try_op();
+
+    return client_id;
 }
 
 

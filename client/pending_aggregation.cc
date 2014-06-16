@@ -172,4 +172,5 @@ bool
 pending_aggregation :: try_op()
 {
     TRACE;
+    return true;
 }

@@ -55,9 +55,6 @@ class message_hyperdex_search : public message
     // refcount
     protected:
         friend class e::intrusive_ptr<message_hyperdex_search>;
-        void inc() { ++m_ref; }
-        void dec() { if (--m_ref == 0) delete this; }
-        size_t m_ref;
 
     // noncopyable
     private:

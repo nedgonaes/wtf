@@ -29,6 +29,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "common/macros.h"
 #include "client/constants.h"
 #include "client/client.h"
 #include "common/block.h"
@@ -51,23 +52,27 @@ pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f
     , m_done(false)
     , m_state(0)
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_write :: ~pending_write() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_write :: can_yield()
 {
+    TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
 pending_write :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
@@ -78,6 +83,7 @@ pending_write :: yield(wtf_client_returncode* status, e::error* err)
 void
 pending_write :: handle_wtf_failure(const server_id& si)
 {
+    TRACE;
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
                                << si;
     return pending_aggregation::handle_wtf_failure(si);
@@ -141,6 +147,7 @@ pending_write :: handle_wtf_message(client* cl,
 bool
 pending_write :: try_op()
 {
+    TRACE;
     /* Get the file metadata from HyperDex */
     const char* path = m_file->path().get();
     e::intrusive_ptr<message_hyperdex_get> msg =
@@ -167,6 +174,8 @@ pending_write :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
+    pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     //response from initial get
     if (m_state == 0)
     {
@@ -207,6 +216,7 @@ pending_write :: handle_hyperdex_message(client* cl,
         }
 
         m_state = 1;
+        return true;
     }
     //response from final metadata update
     else
@@ -218,6 +228,7 @@ pending_write :: handle_hyperdex_message(client* cl,
 void
 pending_write :: send_metadata_update()
 {
+    TRACE;
     m_file->apply_changeset(m_changeset);
     //XXX set attrs and attrs_sz to file metadata with new changes
     // see update_file_metadata in client.cc

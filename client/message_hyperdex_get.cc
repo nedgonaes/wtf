@@ -26,6 +26,7 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "client/message_hyperdex_get.h"
+#include "common/macros.h"
 
 using wtf::message_hyperdex_get;
 
@@ -39,15 +40,18 @@ message_hyperdex_get :: message_hyperdex_get(client* cl,
     , m_attrs(NULL)
     , m_attrs_size(0)
 {
+    TRACE;
 }
 
 message_hyperdex_get :: ~message_hyperdex_get() throw()
 {
+    TRACE;
 }
 
 int64_t
 message_hyperdex_get :: send()
 {
+    TRACE;
     hyperdex::Client* hc = &m_cl->m_hyperdex_client;
     m_reqid = hc->get(m_space.c_str(), m_key.data(), m_key.size(),
             &m_status, &m_attrs, &m_attrs_size);

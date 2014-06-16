@@ -25,6 +25,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include "common/macros.h"
 #include "client/message_hyperdex_put.h"
 
 using wtf::message_hyperdex_put;
@@ -41,15 +42,18 @@ message_hyperdex_put :: message_hyperdex_put(client* cl,
     , m_attrs(attrs)
     , m_attrs_size(attrs_sz)
 {
+    TRACE;
 }
 
 message_hyperdex_put :: ~message_hyperdex_put() throw()
 {
+    TRACE;
 }
 
 int64_t
 message_hyperdex_put :: send()
 {
+    TRACE;
     hyperdex::Client* hc = &m_cl->m_hyperdex_client;
     m_reqid = hc->put(m_space.c_str(), m_key.data(), m_key.size(),
             m_attrs, m_attrs_size, &m_status);
