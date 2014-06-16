@@ -77,15 +77,6 @@
     _BUSYBEE_ERROR(BBRC); \
     return false;
 
-//#define TRACECALLS
-//#define LOG_METADATA
-
-#ifdef TRACECALLS
-#define TRACE std::cerr << __FILE__ << ":" << __func__ << std::endl
-#else
-#define TRACE
-#endif
-
 #ifdef LOG_METADATA 
 #define LOGMETADATA std::cerr << "MESSAGE: " << up.as_slice().hex() << std::endl
 #else

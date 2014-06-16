@@ -32,6 +32,10 @@
 #include <utility>
 #include <vector>
 
+// E
+#include <e/error.h>
+#include <e/intrusive_ptr.h>
+
 //WTF
 #include "client/client.h"
 #include "client/message.h"

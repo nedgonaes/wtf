@@ -36,4 +36,15 @@
 #define XCONCAT(x, y) x ## y
 #define CONCAT(x, y) XCONCAT(x, y)
 
+#define TRACECALLS
+//#define LOG_METADATA
+
+#ifdef TRACECALLS
+#define TRACE std::cerr << __FILE__ << ":" << __func__ << "(" \
+    << __LINE__ << ")" << std::endl
+#else
+#define TRACE
+#endif
+
+
 #endif // wtf_macros_h_

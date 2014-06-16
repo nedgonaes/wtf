@@ -121,15 +121,23 @@ worker_thread(const armnod::argparser& _f,
         {
             std::string v = val();
             wtf_client_returncode status = WTF_CLIENT_GARBAGE;
+            wtf_client_returncode lstatus = WTF_CLIENT_GARBAGE;
             std::string f = file();
+            int64_t fd;
+            int64_t reqid = -1;
             
             /* create a random file */
-            int64_t fd = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, _block_size, &status);
-            if (fd < 0)
+            reqid = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, _block_size, &fd, &status);
+            if (reqid < 0)
             {
                 WTF_TEST_FAIL(0, "failed to open file");
             }
 
+            reqid = cl.loop(reqid, -1, &lstatus);
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0, "failed to open file");
+            }
             
             mt19937 eng(get_random()); 
             uniform_int<size_t> write_distribution(_min_write, _max_write);
@@ -141,7 +149,6 @@ worker_thread(const armnod::argparser& _f,
 
             /* Write some stuff to the random file, in random size chunks. */
             size_t rem = v.size();
-            int64_t reqid = -1;
             size_t sz = 0;
             while (rem > 0)
             {
@@ -169,7 +176,7 @@ worker_thread(const armnod::argparser& _f,
             wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
 
             /* close the random file */
-            cl.close(fd, &rc);
+            reqid = cl.close(fd, &rc);
 
             if (reqid < 0)
             {
@@ -177,14 +184,31 @@ worker_thread(const armnod::argparser& _f,
                  
             }
 
+            reqid = cl.loop(reqid, -1, &status);
+
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0, "XXX");;
+
+            }
+
             /* open the file */
             char* dd = new char[v.size()];
-            fd = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &status);
+            reqid = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &fd, &status);
 
-            if (fd < 0)
+            if (reqid < 0)
             {
                 WTF_TEST_FAIL(0, "unable to open file " << f << cl.error_location() << ":" << cl.error_message());
             }
+
+            reqid = cl.loop(reqid, -1, &status);
+
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0, "XXX");;
+
+            }
+
 
             /* read the file in random size chunks. */
             rem = v.size();
@@ -228,7 +252,22 @@ worker_thread(const armnod::argparser& _f,
             }
 
             /* close the file */
-            cl.close(fd, &rc);
+            reqid = cl.close(fd, &rc);
+
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0, "XXX");;
+
+            }
+
+            reqid = cl.loop(reqid, -1, &status);
+
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0, reqid);;
+
+            }
+
 
             delete [] dd;
             

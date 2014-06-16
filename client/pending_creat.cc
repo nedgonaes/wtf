@@ -30,6 +30,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "common/macros.h"
 #include "client/pending_creat.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_search.h"
@@ -48,23 +49,27 @@ pending_creat :: pending_creat(client* cl, uint64_t client_visible_id,
     , m_fd(fd)
     , m_done(false)
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_creat :: ~pending_creat() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_creat :: can_yield()
 {
+    TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
 pending_creat :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
@@ -79,7 +84,9 @@ pending_creat :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+    TRACE;
 }
 
 typedef struct hyperdex_ds_arena* arena_t;
@@ -88,6 +95,7 @@ typedef const struct hyperdex_client_attribute* attr_t;
 bool
 pending_creat :: send_put(std::string& path, const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
+    TRACE;
     e::intrusive_ptr<message_hyperdex_put> msg = 
         new message_hyperdex_put(m_cl, "wtf", path.c_str(), attrs, attrs_sz);
 
@@ -108,6 +116,7 @@ pending_creat :: send_put(std::string& path, const hyperdex_client_attribute* at
 bool
 pending_creat :: try_op()
 {
+    TRACE;
     int64_t ret = -1;
     int i = 0;
 

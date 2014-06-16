@@ -54,7 +54,8 @@ class message
     public:
         message(client* cl,
                 wtf_opcode oc)
-            : m_oc(oc) 
+            : m_ref(0)
+            , m_oc(oc) 
             , m_cl(cl)
             , m_reqid(0) {};
         virtual ~message() throw () {};
