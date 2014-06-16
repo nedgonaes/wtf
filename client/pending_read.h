@@ -28,26 +28,31 @@
 #ifndef wtf_client_pending_read_h_
 #define wtf_client_pending_read_h_
 
-//STL
+// STL
 #include <map>
 
 // WTF
 #include "client/pending_aggregation.h"
+#include "client/file.h"
+#include "client/client.h"
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
 class pending_read : public pending_aggregation
 {
     public:
-        pending_read(uint64_t client_visible_id,
-                          wtf_client_returncode* status,
-                          char* buf, size_t* buf_sz);
+        pending_read(client* cl, uint64_t id, e::intrusive_ptr<file> f,
+                               char* buf, size_t* buf_sz, 
+                               wtf_client_returncode* status);
         virtual ~pending_read() throw ();
 
     // return to client
     public:
         virtual bool can_yield();
         virtual bool yield(wtf_client_returncode* status, e::error* error);
+
+    friend class file;
+    friend class rereplicate;
 
     // events
     public:
@@ -63,16 +68,16 @@ class pending_read : public pending_aggregation
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
-    protected:
-        friend class e::intrusive_ptr<pending_read>;
-    
-    //populate offset mapping
+        virtual bool try_op();
+
     public:
-        void set_offset(const uint64_t si,
-                        const uint64_t bi,
-                        const size_t buf_offset,   //offset in client buffer
-                        const size_t block_offset, //offset from start of block
-                        const size_t len);         //how many bytes to copy
+        void set_offset(const uint64_t si, const uint64_t bi, const size_t buf_offset,
+                   const size_t block_offset, const size_t len);
+
+    // noncopyable
+    private:
+        pending_read(const pending_read& other);
+        pending_read& operator = (const pending_read& rhs);
 
     private:
         struct buffer_block_len 
@@ -91,17 +96,16 @@ class pending_read : public pending_aggregation
 
         typedef std::map<std::pair<uint64_t, uint64_t>, struct buffer_block_len> offset_map_t;
 
-    // noncopyable
     private:
-        pending_read(const pending_read& other);
-        pending_read& operator = (const pending_read& rhs);
-
-    private:
+        client* m_cl;
         char* m_buf;
         size_t* m_buf_sz;
         size_t m_max_buf_sz;
         offset_map_t m_offset_map;
+        e::intrusive_ptr<file> m_file;
+        std::string m_path;
         bool m_done;
+        int m_state;
 };
 
 }

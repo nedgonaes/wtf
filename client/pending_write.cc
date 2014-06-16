@@ -141,6 +141,7 @@ pending_write :: handle_wtf_message(client* cl,
 bool
 pending_write :: try_op()
 {
+    /* Get the file metadata from HyperDex */
     const char* path = m_file->path().get();
     e::intrusive_ptr<message_hyperdex_get> msg =
         new message_hyperdex_get(m_cl, "wtf", path); 

@@ -743,7 +743,14 @@ client :: write(int64_t fd, const char* buf,
     e::intrusive_ptr<pending_aggregation> op;
     op = new pending_write(this, client_id, f, buf, buf_sz, status);
     f->add_pending_op(client_id);
-    return client_id;
+    if (op->try_op())
+    {
+        return client_id;
+    }
+    else
+    {
+        return -1;
+    }
 }
 
 
@@ -753,49 +760,39 @@ client :: read(int64_t fd, char* buf,
                    wtf_client_returncode* status)
 {
 	TRACE;
-/*    if (m_fds.find(fd) == m_fds.end())
+    if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
     }
 
+    std::cerr << "Reading " << *buf_sz << " bytes from file." << std::endl;
+
     e::intrusive_ptr<file> f = m_fds[fd];
 
-    get_file_metadata(f->path().get(), f, false);
-
+    /* The op object here is created once and a reference to it
+     * is inserted into the m_pending list for each send operation,
+     * which is called from perform_aggregation.  The pending_aggregation
+     * also has an internal list of server_ids it is waiting to hear back
+     * from, which is also appended to for each send op. As servers return
+     * acknowledgements, items are removed from both lists.  When the last
+     * server_id is removed from the list inside the op, it will be marked
+     * as can_yield, which will cause the loop() operation to return the
+     * client_id of the op. */
+    
     int64_t client_id = m_next_client_id++;
-    e::intrusive_ptr<pending_read> op;
-    op = new pending_read(client_id, status, buf, buf_sz);
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_read(this, client_id, f, buf, buf_sz, status);
     f->add_pending_op(client_id);
-
-    size_t rem = std::min(*buf_sz, f->bytes_left_in_file());
-    size_t buf_offset = 0;
-
-    *buf_sz = 0;
-
-    while(rem > 0)
+    if (op->try_op())
     {
-        block_location bl;
-        uint32_t block_length;
-        std::vector<server_id> servers;
-        prepare_read_op(f, rem, buf_offset, bl, block_length, op, servers);
-        size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                  + sizeof(uint64_t) // bl.bi (local block number) 
-                  + sizeof(uint32_t); //block_length
-        std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-        msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bl.bi << block_length;
-
-        if (!maintain_coord_connection(status))
-        {
-            return -1;
-        }
-
-        perform_aggregation(servers, op.get(), REQ_GET, msg, status);
+        return client_id;
     }
+    else
+    {
+        return -1;
+    }	
 
-    return client_id;
-    */
-    return 0;
 }
 
 void

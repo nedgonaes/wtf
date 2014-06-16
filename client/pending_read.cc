@@ -25,22 +25,32 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+//hyperdex
+#include <hyperdex/client.hpp>
+
 // WTF
+#include "client/constants.h"
+#include "client/client.h"
+#include "common/block.h"
 #include "client/pending_read.h"
 #include "common/response_returncode.h"
+#include "client/message_hyperdex_get.h"
+#include "client/message_hyperdex_put.h"
 
 using wtf::pending_read;
-using wtf::pending_aggregation;
 
-pending_read :: pending_read(uint64_t id,
-                             wtf_client_returncode* status,
-                             char* buf,
-                             size_t* buf_sz)
-    : m_buf(buf)
+pending_read :: pending_read(client* cl, uint64_t id, e::intrusive_ptr<file> f,
+                               char* buf, size_t* buf_sz, 
+                               wtf_client_returncode* status)
+    : pending_aggregation(id, status)
+    , m_cl(cl)
+    , m_buf(buf)
     , m_buf_sz(buf_sz)
     , m_max_buf_sz(*buf_sz)
-    , pending_aggregation(id, status)
+    , m_file(f)
     , m_done(false)
+    , m_state(0)
+    , m_offset_map()
 {
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
@@ -70,18 +80,8 @@ void
 pending_read :: handle_wtf_failure(const server_id& si)
 {
     PENDING_ERROR(RECONFIGURE) << "reconfiguration affecting "
-                               << "/" << si;
+                               << si;
     return pending_aggregation::handle_wtf_failure(si);
-}
-
-bool 
-pending_read :: handle_hyperdex_message(client*,
-                                    int64_t reqid,
-                                    hyperdex_client_returncode rc,
-                                    wtf_client_returncode* status,
-                                    e::error* error)
-{
-    return false;
 }
 
 bool
@@ -110,6 +110,66 @@ pending_read :: handle_wtf_message(client* cl,
     return true;
 }
 
+bool
+pending_read :: try_op()
+{
+    /* Get the file metadata from HyperDex */
+    const char* path = m_file->path().get();
+    e::intrusive_ptr<message_hyperdex_get> msg =
+        new message_hyperdex_get(m_cl, "wtf", path); 
+       
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't get from HyperDex: " << msg->status();
+    }
+    else
+    {
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        handle_sent_to_hyperdex(m);
+    }
+
+    return true;
+}
+
+bool
+pending_read :: handle_hyperdex_message(client* cl,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
+{
+    //response from initial get
+    if (m_state == 0)
+    {
+
+        size_t rem = std::min(*m_buf_sz, m_file->bytes_left_in_file());
+        size_t buf_offset = 0;
+        *m_buf_sz = 0;
+
+        while(rem > 0)
+        {
+            block_location bl;
+            uint32_t block_length;
+            std::vector<server_id> servers;
+            m_cl->prepare_read_op(m_file, rem, buf_offset, bl, block_length, this, servers);
+            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                + sizeof(uint64_t) // bl.bi (local block number) 
+                + sizeof(uint32_t); //block_length
+            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+            msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ) << bl.bi << block_length;
+
+            m_cl->perform_aggregation(servers, this, REQ_GET, msg, status);
+        }
+
+        m_state = 1;
+    }
+    //response from final metadata update
+    else
+    {
+    }
+}
+
 void 
 pending_read :: set_offset(const uint64_t si,
                 const uint64_t bi,
@@ -119,4 +179,3 @@ pending_read :: set_offset(const uint64_t si,
 {
     m_offset_map[std::make_pair(si, bi)] = buffer_block_len(buf_offset, block_offset, len);
 }
-

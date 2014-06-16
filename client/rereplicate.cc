@@ -117,7 +117,7 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
 
                 // Read block
                 reqid = wc->m_next_client_id++;
-                e::intrusive_ptr<pending_read> read_op = new pending_read(reqid, &w_status, buf, &buf_sz);
+                e::intrusive_ptr<pending_read> read_op = new pending_read(wc, reqid, f, buf, &buf_sz, &w_status);
 
                 size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                     + sizeof(uint64_t)  // local block number
