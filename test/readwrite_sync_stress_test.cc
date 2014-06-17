@@ -186,12 +186,6 @@ worker_thread(const armnod::argparser& _f,
 
             reqid = cl.loop(reqid, -1, &status);
 
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "XXX");;
-
-            }
-
             /* open the file */
             char* dd = new char[v.size()];
             reqid = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &fd, &status);
@@ -261,13 +255,6 @@ worker_thread(const armnod::argparser& _f,
             }
 
             reqid = cl.loop(reqid, -1, &status);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, reqid);;
-
-            }
-
 
             delete [] dd;
             

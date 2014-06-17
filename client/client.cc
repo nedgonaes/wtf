@@ -565,6 +565,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     pointed to by fd will be populated by a valid file descriptor for the file.
     */
     int64_t client_id = m_next_client_id++;
+    *fd= m_next_fileno++;
 
     if (!maintain_coord_connection(status))
     {
@@ -582,7 +583,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     {
         std::cerr << "Creating file " << abspath << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
-        m_fds[m_next_fileno] = f; 
+        m_fds[*fd] = f; 
         f->flags = flags;
         f->mode = mode;
         e::intrusive_ptr<pending_creat> op = new pending_creat(this, client_id, status, f, fd);
@@ -592,7 +593,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     {
         std::cerr << "Opening file " << abspath << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
-        m_fds[m_next_fileno] = f; 
+        m_fds[*fd] = f; 
         f->flags = flags;
         e::intrusive_ptr<pending_open> op = new pending_open(this, client_id, status, f, fd);
         return op->try_op();
@@ -712,11 +713,12 @@ client :: write(int64_t fd, const char* buf,
 	TRACE;
     if (m_fds.find(fd) == m_fds.end())
     {
+        std::cout << "fd " << fd << " is invalid." << std::endl;
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
     }
 
-    std::cerr << "Wrting " << *buf_sz << " bytes to file." << std::endl;
+    std::cerr << "Wrting " << *buf_sz << " bytes to file " << fd << std::endl;
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
@@ -731,7 +733,8 @@ client :: write(int64_t fd, const char* buf,
      * client_id of the op. */
     
     int64_t client_id = m_next_client_id++;
-    e::intrusive_ptr<pending_aggregation> op;
+    return client_id;
+    e::intrusive_ptr<pending_write> op;
 
 	TRACE;
     op = new pending_write(this, client_id, f, buf, buf_sz, status);
