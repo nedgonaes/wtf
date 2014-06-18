@@ -68,7 +68,8 @@ class pending_creat : public pending_aggregation
         pending_creat& operator = (const pending_creat& rhs);
 
     private:
-        bool send_put(std::string& dst, const hyperdex_client_attribute* attrs, size_t attrs_sz);
+        bool send_put(std::string& dst, struct hyperdex_ds_arena* arena, 
+            const hyperdex_client_attribute* attrs, size_t attrs_sz);
 
     private:
         client* m_cl;

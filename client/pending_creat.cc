@@ -90,14 +90,14 @@ pending_creat :: handle_hyperdex_message(client* cl,
 }
 
 typedef struct hyperdex_ds_arena* arena_t;
-typedef const struct hyperdex_client_attribute* attr_t;
+typedef struct hyperdex_client_attribute* attr_t;
 
 bool
-pending_creat :: send_put(std::string& path, const hyperdex_client_attribute* attrs, size_t attrs_sz)
+pending_creat :: send_put(std::string& path, arena_t arena, const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
     TRACE;
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", path.c_str(), attrs, attrs_sz);
+        new message_hyperdex_put(m_cl, "wtf", path.c_str(), arena, attrs, attrs_sz);
 
     if (msg->send() < 0)
     {
@@ -122,29 +122,36 @@ pending_creat :: try_op()
 
     hyperdex_client_returncode hstatus;
 
-    typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
-
+    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
     uint64_t mode = m_file->mode;
     uint64_t directory = m_file->is_directory;
-    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
-    struct hyperdex_client_attribute update_attr[3];
+    size_t sz;
 
-    update_attr[0].attr = "mode";
-    update_attr[0].value = (const char*)&mode;
-    update_attr[0].value_sz = sizeof(mode);
-    update_attr[0].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_returncode status;
+    arena_t arena = hyperdex_ds_arena_create();
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 3);
 
-    update_attr[1].attr = "directory";
-    update_attr[1].value = (const char*)&directory;
-    update_attr[1].value_sz = sizeof(directory);
-    update_attr[1].datatype = HYPERDATATYPE_INT64;
+    attrs[0].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "mode", 5,
+                            &status, &attrs[0].attr, &sz);
+    hyperdex_ds_copy_int(arena, mode, 
+                            &status, &attrs[0].value, &attrs[0].value_sz);
 
-    update_attr[2].attr = "blockmap";
-    update_attr[2].value = reinterpret_cast<const char*>(blockmap_update->data());
-    update_attr[2].value_sz = blockmap_update->size();
-    update_attr[2].datatype = HYPERDATATYPE_STRING;
+    attrs[1].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "directory", 10,
+                            &status, &attrs[1].attr, &sz);
+    hyperdex_ds_copy_int(arena, directory, 
+                            &status, &attrs[1].value, &attrs[1].value_sz);
 
-    const hyperdex_client_attribute* attrs = update_attr;
+    attrs[2].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "blockmap", 9,
+                            &status, &attrs[2].attr, &sz);
+    hyperdex_ds_copy_string(arena, 
+                            reinterpret_cast<const char*>(blockmap_update->data()), 
+                            blockmap_update->size(),
+                            &status, &attrs[2].value, &attrs[2].value_sz);
+
     std::string path(m_file->path().get()); 
-    return send_put(path, attrs, 3);
+
+    return send_put(path, arena, attrs, 3);
 }

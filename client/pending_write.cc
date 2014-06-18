@@ -224,6 +224,10 @@ pending_write :: handle_hyperdex_message(client* cl,
     }
 }
 
+ 
+typedef struct hyperdex_ds_arena* arena_t;
+typedef struct hyperdex_client_attribute* attr_t;
+
 
 void
 pending_write :: send_metadata_update()
@@ -233,11 +237,38 @@ pending_write :: send_metadata_update()
     //XXX set attrs and attrs_sz to file metadata with new changes
     // see update_file_metadata in client.cc
 
-    hyperdex_client_attribute* attrs = NULL; 
-    size_t attrs_sz;
+    size_t sz;
+
+    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
+    uint64_t mode = m_file->mode;
+    uint64_t directory = m_file->is_directory;
+
+    hyperdex_ds_returncode status;
+    arena_t arena = hyperdex_ds_arena_create();
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 3);
+
+    attrs[0].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "mode", 5,
+                            &status, &attrs[0].attr, &sz);
+    hyperdex_ds_copy_int(arena, mode, 
+                            &status, &attrs[0].value, &attrs[0].value_sz);
+
+    attrs[1].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "directory", 10,
+                            &status, &attrs[1].attr, &sz);
+    hyperdex_ds_copy_int(arena, directory, 
+                            &status, &attrs[1].value, &attrs[1].value_sz);
+
+    attrs[2].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "blockmap", 9,
+                            &status, &attrs[2].attr, &sz);
+    hyperdex_ds_copy_string(arena, 
+                            reinterpret_cast<const char*>(blockmap_update->data()), 
+                            blockmap_update->size(),
+                            &status, &attrs[2].value, &attrs[2].value_sz);
 
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), attrs, attrs_sz);
+        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 3);
 
     if (msg->send() < 0)
     {

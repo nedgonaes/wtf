@@ -115,10 +115,11 @@ change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst)
 }
 
 bool
-pending_rename :: send_put(std::string& dst, const hyperdex_client_attribute* attrs, size_t attrs_sz)
+pending_rename :: send_put(std::string& dst, arena_t arena,
+                            const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", dst.c_str(), attrs, attrs_sz);
+        new message_hyperdex_put(m_cl, "wtf", dst.c_str(), arena, attrs, attrs_sz);
 
     if (msg->send() < 0)
     {
@@ -160,8 +161,7 @@ pending_rename :: handle_search(client* cl,
 
         arena_t arena = hyperdex_ds_arena_create();
         attr_t attrs = change_name(arena, search_attrs, sz, m_dst);
-        bool ret = send_put(m_dst, attrs, sz) && send_del(m_dst);
-        hyperdex_ds_arena_destroy(arena);
+        bool ret = send_put(m_dst, arena, attrs, sz) && send_del(m_dst);
         return ret;
     }
 

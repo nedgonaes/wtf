@@ -89,7 +89,8 @@ class pending_rename : public pending_aggregation
         pending_rename& operator = (const pending_rename& rhs);
 
     private:
-        bool send_put(std::string& dst, const hyperdex_client_attribute* attrs, size_t attrs_sz);
+        bool send_put(std::string& dst, struct hyperdex_ds_arena* arena,
+            const struct hyperdex_client_attribute* attrs, size_t attrs_sz);
         bool send_del(std::string& src);
 
     private:

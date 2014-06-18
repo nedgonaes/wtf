@@ -34,6 +34,7 @@
 //WTF  
 #include "client/client.h"
 #include "client/message.h"
+#include <hyperdex/datastructures.h>
 
 namespace wtf __attribute__ ((visibility("hidden")))
 {
@@ -44,6 +45,7 @@ class message_hyperdex_put : public message
         message_hyperdex_put(client* cl,
             const char* space,
             const char* key,
+            const hyperdex_ds_arena* arena,
             const hyperdex_client_attribute* attrs, 
             size_t attrs_sz);
         virtual ~message_hyperdex_put() throw ();
@@ -68,6 +70,7 @@ class message_hyperdex_put : public message
     private:
         std::string m_space;
         std::string m_key;
+        const hyperdex_ds_arena* m_arena;
         hyperdex_client_returncode m_status;
         const hyperdex_client_attribute* m_attrs;
         size_t m_attrs_size;

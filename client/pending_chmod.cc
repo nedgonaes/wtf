@@ -120,17 +120,25 @@ pending_chmod :: handle_hyperdex_message(client* cl,
     return true;
 }
 
+typedef struct hyperdex_ds_arena* arena_t;
+typedef struct hyperdex_client_attribute* attr_t;
+
 bool
 pending_chmod :: try_op()
 {
-    struct hyperdex_client_attribute attr;
-    attr.attr = "mode";
-    attr.value = (const char*)&m_mode;
-    attr.value_sz = sizeof(mode_t);
-    attr.datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_returncode status;
+    arena_t arena = hyperdex_ds_arena_create();
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 1);
+
+    size_t sz;
+    attrs[0].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "mode", 5,
+                            &status, &attrs[0].attr, &sz);
+    hyperdex_ds_copy_int(arena, m_mode, 
+                            &status, &attrs[0].value, &attrs[0].value_sz);
 
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), &attr, 1);
+        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 1);
 
     if (msg->send() < 0)
     {
