@@ -168,6 +168,8 @@ pending_read :: handle_hyperdex_message(client* cl,
     else
     {
     }
+
+    return true;
 }
 
 void 

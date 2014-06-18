@@ -309,6 +309,18 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
     {
         m_gc.quiescent_state(&m_gc_ts);
 
+        std::cout << "wait_for = " << wait_for << std::endl;
+        if (m_yielding)
+            std::cout << "m_yielding" << std::endl;
+        if (!m_failed.empty())
+            std::cout << "m_failed not empty" << std::endl;
+        if (!m_pending_ops.empty())
+            std::cout << "m_pending_ops not empty" << std::endl;
+        if (!m_pending_hyperdex_ops.empty())
+            std::cout << "m_pending_hyperdex_ops not empty" << std::endl;
+        if (!m_yieldable.empty())
+            std::cout << "m_yieldable not empty" << std::endl;
+
         /* Handle currently yielding operation first. */
         if (m_yielding)
         {
@@ -337,6 +349,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                    */
                 m_yielded = m_yielding;
                 m_yielding = NULL;
+                return client_id;
             }
 
             return client_id;
@@ -375,6 +388,11 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 m_yielding = it->second;
                 m_yieldable.erase(it);
                 continue;
+            }
+            /* nothing left to do here.*/
+            else if (m_pending_ops.empty() && m_pending_hyperdex_ops.empty())
+            {
+                return -1;
             }
         }
         else if(!m_yieldable.empty())
@@ -587,7 +605,8 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         f->flags = flags;
         f->mode = mode;
         e::intrusive_ptr<pending_creat> op = new pending_creat(this, client_id, status, f, fd);
-        return op->try_op();
+        op->try_op();
+        return client_id;
     }
     else
     {
@@ -596,7 +615,8 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         m_fds[*fd] = f; 
         f->flags = flags;
         e::intrusive_ptr<pending_open> op = new pending_open(this, client_id, status, f, fd);
-        return op->try_op();
+        op->try_op();
+        return client_id;
     }
 }
 
@@ -733,7 +753,6 @@ client :: write(int64_t fd, const char* buf,
      * client_id of the op. */
     
     int64_t client_id = m_next_client_id++;
-    return client_id;
     e::intrusive_ptr<pending_write> op;
 
 	TRACE;
@@ -1141,21 +1160,6 @@ client :: mkdir(const char* path, mode_t mode, wtf_client_returncode* status)
         return 0;
     }
     */
-}
-
-int64_t 
-client :: opendir(const char* path)
-{
-	TRACE;
-    int64_t fd = m_next_fileno;
-    m_next_fileno;
-    m_next_fileno++;
-}
-
-int64_t 
-client :: closedir(int fd)
-{
-	TRACE;
 }
 
 int64_t 

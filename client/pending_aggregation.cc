@@ -52,6 +52,16 @@ bool
 pending_aggregation :: aggregation_done()
 {
     TRACE;
+    if (!m_outstanding_hyperdex.empty())
+        std::cout << "not done: " 
+            << m_outstanding_hyperdex.size() 
+            << " hyperdex messages outstanding." << std::endl;
+    if (!m_outstanding_wtf.empty())
+        std::cout << "not done: " 
+            << m_outstanding_wtf.size() 
+            << " wtf messages outstanding." << std::endl;
+    if (m_outstanding_wtf.empty() && m_outstanding_hyperdex.empty())
+        std::cout << "aggregation is done." << std::endl;
     return m_outstanding_wtf.empty() && m_outstanding_hyperdex.empty();
 }
 
@@ -133,6 +143,8 @@ void
 pending_aggregation :: remove_hyperdex_message(int64_t reqid)
 {
     TRACE;
+    std::cout << m_outstanding_hyperdex.size() 
+        << " outstanding hyperdex messages." << std::endl;
     for (size_t i = 0; i < m_outstanding_hyperdex.size(); ++i)
     {
         if (m_outstanding_hyperdex[i]->reqid() != reqid)
@@ -147,8 +159,12 @@ pending_aggregation :: remove_hyperdex_message(int64_t reqid)
             m_outstanding_hyperdex[j] = m_outstanding_hyperdex[j + 1];
         }
 
-        TRACE;
         m_outstanding_hyperdex.pop_back();
+
+        TRACE;
+        std::cout << m_outstanding_hyperdex.size() 
+            << " outstanding hyperdex messages." << std::endl;
+
         return;
     }
 }

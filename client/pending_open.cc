@@ -79,63 +79,28 @@ pending_open :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    //XXX: unpack metadata here
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
-}
-
-typedef struct hyperdex_ds_arena* arena_t;
-typedef const struct hyperdex_client_attribute* attr_t;
-
-bool
-pending_open :: send_put(std::string& path, const hyperdex_client_attribute* attrs, size_t attrs_sz)
-{
-    e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", path.c_str(), attrs, attrs_sz);
-
-    if (msg->send() < 0)
-    {
-        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
-    }
-    else
-    {
-        m_cl->add_hyperdex_op(msg->reqid(), this);
-        e::intrusive_ptr<message> m = msg.get();
-        pending_aggregation::handle_sent_to_hyperdex(m);
-    }
-
-    return true;
 }
 
 bool
 pending_open :: try_op()
 {
-    int64_t ret = -1;
-    int i = 0;
+    /* Get the file metadata from HyperDex */
+    const char* path = m_file->path().get();
+    e::intrusive_ptr<message_hyperdex_get> msg =
+        new message_hyperdex_get(m_cl, "wtf", path); 
+       
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't get from HyperDex: " << msg->status();
+    }
+    else
+    {
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        handle_sent_to_hyperdex(m);
+    }
 
-    hyperdex_client_returncode hstatus;
-
-    typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
-
-    uint64_t mode = m_file->mode;
-    uint64_t directory = m_file->is_directory;
-    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
-    struct hyperdex_client_attribute update_attr[3];
-
-    update_attr[0].attr = "mode";
-    update_attr[0].value = (const char*)&mode;
-    update_attr[0].value_sz = sizeof(mode);
-    update_attr[0].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[1].attr = "directory";
-    update_attr[1].value = (const char*)&directory;
-    update_attr[1].value_sz = sizeof(directory);
-    update_attr[1].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[2].attr = "blockmap";
-    update_attr[2].value = reinterpret_cast<const char*>(blockmap_update->data());
-    update_attr[2].value_sz = blockmap_update->size();
-    update_attr[2].datatype = HYPERDATATYPE_STRING;
-
-    const hyperdex_client_attribute* attrs = update_attr;
-    std::string path(m_file->path().get()); 
-    return send_put(path, attrs, 3);
+    return true;
 }
