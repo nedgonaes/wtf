@@ -28,8 +28,10 @@
 // WTF
 #include "client/pending_aggregation.h"
 #include "common/macros.h"
+#include "client/message.h"
 
 using wtf::pending_aggregation;
+using wtf::message;
 
 pending_aggregation :: pending_aggregation(uint64_t id,
                                            wtf_client_returncode* status)
@@ -182,6 +184,19 @@ pending_aggregation :: set_error(const e::error& err)
 {
     TRACE;
     m_error = err;
+}
+
+void
+pending_aggregation :: get_outstanding_hyperdex(int64_t reqid, 
+                                                e::intrusive_ptr<message>& msg)
+{
+    for (size_t i = 0; i < m_outstanding_hyperdex.size(); ++i)
+    {
+        if (m_outstanding_hyperdex[i]->reqid() == reqid)
+        {
+            msg = m_outstanding_hyperdex[i];
+        }
+    }
 }
 
 bool
