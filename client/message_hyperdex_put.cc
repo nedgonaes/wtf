@@ -59,5 +59,6 @@ message_hyperdex_put :: send()
     hyperdex::Client* hc = &m_cl->m_hyperdex_client;
     m_reqid = hc->put(m_space.c_str(), m_key.data(), m_key.size(),
             m_attrs, m_attrs_size, &m_status);
+    std::cout << "PUT(" << m_attrs[2].value_sz << ") " << e::slice(m_attrs[2].value, m_attrs[2].value_sz).hex() << std::endl;
     return m_reqid;
 }

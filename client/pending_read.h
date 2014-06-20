@@ -80,6 +80,9 @@ class pending_read : public pending_aggregation
         pending_read& operator = (const pending_read& rhs);
 
     private:
+        void parse_metadata(const hyperdex_client_attribute* attrs, size_t attrs_sz);
+
+    private:
         struct buffer_block_len 
         {
             buffer_block_len()

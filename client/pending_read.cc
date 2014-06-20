@@ -142,8 +142,12 @@ pending_read :: handle_hyperdex_message(client* cl,
     //response from initial get
     if (m_state == 0)
     {
-
+        e::intrusive_ptr<message_hyperdex_get> msg = dynamic_cast<message_hyperdex_get*>(m_outstanding_hyperdex[0].get());
+        const hyperdex_client_attribute* attrs = msg->attrs();
+        size_t attrs_sz = msg->attrs_sz();
+        parse_metadata(attrs, attrs_sz);
         size_t rem = std::min(*m_buf_sz, m_file->bytes_left_in_file());
+        std::cout << "REM = " << rem << std::endl;
         size_t buf_offset = 0;
         *m_buf_sz = 0;
 
@@ -171,6 +175,59 @@ pending_read :: handle_hyperdex_message(client* cl,
 
     return true;
 }
+
+void
+pending_read :: parse_metadata(const hyperdex_client_attribute* attrs, size_t attrs_sz)
+{
+    for (size_t i = 0; i < attrs_sz; ++i)
+    {
+        if (strcmp(attrs[i].attr, "blockmap") == 0)
+        {
+            std::cout << "blockmap(" << attrs[i].value_sz << ")" << std::endl;
+            
+            std::cout << "GET " << e::slice(attrs[i].value, attrs[i].value_sz).hex() << std::endl;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+
+            if (attrs[i].value_sz == 0)
+            {
+                continue;
+            }
+
+            up = up >> m_file;
+        }
+        else if (strcmp(attrs[i].attr, "directory") == 0)
+        {
+            std::cout << "directory" << std::endl;
+            uint64_t is_dir;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+            up = up >> is_dir;
+            e::unpack64be((uint8_t*)&is_dir, &is_dir);
+
+            if (is_dir == 0)
+            {
+                m_file->is_directory = false;
+            }
+            else
+            {
+                m_file->is_directory = true;
+            }
+        }
+        else if (strcmp(attrs[i].attr, "mode") == 0)
+        {
+            std::cout << "mode" << std::endl;
+            uint64_t mode;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+            up = up >> mode;
+            e::unpack64be((uint8_t*)&mode, &mode);
+            m_file->mode = mode;
+        }
+    }
+
+    std::cout << *m_file << std::endl;
+} 
 
 void 
 pending_read :: set_offset(const uint64_t si,
