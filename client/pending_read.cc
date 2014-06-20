@@ -166,11 +166,13 @@ pending_read :: handle_hyperdex_message(client* cl,
             m_cl->perform_aggregation(servers, this, REQ_GET, msg, status);
         }
 
+        pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
         m_state = 1;
     }
     //response from final metadata update
     else
     {
+        pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     }
 
     return true;
