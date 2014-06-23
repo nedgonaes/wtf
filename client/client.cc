@@ -1163,7 +1163,7 @@ client :: mkdir(const char* path, mode_t mode, wtf_client_returncode* status)
 }
 
 int64_t 
-client :: readdir(char* path, char** entry, wtf_client_returncode* status) 
+client :: readdir(const char* path, char** entry, wtf_client_returncode* status) 
 {
 	TRACE;
 

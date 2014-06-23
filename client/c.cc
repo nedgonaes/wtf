@@ -301,7 +301,7 @@ WTF_API int64_t wtf_client_truncate(wtf_client* _cl,
 }
 
 WTF_API int64_t wtf_client_readdir(wtf_client* _cl, 
-            char* path, char** entry, wtf_client_returncode* status)
+            const char* path, char** entry, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
         return cl->readdir(path, entry, status);

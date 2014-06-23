@@ -100,7 +100,7 @@ class Client
             { return wtf_client_loop(m_cl, id, timeout, status); }
         int64_t truncate(int fd, size_t length, wtf_client_returncode* status)
             { return wtf_client_truncate(m_cl, fd, length, status); }
-        int64_t readdir(char* path, char** entry, wtf_client_returncode* status)
+        int64_t readdir(const char* path, char** entry, wtf_client_returncode* status)
             { return wtf_client_readdir(m_cl, path, entry, status); }
 
         int64_t write_sync(int64_t fd,

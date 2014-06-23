@@ -43,6 +43,7 @@ pending_readdir :: pending_readdir(client* cl, uint64_t client_visible_id,
     , m_entry(entry)
     , m_results()
     , m_path(path)
+    , m_done(false)
 {
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
@@ -55,7 +56,7 @@ pending_readdir :: ~pending_readdir() throw ()
 bool
 pending_readdir :: can_yield()
 {
-    return this->aggregation_done() && !m_results.empty();
+    return !m_results.empty() && !m_done;
 }
 
 bool
@@ -68,6 +69,12 @@ pending_readdir :: yield(wtf_client_returncode* status, e::error* err)
     *m_entry = (char*)malloc(res->size()+1);
     strcpy(*m_entry, res->c_str());
     m_results.pop_back();
+
+    if (m_results.empty() && pending_aggregation::aggregation_done())
+    {
+        m_done = true;
+    }
+
     return true;
 }
 
@@ -77,22 +84,6 @@ pending_readdir :: handle_hyperdex_failure(int64_t reqid)
     return pending_aggregation::handle_hyperdex_failure(reqid);
 }
 
-void
-pending_readdir :: handle_wtf_failure(const server_id& sid)
-{
-    pending_aggregation::handle_wtf_failure(sid);
-}
-
-bool
-pending_readdir :: handle_wtf_message(client* cl,
-                                    const server_id& si,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up,
-                                    wtf_client_returncode* status,
-                                    e::error* error)
-{
-}
-
 bool
 pending_readdir :: handle_hyperdex_message(client* cl,
                                     int64_t reqid,
@@ -100,6 +91,7 @@ pending_readdir :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    std::cout << "HYPERDEX RETURNED " << rc << std::endl;
     if (rc < 0)
     {
         PENDING_ERROR(IO) << "Couldn't get from HyperDex";
@@ -119,10 +111,12 @@ pending_readdir :: handle_hyperdex_message(client* cl,
         {
             if (strcmp(attrs[i].attr, "path") == 0)
             {
-                m_results.push_back(std::string(attrs[i].value));
+                m_results.push_back(std::string(attrs[i].value, attrs[i].value_sz));
                 break;
             }
         }
+
+        m_cl->add_hyperdex_op(m_outstanding_hyperdex[0]->reqid(), this);
     }
 
     return true;

@@ -36,6 +36,7 @@ message_hyperdex_search :: message_hyperdex_search(client* cl,
                                              const char* regex)
     : message(cl, OPCODE_HYPERDEX_SEARCH) 
     , m_space(space)
+    , m_name(name)
     , m_regex(regex)
     , m_status(HYPERDEX_CLIENT_GARBAGE)
     , m_attrs(NULL)

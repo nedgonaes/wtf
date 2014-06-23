@@ -29,6 +29,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "common/macros.h"
 #include "client/pending_mkdir.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_put.h"
@@ -44,23 +45,27 @@ pending_mkdir :: pending_mkdir(client* cl, int64_t client_visible_id,
     , m_mode(mode)
     , m_done(false)
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_mkdir :: ~pending_mkdir() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_mkdir :: can_yield()
 {
+    TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
 pending_mkdir :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
@@ -75,6 +80,7 @@ pending_mkdir :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     bool handled = pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     assert(handled);
 
@@ -92,6 +98,7 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_mkdir :: try_op()
 {
+    TRACE;
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
     attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
@@ -110,7 +117,7 @@ pending_mkdir :: try_op()
                             &status, &attrs[1].value, &attrs[1].value_sz);
 
    e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 1);
+        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 2);
 
     if (msg->send() < 0)
     {
