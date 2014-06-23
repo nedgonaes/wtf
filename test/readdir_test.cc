@@ -144,20 +144,23 @@ worker_thread(const armnod::argparser& _f)
         wtf_client_returncode lstatus;
         int64_t reqid = cl.readdir("/", &entry, &status);
 
-        if (cl.loop(reqid, -1, &lstatus) < 0)
+        while (true)
         {
-            WTF_TEST_FAIL(0, "failed to readdir");
+
+            if (cl.loop(reqid, -1, &lstatus) < 0)
+            {
+                WTF_TEST_FAIL(0, "failed to readdir");
+            }
+
+            if (status == WTF_CLIENT_READDIRDONE)
+            {
+                break;
+            }
+
+            std::cout << "LISTING" << std::endl;
+            std::cout << std::string(entry) << std::endl;
+
         }
-
-        std::cout << "LISTING" << std::endl;
-        std::cout << std::string(entry) << std::endl;
-
-        if (cl.loop(reqid, -1, &lstatus) < 0)
-        {
-            WTF_TEST_FAIL(0, "failed to open file");
-        }
-
-        std::cout << std::string(entry) << std::endl;
 
         WTF_TEST_SUCCESS(0);      
     }

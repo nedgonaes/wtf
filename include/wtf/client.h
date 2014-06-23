@@ -53,6 +53,7 @@ extern "C"
         WTF_CLIENT_EXIST        = 8454,
         WTF_CLIENT_ISDIR        = 8455,
         WTF_CLIENT_NOTDIR       = 8456,
+        WTF_CLIENT_READDIRDONE  = 8457,
 
 
         /* Error conditions */

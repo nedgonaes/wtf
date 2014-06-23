@@ -62,7 +62,7 @@ pending_readdir :: can_yield()
 bool
 pending_readdir :: yield(wtf_client_returncode* status, e::error* err)
 {
-    *status = WTF_CLIENT_SUCCESS;
+    *status = *m_status;
     *err = e::error();
     assert(this->can_yield());
     std::string* res = &m_results[m_results.size()-1];
@@ -92,18 +92,22 @@ pending_readdir :: handle_hyperdex_message(client* cl,
                                     e::error* err)
 {
     std::cout << "HYPERDEX RETURNED " << rc << std::endl;
+    e::intrusive_ptr<message_hyperdex_search> msg = 
+        dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
+    std::cout << "READDIR RETURNED " << msg->status() << std::endl;
+
     if (rc < 0)
     {
         PENDING_ERROR(IO) << "Couldn't get from HyperDex";
     }
-    else if (rc == HYPERDEX_CLIENT_SEARCHDONE)
+    else if (msg->status() == HYPERDEX_CLIENT_SEARCHDONE)
     {
+        m_results.push_back(std::string(""));
+        set_status(WTF_CLIENT_READDIRDONE);
         return pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     }
     else
     {
-        e::intrusive_ptr<message_hyperdex_search> msg = 
-            dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
         const hyperdex_client_attribute* attrs = msg->attrs();
         size_t sz = msg->attrs_sz();
 
