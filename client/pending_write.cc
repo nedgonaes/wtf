@@ -224,6 +224,7 @@ pending_write :: handle_hyperdex_message(client* cl,
         e::intrusive_ptr<message_hyperdex_put> msg = dynamic_cast<message_hyperdex_put*>(m_outstanding_hyperdex[0].get());
         std::cout << reqid << " : " << msg->status() << std::endl;
         pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+        return true;
     }
 }
 

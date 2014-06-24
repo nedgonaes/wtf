@@ -131,6 +131,7 @@ pending_open :: handle_hyperdex_message(client* cl,
     }
 
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+    return true;
 }
 
     bool
