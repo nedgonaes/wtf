@@ -1,3 +1,4 @@
+#include "common/macros.h"
 #include "blockstore/blockmap.h"
 
 #define BACKING_SIZE 2147483648
@@ -272,6 +273,7 @@ ssize_t
 blockmap :: write(const e::slice& data,
                  uint64_t& bid)
 {
+    TRACE;
     ssize_t status = -1;
     size_t disk_offset;
 
@@ -302,6 +304,7 @@ blockmap :: update(const e::slice& data,
              uint64_t& bid,
              uint64_t& block_len)
 {
+    TRACE;
     ssize_t status = -1;
     size_t disk_offset;
 
@@ -321,7 +324,11 @@ blockmap :: update(const e::slice& data,
 
     bid = m_block_id++;
 
+    std::cout << "BLOCK IS " << vb.length() << " BYTES" << std::endl;
+    std::cout  << "ADDING " << data.size() << " BYTES" << std::endl;
     vb.update(offset, data.size(), disk_offset);
+    std::cout << "BLOCK IS " << vb.length() << " BYTES" << std::endl;
+    fflush(stdout);
     block_len = vb.length();
 
 

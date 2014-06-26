@@ -238,6 +238,22 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 
     } while (last != m_block_map.begin());
 
+    //Get current block.
+    file::block_map::iterator it = m_block_map.lower_bound(m_offset);
+    
+    if (it == m_block_map.end() ||
+       (it != m_block_map.begin() &&
+        it != m_block_map.end() && 
+        it->second->offset() > m_offset))
+    {
+        it--;
+    }
+
+    e::intrusive_ptr<block> b = it->second;
+
+    m_bytes_left_in_block = b->offset() + b->capacity() - m_offset;
+    m_current_block_length = b->capacity();
+    m_current_block = b;
 }
 
 size_t

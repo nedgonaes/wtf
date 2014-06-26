@@ -184,80 +184,82 @@ worker_thread(const armnod::argparser& _f,
                  
             }
 
-            reqid = cl.loop(reqid, -1, &status);
+            //reqid = cl.loop(reqid, -1, &status);
 
-            /* open the file */
-            char* dd = new char[v.size()];
-            reqid = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &fd, &status);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "unable to open file " << f << cl.error_location() << ":" << cl.error_message());
-            }
-
-            reqid = cl.loop(reqid, -1, &status);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "XXX");;
-
-            }
-
-
-            /* read the file in random size chunks. */
-            rem = v.size();
-            reqid = -1;
-            sz = 0;
-            while (rem > 0)
-            {
-                sz = read_size();
-                sz = std::min(sz, rem);
-
-                reqid = cl.read(fd, dd + v.size() - rem, &sz, &status);
-
-                if (reqid < 0)
-                {
-                    WTF_TEST_FAIL(0, "XXX");;
-
-                }
-
-                reqid = cl.loop(reqid, -1, &status);
-
-                if (reqid < 0)
-                {
-                    WTF_TEST_FAIL(0, cl.error_message());;
-
-                }
-
-                rem -= sz;
-            }
-
-            /* compare the contents of the write with the contents returned from read */
-            std::string d(dd, v.size());
-
-            if (v.compare(d) != 0)
-            {
-                e::slice slc1(v.data(), v.size());
-                e::slice slc2(d.data(), d.size());
-                WTF_TEST_FAIL(0, "Strings don't match"
-                                  << slc1.hex() << std::endl
-                                  << " != " << std::endl
-                                  << slc2.hex());
-            }
-
-            /* close the file */
-            reqid = cl.close(fd, &rc);
-
-            if (reqid < 0)
-            {
-                WTF_TEST_FAIL(0, "XXX");;
-
-            }
-
-            reqid = cl.loop(reqid, -1, &status);
-
-            delete [] dd;
-            
+//
+//            /* open the file */
+//            char* dd = new char[v.size()];
+//            reqid = cl.open(f.data(), O_RDWR, 0777, 3, _block_size, &fd, &status);
+//
+//            if (reqid < 0)
+//            {
+//                WTF_TEST_FAIL(0, "unable to open file " << f << cl.error_location() << ":" << cl.error_message());
+//            }
+//
+//            reqid = cl.loop(reqid, -1, &status);
+//
+//            if (reqid < 0)
+//            {
+//                WTF_TEST_FAIL(0, "XXX");;
+//
+//            }
+//
+//            
+//
+//            /* read the file in random size chunks. */
+//            rem = v.size();
+//            reqid = -1;
+//            sz = 0;
+//            while (rem > 0)
+//            {
+//                sz = read_size();
+//                sz = std::min(sz, rem);
+//
+//                reqid = cl.read(fd, dd + v.size() - rem, &sz, &status);
+//
+//                if (reqid < 0)
+//                {
+//                    WTF_TEST_FAIL(0, "XXX");;
+//
+//                }
+//
+//                reqid = cl.loop(reqid, -1, &status);
+//
+//                if (reqid < 0)
+//                {
+//                    WTF_TEST_FAIL(0, cl.error_message());;
+//
+//                }
+//
+//                rem -= sz;
+//            }
+//
+//            /* compare the contents of the write with the contents returned from read */
+//            std::string d(dd, v.size());
+//
+//            if (v.compare(d) != 0)
+//            {
+//                e::slice slc1(v.data(), v.size());
+//                e::slice slc2(d.data(), d.size());
+//                WTF_TEST_FAIL(0, "Strings don't match"
+//                                  << slc1.hex() << std::endl
+//                                  << " != " << std::endl
+//                                  << slc2.hex());
+//            }
+//
+//            /* close the file */
+//            reqid = cl.close(fd, &rc);
+//
+//            if (reqid < 0)
+//            {
+//                WTF_TEST_FAIL(0, "XXX");;
+//
+//            }
+//
+//            //reqid = cl.loop(reqid, -1, &status);
+//
+//            delete [] dd;
+//            
             WTF_TEST_SUCCESS(0);      
         }
     }
