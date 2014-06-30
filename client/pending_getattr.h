@@ -42,8 +42,9 @@ class pending_getattr : public pending_aggregation
 {
     public:
         pending_getattr(client* cl, uint64_t client_visible_id,
+                          const char* path,
                           wtf_client_returncode* status,
-                          e::intrusive_ptr<file> f, int64_t* fd); 
+                          struct wtf_file_attrs* fa); 
         virtual ~pending_getattr() throw ();
 
     // return to client
@@ -72,8 +73,8 @@ class pending_getattr : public pending_aggregation
 
     private:
         client* m_cl;
-        e::intrusive_ptr<file> m_file;
-        int64_t* m_fd;
+        std::string m_path;
+        struct wtf_file_attrs* m_file_attrs;
         bool m_done;
 };
 

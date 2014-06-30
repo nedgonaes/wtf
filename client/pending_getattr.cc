@@ -31,20 +31,20 @@
 
 // WTF
 #include "common/macros.h"
-#include "client/pending_open.h"
+#include "client/pending_getattr.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_get.h"
 
-using wtf::pending_open;
+using wtf::pending_getattr;
 using wtf::message_hyperdex_get;
 
-pending_open :: pending_open(client* cl, uint64_t client_visible_id, 
-                           wtf_client_returncode* status, e::intrusive_ptr<file> f,
-                           int64_t* fd)
+pending_getattr :: pending_getattr(client* cl, uint64_t client_visible_id, 
+                           const char* path,
+                           wtf_client_returncode* status, struct wtf_file_attrs* fa)
     : pending_aggregation(client_visible_id, status) 
+    , m_path(path)
     , m_cl(cl)
-    , m_file(f)
-    , m_fd(fd)
+    , m_file_attrs(fa)
     , m_done(false)
 {
     TRACE;
@@ -52,20 +52,20 @@ pending_open :: pending_open(client* cl, uint64_t client_visible_id,
     set_error(e::error());
 }
 
-pending_open :: ~pending_open() throw ()
+pending_getattr :: ~pending_getattr() throw ()
 {
     TRACE;
 }
 
 bool
-pending_open :: can_yield()
+pending_getattr :: can_yield()
 {
     TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
-pending_open :: yield(wtf_client_returncode* status, e::error* err)
+pending_getattr :: yield(wtf_client_returncode* status, e::error* err)
 {
     TRACE;
     *status = WTF_CLIENT_SUCCESS;
@@ -76,7 +76,7 @@ pending_open :: yield(wtf_client_returncode* status, e::error* err)
 }
 
 bool
-pending_open :: handle_hyperdex_message(client* cl,
+pending_getattr :: handle_hyperdex_message(client* cl,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
@@ -89,6 +89,8 @@ pending_open :: handle_hyperdex_message(client* cl,
     const hyperdex_client_attribute* attrs = msg->attrs();
     size_t attrs_sz = msg->attrs_sz();
 
+    e::intrusive_ptr<file> f = new file(0,0,0);
+
     for (size_t i = 0; i < attrs_sz; ++i)
     {
         if (strcmp(attrs[i].attr, "blockmap") == 0)
@@ -100,7 +102,7 @@ pending_open :: handle_hyperdex_message(client* cl,
                 continue;
             }
 
-            up = up >> m_file;
+            up = up >> f;
         }
         else if (strcmp(attrs[i].attr, "directory") == 0)
         {
@@ -112,11 +114,11 @@ pending_open :: handle_hyperdex_message(client* cl,
 
             if (is_dir == 0)
             {
-                m_file->is_directory = false;
+                f->is_directory = false;
             }
             else
             {
-                m_file->is_directory = true;
+                f->is_directory = true;
             }
         }
         else if (strcmp(attrs[i].attr, "mode") == 0)
@@ -126,22 +128,27 @@ pending_open :: handle_hyperdex_message(client* cl,
             e::unpacker up(attrs[i].value, attrs[i].value_sz);
             up = up >> mode;
             e::unpack64be((uint8_t*)&mode, &mode);
-            m_file->mode = mode;
+            f->mode = mode;
         }
     }
+
+    /*fill out file_attrs*/
+    m_file_attrs->size = f->length();
+    m_file_attrs->mode = f->mode;
+    m_file_attrs->flags = f->flags;
+    m_file_attrs->is_dir = f->is_directory;
 
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     return true;
 }
 
     bool
-pending_open :: try_op()
+pending_getattr :: try_op()
 {
     TRACE;
     /* Get the file metadata from HyperDex */
-    const char* path = m_file->path().get();
     e::intrusive_ptr<message_hyperdex_get> msg =
-        new message_hyperdex_get(m_cl, "wtf", path); 
+        new message_hyperdex_get(m_cl, "wtf", m_path.c_str()); 
        
     if (msg->send() < 0)
     {

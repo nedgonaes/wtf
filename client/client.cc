@@ -1,4 +1,4 @@
-/ Copyright (c) 2013, Sean Ogden
+// Copyright (c) 2013, Sean Ogden
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,7 @@
 #include "common/special_objects.h"
 #include "client/file.h"
 #include "common/coordinator_link.h"
+#include "client/pending_getattr.h"
 #include "client/pending_write.h"
 #include "client/pending_readdir.h"
 #include "client/pending_del.h"
@@ -989,7 +990,7 @@ client :: getcwd(char* c, size_t len)
 }
 
 int64_t
-client :: getattr(const char* path, struct wtf_file_attrs* fa)
+client :: getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status)
 {
     TRACE;
     int64_t client_id = m_next_client_id++;
@@ -1008,7 +1009,7 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa)
 
     e::intrusive_ptr<file> f = new file(abspath, 0, 0);
     e::intrusive_ptr<pending_aggregation> op;
-    op = new pending_getattr(this, client_id, status, f, fd);
+    op = new pending_getattr(this, client_id, abspath, status, fa);
     if (op->try_op())
     {
         return client_id;

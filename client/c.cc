@@ -194,7 +194,7 @@ WTF_API int64_t wtf_client_getattr(wtf_client* _cl,
             struct wtf_file_attrs* fa, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->getattr(path, fa);
+        return cl->getattr(path, fa, status);
     );
 
 }

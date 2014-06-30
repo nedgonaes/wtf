@@ -93,7 +93,7 @@ class client
         int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size, int64_t* fd, wtf_client_returncode* status);
         int64_t unlink(const char* path, wtf_client_returncode* status);
         int64_t rename(const char* src, const char* dst, wtf_client_returncode* status);
-        int64_t getattr(const char* path, struct wtf_file_attrs* fa);
+        int64_t getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status);
         std::vector<std::string> ls(const char* path);
 
         int64_t lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* status);
@@ -143,6 +143,7 @@ class client
             e::intrusive_ptr<pending_aggregation> op;
         };
 
+        friend class pending_getattr;
         friend class pending_read;
         friend class pending_chmod;
         friend class pending_write;
