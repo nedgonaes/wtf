@@ -1,4 +1,4 @@
-// Copyright (c) 2013, Sean Ogden
+/ Copyright (c) 2013, Sean Ogden
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -991,27 +991,32 @@ client :: getcwd(char* c, size_t len)
 int64_t
 client :: getattr(const char* path, struct wtf_file_attrs* fa)
 {
-    /*
-	TRACE;
-    wtf_client_returncode status;
-    wtf_client_returncode lstatus;
+    TRACE;
+    int64_t client_id = m_next_client_id++;
 
-    int64_t fd = 0;
-    int64_t reqid = open(path, O_RDONLY, 0, 0, 0, &fd, &status);
-
-    if (reqid < 0)
+    if (!maintain_coord_connection(status))
     {
         return -1;
     }
 
-    e::intrusive_ptr<file> f = m_fds[fd];
-    fa->is_dir = f->is_directory ? 1 : 0;
-    fa->size = f->length();
-    fa->mode = f->mode;
-    fa->flags = f->flags;
-    close(fd, &status);
-    */
-    return 0;
+    char abspath[PATH_MAX]; 
+
+    if (canon_path(path, abspath, PATH_MAX) != 0)
+    {
+        return -1;
+    }
+
+    e::intrusive_ptr<file> f = new file(abspath, 0, 0);
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_getattr(this, client_id, status, f, fd);
+    if (op->try_op())
+    {
+        return client_id;
+    }
+    else
+    {
+        return -1;
+    }	
 }
 
 int64_t

@@ -49,6 +49,7 @@ int64_t
 rereplicate :: replicate_one(const char* path, uint64_t sid)
 {
     wtf_client_returncode w_status;
+    wtf_client_returncode l_status;
 
     // Check if daemon has actually failed
     if (!wc->maintain_coord_connection(&w_status))
@@ -69,8 +70,20 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
     e::intrusive_ptr<wtf::file> f = new wtf::file(path, 0, CHUNKSIZE);
     while (true)
     {
-        //XXX
+        
+        //XXX This function no longer exists.  You should use getattr
         //ret = wc->get_file_metadata(f->path().get(), f, false);
+
+        //struct wtf_file_attrs fa;
+        //ret = wc->getattr(f->path().get(), &fa); 
+
+        if (ret < 0)
+        {
+            std::cerr << "Failed to read file metadata" << std::endl;
+            return -1;
+        }
+
+        ret = wc->loop(ret, -1, &l_status);
 
         if (ret < 0)
         {
