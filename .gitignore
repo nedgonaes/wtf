@@ -64,3 +64,4 @@ wtf-0.1.dev.tar.gz
 makelog
 wtf-backup
 readdir-test
+getattr-test

@@ -307,7 +307,8 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 ################################## tests   #####################################
 ################################################################################
 shell_wrappers =
-#shell_wrappers += test/sh/readdir_test.sh
+shell_wrappers += test/sh/readdir_test.sh
+shell_wrappers += test/sh/getattr_test.sh
 shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.2GB.sh
 
@@ -319,6 +320,10 @@ test_readwrite_sync_stress_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmn
 check_PROGRAMS += test/readdir-test
 test_readdir_test_SOURCES = test/readdir_test.cc 
 test_readdir_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
+
+check_PROGRAMS += test/getattr-test
+test_getattr_test_SOURCES = test/getattr_test.cc 
+test_getattr_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 #java tests
 if ENABLE_JAVA_BINDINGS
