@@ -41,8 +41,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
 class pending_chdir : public pending_aggregation
 {
     public:
-        pending_chdir(client* cl, uint64_t id, e::intrusive_ptr<file> f,
-                               const char* buf, size_t* buf_sz, 
+        pending_chdir(client* cl, uint64_t id, const char* path,
                                wtf_client_returncode* status);
         virtual ~pending_chdir() throw ();
 
@@ -56,13 +55,6 @@ class pending_chdir : public pending_aggregation
 
     // events
     public:
-        virtual void handle_wtf_failure(const server_id& si);
-        virtual bool handle_wtf_message(client*,
-                                    const server_id& si,
-                                    std::auto_ptr<e::buffer> msg,
-                                    e::unpacker up,
-                                    wtf_client_returncode* status,
-                                    e::error* error);
         virtual bool handle_hyperdex_message(client*,
                                     int64_t reqid,
                                     hyperdex_client_returncode rc,
@@ -77,26 +69,9 @@ class pending_chdir : public pending_aggregation
         typedef std::map<uint64_t, e::intrusive_ptr<block> > changeset_t;
 
     private:
-        void send_metadata_update();
-        void prepare_write_op(e::intrusive_ptr<file> f, 
-                              size_t& rem, 
-                              std::vector<block_location>& bl,
-                              size_t& buf_offset,
-                              uint32_t& block_offset,
-                              uint32_t& block_capacity,
-                              uint64_t& file_offset,
-                              size_t& slice_len);
-
-    private:
         client* m_cl;
-        const char* m_buf;
-        const size_t* m_buf_sz;
-        e::intrusive_ptr<file> m_file;
         std::string m_path;
-        std::auto_ptr<e::buffer> m_old_blockmap;
-        changeset_t m_changeset;
         bool m_done;
-        int m_state;
 };
 
 }

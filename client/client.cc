@@ -1024,66 +1024,31 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_return
 int64_t
 client :: chdir(char* path)
 {
-    /*
-	TRACE;
+    TRACE;
+    int64_t client_id = m_next_client_id++;
+
+    if (!maintain_coord_connection(status))
+    {
+        return -1;
+    }
+
     char abspath[PATH_MAX]; 
+
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
         return -1;
     }
 
-    const struct hyperdex_client_attribute* attrs;
-    size_t attrs_sz;
-    int64_t ret = 0;
-    hyperdex_client_returncode hstatus;
-    wtf_client_returncode lstatus;
-    wtf_client_returncode* status = &lstatus;
-
-    ret = m_hyperdex_client.get("wtf", abspath, strlen(abspath), &hstatus, &attrs, &attrs_sz);
-    if (ret == -1)
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_chdir(this, client_id, abspath, status);
+    if (op->try_op())
     {
-        return -1;
-    }
-    
-    hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
-    {
-        ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
-        return -1;
+        return client_id;
     }
     else
     {
-        for (size_t i = 0; i < attrs_sz; ++i)
-        {
-            if (strcmp(attrs[i].attr, "directory") == 0)
-            {
-                uint64_t is_dir;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> is_dir;
-
-                if (is_dir == 0)
-                {
-                    errno = ENOTDIR;
-                    return -1;
-                }
-            }
-            else if (strcmp(attrs[i].attr, "mode") == 0)
-            {
-                uint64_t mode;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> mode;
-                //XXX: implement owner, group, etc and deny if no
-                //     read permissions.
-            }
-        }
-    }
-    
-    m_cwd = abspath;
-    */
-    return 0;
+        return -1;
+    }	
 }
 
 int64_t
