@@ -67,15 +67,13 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
     int64_t ret;
     int64_t reqid;
 
-    e::intrusive_ptr<wtf::file> f = new wtf::file(path, 0, CHUNKSIZE);
+    e::intrusive_ptr<wtf::file> f;
+
     while (true)
     {
         
-        //XXX This function no longer exists.  You should use getattr
-        //ret = wc->get_file_metadata(f->path().get(), f, false);
-
-        //struct wtf_file_attrs fa;
-        //ret = wc->getattr(f->path().get(), &fa); 
+        int64_t fd;
+        ret = wc->open(f->path().get(), O_RDONLY, 0, 0, 0, &fd, &w_status);
 
         if (ret < 0)
         {
@@ -90,6 +88,8 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
             std::cerr << "Failed to read file metadata" << std::endl;
             return -1;
         }
+
+        f = wc->m_fds[fd];
 
         // If path is a directory, ignore
         if (f->is_directory)
