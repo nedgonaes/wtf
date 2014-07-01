@@ -44,6 +44,7 @@ namespace wtf __attribute__ ((visibility("hidden")))
 {
 class pending_rename;
 class pending_getattr;
+class pending_chdir;
 class pending_chmod;
 class pending_del;
 class pending_write;
@@ -98,6 +99,7 @@ class pending_aggregation
     // refcount
     protected:
         friend class e::intrusive_ptr<pending_aggregation>;
+        friend class e::intrusive_ptr<pending_chdir>;
         friend class e::intrusive_ptr<pending_rename>;
         friend class e::intrusive_ptr<pending_chmod>;
         friend class e::intrusive_ptr<pending_del>;

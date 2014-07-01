@@ -50,6 +50,7 @@
 #include "client/file.h"
 #include "common/coordinator_link.h"
 #include "client/pending_getattr.h"
+#include "client/pending_chdir.h"
 #include "client/pending_write.h"
 #include "client/pending_readdir.h"
 #include "client/pending_del.h"

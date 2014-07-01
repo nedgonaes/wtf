@@ -144,6 +144,7 @@ class client
         };
 
         friend class pending_getattr;
+        friend class pending_chdir;
         friend class pending_read;
         friend class pending_chmod;
         friend class pending_write;
