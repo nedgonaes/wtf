@@ -62,6 +62,9 @@ class pending_chdir : public pending_aggregation
                                     e::error* error);
         virtual bool try_op();
 
+    private:
+        bool parse_metadata(const hyperdex_client_attribute* attrs, size_t attrs_sz);
+
     // noncopyable
     private:
         pending_chdir(const pending_chdir& other);

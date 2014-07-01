@@ -156,7 +156,7 @@ WTF_API int64_t wtf_client_chdir(wtf_client* _cl,
             char* path, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->chdir(path);
+        return cl->chdir(path, status);
     );
 }
 

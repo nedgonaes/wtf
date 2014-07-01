@@ -40,17 +40,12 @@
 
 using wtf::pending_chdir;
 
-pending_chdir :: pending_chdir(client* cl, uint64_t id, e::intrusive_ptr<file> f,
-                               const char* buf, size_t* buf_sz, 
+pending_chdir :: pending_chdir(client* cl, uint64_t id, const char* path,
                                wtf_client_returncode* status)
     : pending_aggregation(id, status)
     , m_cl(cl)
-    , m_buf(buf)
-    , m_buf_sz(buf_sz)
-    , m_old_blockmap(f->serialize_blockmap())
-    , m_file(f)
+    , m_path(path)
     , m_done(false)
-    , m_state(0)
 {
     TRACE;
     set_status(WTF_CLIENT_SUCCESS);
@@ -112,40 +107,61 @@ pending_chdir :: handle_hyperdex_message(client* cl,
     TRACE;
     //response from initial get
 
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
+    if (rc == HYPERDEX_CLIENT_NOTFOUND)
     {
-        ERROR(NOTFOUND) << "path " << abspath << " not found in HyperDex.";
+        PENDING_ERROR(NOTFOUND) << "path " << m_path << " not found in HyperDex.";
         return -1;
     }
     else
     {
-        for (size_t i = 0; i < attrs_sz; ++i)
+        e::intrusive_ptr<message_hyperdex_get> msg = dynamic_cast<message_hyperdex_get*>(m_outstanding_hyperdex[0].get());
+        const hyperdex_client_attribute* attrs = msg->attrs();
+        size_t attrs_sz = msg->attrs_sz();
+        if (parse_metadata(attrs, attrs_sz))
         {
-            if (strcmp(attrs[i].attr, "directory") == 0)
-            {
-                uint64_t is_dir;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> is_dir;
-
-                if (is_dir == 0)
-                {
-                    errno = ENOTDIR;
-                    return -1;
-                }
-            }
-            else if (strcmp(attrs[i].attr, "mode") == 0)
-            {
-                uint64_t mode;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> mode;
-                //XXX: implement owner, group, etc and deny if no
-                //     read permissions.
-            }
+            m_cl->m_cwd = m_path;
         }
     }
 
-    m_cl->m_cwd = m_path;
+    pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+
+    return true;
 }
+
+bool
+pending_chdir :: parse_metadata(const hyperdex_client_attribute* attrs, size_t attrs_sz)
+{
+    for (size_t i = 0; i < attrs_sz; ++i)
+    {
+        if (strcmp(attrs[i].attr, "directory") == 0)
+        {
+            std::cout << "directory" << std::endl;
+            uint64_t is_dir;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+            up = up >> is_dir;
+
+            if (is_dir == 0)
+            {
+                PENDING_ERROR(NOTDIR) << m_path << " is not a directory. "; 
+                return false;
+            }
+        }
+        else if (strcmp(attrs[i].attr, "mode") == 0)
+        {
+            std::cout << "mode" << std::endl;
+            uint64_t mode;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+            up = up >> mode;
+
+            e::unpack64be((uint8_t*)&mode, &mode);
+            //XXX: implement owner, group, etc and deny if no
+            //     read permissions.
+        }
+    }
+
+    return true;
+} 
+
 

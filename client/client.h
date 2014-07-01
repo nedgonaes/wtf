@@ -89,7 +89,7 @@ class client
     public:
         int64_t canon_path(const char* rel, char* abspath, size_t abspath_sz);
         int64_t getcwd(char* c, size_t len);
-        int64_t chdir(char* path);
+        int64_t chdir(char* path, wtf_client_returncode* status);
         int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, size_t block_size, int64_t* fd, wtf_client_returncode* status);
         int64_t unlink(const char* path, wtf_client_returncode* status);
         int64_t rename(const char* src, const char* dst, wtf_client_returncode* status);
