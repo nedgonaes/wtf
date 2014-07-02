@@ -1022,7 +1022,7 @@ client :: getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_return
 }
 
 int64_t
-client :: chdir(char* path, wtf_client_returncode* status)
+client :: chdir(const char* path, wtf_client_returncode* status)
 {
     TRACE;
     int64_t client_id = m_next_client_id++;

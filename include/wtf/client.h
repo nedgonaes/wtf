@@ -96,7 +96,7 @@ extern "C"
     int64_t wtf_client_getcwd(struct wtf_client* m_cl, 
             char* path, size_t len, wtf_client_returncode* status);
     int64_t wtf_client_chdir(struct wtf_client* m_cl, 
-            char* path, wtf_client_returncode* status);
+            const char* path, wtf_client_returncode* status);
     int64_t wtf_client_open(struct wtf_client* m_cl, 
             const char* path, int flags, mode_t mode, size_t num_replicas,
             size_t block_size, int64_t* fd, wtf_client_returncode* status);

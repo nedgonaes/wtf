@@ -65,3 +65,4 @@ makelog
 wtf-backup
 readdir-test
 getattr-test
+chdir-test

@@ -60,7 +60,7 @@ class Client
     public:
         int64_t getcwd(char* c, size_t len, wtf_client_returncode* status)
             { return wtf_client_getcwd(m_cl, c, len, status); }
-        int64_t chdir(char* path, wtf_client_returncode* status)
+        int64_t chdir(const char* path, wtf_client_returncode* status)
             { return wtf_client_chdir(m_cl, path, status); }
         int64_t open(const char* path, int flags, mode_t mode, size_t num_replicas, 
                      size_t block_length, int64_t* fd, wtf_client_returncode* status)

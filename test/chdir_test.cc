@@ -31,6 +31,7 @@
 #include <tr1/unordered_map>
 #include <tr1/memory>
 #include <tr1/random>
+#include <sstream>
 
 // po6
 #include <po6/error.h>
@@ -144,7 +145,7 @@ worker_thread(const armnod::argparser& _f)
             
             expected_path << "/" << f;
             
-            reqid = cl.chdir(f.data(), &entry, &status);
+            reqid = cl.chdir(f.data(), &status);
 
             if (reqid < 0)
             {
@@ -159,7 +160,7 @@ worker_thread(const armnod::argparser& _f)
 
             char path[PATH_MAX];
 
-            cl.getcwd(path, PATH_MAX);
+            cl.getcwd(path, PATH_MAX, NULL);
 
             if (strcmp(path, expected_path.str().c_str()) != 0)
             {
