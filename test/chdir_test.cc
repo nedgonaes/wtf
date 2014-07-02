@@ -115,7 +115,6 @@ worker_thread(const armnod::argparser& _f)
     {
 
         std::stringstream expected_path;
-        expected_path << "/";
 
         wtf::Client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
         while (__sync_fetch_and_add(&_done, 1) < _number)
@@ -162,6 +161,8 @@ worker_thread(const armnod::argparser& _f)
 
             cl.getcwd(path, PATH_MAX, NULL);
 
+            std::cout << std::string(path) << std::endl;
+            std::cout << expected_path.str() << std::endl;
             if (strcmp(path, expected_path.str().c_str()) != 0)
             {
                 WTF_TEST_FAIL(0, "cwd incorrect.");
