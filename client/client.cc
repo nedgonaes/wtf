@@ -772,6 +772,13 @@ client :: read(int64_t fd, char* buf,
                    wtf_client_returncode* status)
 {
 	TRACE;
+
+    if (!maintain_coord_connection(status))
+    {
+        return -1;
+    }
+
+
     if (m_fds.find(fd) == m_fds.end())
     {
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
@@ -796,6 +803,7 @@ client :: read(int64_t fd, char* buf,
     e::intrusive_ptr<pending_aggregation> op;
     op = new pending_read(this, client_id, f, buf, buf_sz, status);
     f->add_pending_op(client_id);
+
     if (op->try_op())
     {
         return client_id;
@@ -879,8 +887,34 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 int64_t
 client :: truncate(int fd, off_t length)
 {
-	TRACE;
     //XXX: implement truncate.
+    TRACE;
+
+    if (!maintain_coord_connection(status))
+    {
+        return -1;
+    }
+
+    if (m_fds.find(fd) == m_fds.end())
+    {
+        ERROR(BADF) << "file descriptor " << fd << " is invalid.";
+        return -1;
+    }
+
+    e::intrusive_ptr<file> f = m_fds[fd];
+
+    int64_t client_id = m_next_client_id++;
+    e::intrusive_ptr<pending_aggregation> op;
+    op = new pending_truncate(this, client_id, f, length, status);
+
+    if (op->try_op())
+    {
+        return client_id;
+    }
+    else
+    {
+        return -1;
+    }	
     return 0;
 }
 
