@@ -310,6 +310,7 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 ################################################################################
 shell_wrappers =
 shell_wrappers += test/sh/readdir_test.sh
+shell_wrappers += test/sh/chdir_test.sh
 shell_wrappers += test/sh/getattr_test.sh
 shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.2GB.sh
@@ -318,6 +319,10 @@ shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 check_PROGRAMS += test/readwrite-sync-stress-test
 test_readwrite_sync_stress_test_SOURCES = test/readwrite_sync_stress_test.cc 
 test_readwrite_sync_stress_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
+
+check_PROGRAMS += test/chdir-test
+test_chdir_test_SOURCES = test/chdir_test.cc 
+test_chdir_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 check_PROGRAMS += test/readdir-test
 test_readdir_test_SOURCES = test/readdir_test.cc 
