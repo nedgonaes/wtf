@@ -295,7 +295,7 @@ WTF_API int64_t wtf_client_truncate(wtf_client* _cl,
             int64_t fd, size_t length, wtf_client_returncode* status)
 {
     C_WRAP_EXCEPT(
-        return cl->truncate(fd, length);
+        return cl->truncate(fd, length, status);
     );
 
 }

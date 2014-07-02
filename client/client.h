@@ -112,7 +112,7 @@ class client
         int64_t close(int64_t fd, wtf_client_returncode* status);
         int64_t loop(int timeout, wtf_client_returncode* status);
         int64_t loop(int64_t id, int timeout, wtf_client_returncode* status);
-        int64_t truncate(int fd, off_t length);
+        int64_t truncate(int fd, off_t length, wtf_client_returncode* status);
         int64_t opendir(const char* path);
         int64_t closedir(int fd);
         int64_t readdir(const char* path, char** entry, wtf_client_returncode* status);
@@ -145,6 +145,7 @@ class client
 
         friend class pending_getattr;
         friend class pending_chdir;
+        friend class pending_truncate;
         friend class pending_read;
         friend class pending_chmod;
         friend class pending_write;

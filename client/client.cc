@@ -50,6 +50,7 @@
 #include "client/file.h"
 #include "common/coordinator_link.h"
 #include "client/pending_getattr.h"
+#include "client/pending_truncate.h"
 #include "client/pending_chdir.h"
 #include "client/pending_write.h"
 #include "client/pending_readdir.h"
@@ -885,7 +886,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 }
 
 int64_t
-client :: truncate(int fd, off_t length)
+client :: truncate(int fd, off_t length, wtf_client_returncode* status)
 {
     //XXX: implement truncate.
     TRACE;
