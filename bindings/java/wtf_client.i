@@ -27,6 +27,7 @@ using namespace wtf;
 %apply long long *INOUT {size_t *data_sz};
 %apply char *BYTE {char *data};
 %apply long *OUTPUT {wtf_client_returncode *status}
+%apply long *OUTPUT {int64_t *fd}
 %template(StringVec) std::vector<std::string>;
 %ignore "";
 

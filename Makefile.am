@@ -338,7 +338,7 @@ test_getattr_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 if ENABLE_JAVA_BINDINGS
 java_wrappers =
 java_wrappers += test/sh/bindings.java.Basic.sh
-#shell_wrappers += $(java_wrappers)
+shell_wrappers += $(java_wrappers)
 endif
 TESTS += $(shell_wrappers)
 
