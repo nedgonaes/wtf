@@ -138,6 +138,7 @@ pending_getattr :: handle_hyperdex_message(client* cl,
     m_file_attrs->flags = f->flags;
     m_file_attrs->is_dir = f->is_directory;
 
+    std::cout << "SIZE IS " << f->length() << std::endl;
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     return true;
 }

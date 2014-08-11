@@ -309,6 +309,15 @@ WTF_API int64_t wtf_client_readdir(wtf_client* _cl,
 
 }
 
+WTF_API int64_t wtf_client_getattr_sync(wtf_client* _cl, 
+            const char* path, 
+            struct wtf_file_attrs* fa, wtf_client_returncode* status)
+{
+    C_WRAP_EXCEPT(
+        return cl->getattr_sync(path, fa, status);
+    );
+
+}
 
 WTF_API int64_t wtf_client_write_sync(wtf_client* _cl, 
             int64_t fd, const char* data, 

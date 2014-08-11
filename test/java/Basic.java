@@ -24,7 +24,7 @@ public class Basic {
         data[0] = 'h';
         data[1] = 'i';
 		long[] data_sz = { 2L };
-		long reqid = c.write_sync(fd[0], data, data_sz, 3, status);
+		reqid = c.write_sync(fd[0], data, data_sz, 3, status);
 		assert(reqid > 0) : "reqid: " + reqid;
 		c.close(fd[0], status);
 		System.out.println("close fd " + fd[0] + " status " + status[0]);
@@ -41,8 +41,6 @@ public class Basic {
         readdata[1] = '\0';
         reqid = -1;
         reqid = c.read_sync(fd[0], readdata, data_sz, status);
-        assert(reqid > 0);
-        reqid = c.loop(reqid, -1, lstatus);
         assert(reqid > 0);
         System.out.println(new String(readdata));
 		System.out.println("finish");

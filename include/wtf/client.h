@@ -138,6 +138,9 @@ extern "C"
     int64_t wtf_client_readdir(struct wtf_client* m_cl, 
             const char* path, char** entry, wtf_client_returncode* status);
 
+    int64_t wtf_client_getattr_sync(struct wtf_client* m_cl, 
+            const char* path, 
+            struct wtf_file_attrs* fa, wtf_client_returncode* status);
     int64_t wtf_client_read_sync(struct wtf_client* m_cl, 
             int64_t fd, char* data, 
             size_t* data_sz, 

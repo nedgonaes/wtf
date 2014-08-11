@@ -106,9 +106,19 @@ public class Client
     {
         ops.remove(l);
     }
+
     /* operations */
-    public native Deferred async_read(String path, byte[] data, int offset, int length) throws WTFClientException;
-    public Object read(String path, byte[] data, int offset, int length) throws WTFClientException
+    public native Deferred async_open(String path, int flags, int mode, 
+        int num_replicas, int block_size, int[] fd) throws WTFClientException;
+    public Object open(String path, int flags, int mode, 
+        int num_replicas, int block_size, int[] fd) throws WTFClientException
+    {
+        return (Object) async_open(path, flags, mode, num_replicas, block_size
+            fd).waitForIt();
+    }
+
+    public native Deferred async_read(int fd, byte[] data, int offset, int length) throws WTFClientException;
+    public Object read(int fd, byte[] data, int offset, int length) throws WTFClientException
     {
         return (Object) async_read(path, data, offset, length).waitForIt();
     }
@@ -119,3 +129,4 @@ public class Client
         return (Boolean) async_write(path, data).waitForIt();
     }
 }
+

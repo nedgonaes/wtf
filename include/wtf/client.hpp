@@ -103,6 +103,8 @@ class Client
         int64_t readdir(const char* path, char** entry, wtf_client_returncode* status)
             { return wtf_client_readdir(m_cl, path, entry, status); }
 
+        int64_t getattr_sync(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status)
+            { return wtf_client_getattr_sync(m_cl, path, fa, status); }
         int64_t write_sync(int64_t fd,
                       const char* data,
                       size_t* data_sz,

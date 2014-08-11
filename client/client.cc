@@ -1555,6 +1555,25 @@ operator << (std::ostream& lhs, wtf_client_returncode rhs)
 
 /* Sync ops */
 int64_t
+client :: getattr_sync(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status)
+{
+    int64_t reqid = getattr(path, fa, status);
+    if (reqid < 0)
+    {
+        return reqid;
+    }
+
+    int64_t lreqid = loop(reqid, -1, status);
+    if (lreqid < 0)
+    {
+        return lreqid;
+    }
+
+    return lreqid;
+
+}
+
+int64_t
 client :: write_sync(int64_t fd, const char* buf,
                    size_t * buf_sz, 
                    wtf_client_returncode* status)

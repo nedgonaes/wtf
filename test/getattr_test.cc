@@ -147,10 +147,60 @@ worker_thread(const armnod::argparser& _f)
         {
             WTF_TEST_FAIL(0, "failed to open file");
         }
-           
+
         if (fa.is_dir != 1)
         {
             WTF_TEST_FAIL(0, "directory is not marked as a directory.");
+        }
+
+        /* create a random file */
+        reqid = cl.open("/foo", O_CREAT | O_RDWR, mode_t(0777), 3, _block_size, &fd, &status);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "failed to open file");
+        }
+
+        reqid = cl.loop(reqid, -1, &lstatus);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "failed to open file");
+        }
+
+        size_t sz = 12;
+        reqid = cl.write(fd, "hello world", &sz, 1, &status);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "failed to write file");
+        }
+
+        reqid = cl.loop(reqid, -1, &lstatus);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "failed to open file");
+        }
+
+        reqid = cl.close(fd, &status);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "XXX");;
+
+        }
+
+        reqid = cl.getattr("/foo", &fa, &status);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "failed to open file");
+        }
+
+        reqid = cl.loop(reqid, -1, &lstatus);
+        if (reqid < 0)
+        {
+            WTF_TEST_FAIL(0, "failed to open file");
+        }
+ 
+        if (fa.size != 12)
+        {
+            WTF_TEST_FAIL(0, "file length is incorrect.");
         }
 
         WTF_TEST_SUCCESS(0);      

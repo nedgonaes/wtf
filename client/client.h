@@ -121,6 +121,7 @@ class client
         void set_error_message(const char* msg);
 
     public:
+        int64_t getattr_sync(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status);
         int64_t write_sync(int64_t fd,
                       const char* buf,
                       size_t* buf_sz,
