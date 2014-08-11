@@ -31,7 +31,6 @@
 #include <string.h>
 
 /* WTF */
-#include <wtf.h>
 #include <wtf/client.h>
 #include "visibility.h"
 #include "bindings/java/org_wtf_client_Client.h"
@@ -85,7 +84,7 @@ static jfieldID _client_ptr;
 static jmethodID _client_add_op;
 static jmethodID _client_remove_op;
 
-define CHECK_CACHE(X) assert((X))
+#define CHECK_CACHE(X) assert((X))
 
 #define ERROR_CHECK(RET) if ((*env)->ExceptionCheck(env) == JNI_TRUE) return (RET)
 #define ERROR_CHECK_VOID() if ((*env)->ExceptionCheck(env) == JNI_TRUE) return
@@ -275,321 +274,6 @@ wtf_java_client_throw_exception(JNIEnv* env,
     return (*env)->Throw(env, err);
 }
 
-/********************************** Java -> C *********************************/
-
-static const char*
-wtf_java_client_convert_cstring(JNIEnv* env,
-                                     struct wtf_ds_arena* arena,
-                                     jobject str)
-{
-    const char* tmp = NULL;
-    const char* ret = NULL;
-    size_t ret_sz = 0;
-    enum wtf_ds_returncode rc;
-    int success;
-    tmp = (*env)->GetStringUTFChars(env, str, 0);
-    ERROR_CHECK(NULL);
-    success = wtf_ds_copy_string(arena, tmp, strlen(tmp) + 1, &rc, &ret, &ret_sz);
-    (*env)->ReleaseStringUTFChars(env, str, tmp);
-    ERROR_CHECK(NULL);
-
-    if (success < 0)
-    {
-        wtf_java_out_of_memory(env);
-        return NULL;
-    }
-
-    return ret;
-}
-
-typedef int (*elem_string_fptr)(void*, const char*, size_t, enum wtf_ds_returncode*);
-typedef int (*elem_int_fptr)(void*, int64_t, enum wtf_ds_returncode*);
-typedef int (*elem_float_fptr)(void*, double, enum wtf_ds_returncode*);
-
-#define HDJAVA_HANDLE_ELEM_ERROR(X, TYPE) \
-    switch (X) \
-    { \
-        case WTF_DS_NOMEM: \
-            wtf_java_out_of_memory(env); \
-            return -1; \
-        case WTF_DS_MIXED_TYPES: \
-            wtf_java_client_throw_exception(env, WTF_CLIENT_WRONGTYPE, "Cannot add " TYPE " to a heterogenous container"); \
-            return -1; \
-        case WTF_DS_SUCCESS: \
-        case WTF_DS_STRING_TOO_LONG: \
-        case WTF_DS_WRONG_STATE: \
-        default: \
-            wtf_java_client_throw_exception(env, WTF_CLIENT_WRONGTYPE, "Cannot convert " TYPE " to a WTF type"); \
-            return -1; \
-    }
-
-static int
-wtf_java_client_convert_elem(JNIEnv* env,
-                                  jobject obj,
-                                  void* container,
-                                  elem_string_fptr f_string,
-                                  elem_int_fptr f_int,
-                                  elem_float_fptr f_float)
-{
-    enum wtf_ds_returncode error;
-    int success;
-    const char* tmp_str;
-    size_t tmp_str_sz;
-    jbyte* tmp_bytes;
-    size_t tmp_bytes_sz;
-    int64_t tmp_l;
-    int32_t tmp_i;
-    double tmp_d;
-
-    if ((*env)->IsInstanceOf(env, obj, _string) == JNI_TRUE)
-    {
-        tmp_str = (*env)->GetStringUTFChars(env, obj, 0);
-        ERROR_CHECK(-1);
-        tmp_str_sz = (*env)->GetStringUTFLength(env, obj);
-        ERROR_CHECK(-1);
-        success = f_string(container, tmp_str, tmp_str_sz, &error);
-        (*env)->ReleaseStringUTFChars(env, obj, tmp_str);
-        ERROR_CHECK(-1);
-
-        if (success < 0)
-        {
-            HDJAVA_HANDLE_ELEM_ERROR(error, "string");
-        }
-
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, obj, _byte_string) == JNI_TRUE)
-    {
-        obj = (*env)->CallObjectMethod(env, obj, _byte_string_get);
-        ERROR_CHECK(-1);
-        tmp_bytes = (*env)->GetByteArrayElements(env, obj, 0);
-        ERROR_CHECK(-1);
-        tmp_bytes_sz = (*env)->GetArrayLength(env, obj);
-        ERROR_CHECK(-1);
-        success = f_string(container, (const char*)tmp_bytes, tmp_bytes_sz, &error);
-        (*env)->ReleaseByteArrayElements(env, obj, tmp_bytes, 0);
-        ERROR_CHECK(-1);
-
-        if (success < 0)
-        {
-            HDJAVA_HANDLE_ELEM_ERROR(error, "bytes");
-        }
-
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, obj, _long) == JNI_TRUE)
-    {
-        tmp_l = (*env)->CallLongMethod(env, obj, _long_longValue);
-        ERROR_CHECK(-1);
-
-        if (f_int(container, tmp_l, &error) < 0)
-        {
-            HDJAVA_HANDLE_ELEM_ERROR(error, "long");
-        }
-
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, obj, _integer) == JNI_TRUE)
-    {
-        tmp_i = (*env)->CallIntMethod(env, obj, _integer_intValue);
-        ERROR_CHECK(-1);
-
-        if (f_int(container, tmp_i, &error) < 0)
-        {
-            HDJAVA_HANDLE_ELEM_ERROR(error, "int");
-        }
-
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, obj, _double) == JNI_TRUE)
-    {
-        tmp_d = (*env)->CallDoubleMethod(env, obj, _double_doubleValue);
-        ERROR_CHECK(-1);
-
-        if (f_float(container, tmp_d, &error) < 0)
-        {
-            HDJAVA_HANDLE_ELEM_ERROR(error, "float");
-        }
-
-        return 0;
-    }
-    else
-    {
-        wtf_java_client_throw_exception(env, WTF_CLIENT_WRONGTYPE,
-                                             "Cannot convert unknown type to a WTF type");
-        return -1;
-    }
-}
-
-static int
-wtf_java_client_convert_type(JNIEnv* env,
-                                  struct wtf_ds_arena* arena,
-                                  jobject x,
-                                  const char** value,
-                                  size_t* value_sz,
-                                  enum hyperdatatype* datatype)
-{
-    enum wtf_ds_returncode error;
-    int success;
-    const char* tmp_str;
-    size_t tmp_str_sz;
-    jbyte* tmp_bytes;
-    size_t tmp_bytes_sz;
-    int64_t tmp_l;
-    int32_t tmp_i;
-    double tmp_d;
-
-    if (x == NULL)
-    {
-        *value = "";
-        *value_sz = 0;
-        *datatype = HYPERDATATYPE_GENERIC;
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, x, _string) == JNI_TRUE)
-    {
-        tmp_str = (*env)->GetStringUTFChars(env, x, 0);
-        ERROR_CHECK(-1);
-        tmp_str_sz = (*env)->GetStringUTFLength(env, x);
-        ERROR_CHECK(-1);
-        success = wtf_ds_copy_string(arena, tmp_str, tmp_str_sz,
-                                          &error, value, value_sz);
-        (*env)->ReleaseStringUTFChars(env, x, tmp_str);
-        ERROR_CHECK(-1);
-        *datatype = HYPERDATATYPE_STRING;
-
-        if (success < 0)
-        {
-            wtf_java_out_of_memory(env);
-            return -1;
-        }
-
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, x, _byte_string) == JNI_TRUE)
-    {
-        x = (*env)->CallObjectMethod(env, x, _byte_string_get);
-        tmp_bytes = (*env)->GetByteArrayElements(env, x, 0);
-        ERROR_CHECK(-1);
-        tmp_bytes_sz = (*env)->GetArrayLength(env, x);
-        ERROR_CHECK(-1);
-        success = wtf_ds_copy_string(arena, (const char*)tmp_bytes, tmp_bytes_sz,
-                                          &error, value, value_sz);
-        (*env)->ReleaseByteArrayElements(env, x, tmp_bytes, 0);
-        ERROR_CHECK(-1);
-        *datatype = HYPERDATATYPE_STRING;
-
-        if (success < 0)
-        {
-            wtf_java_out_of_memory(env);
-            return -1;
-        }
-
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, x, _long) == JNI_TRUE)
-    {
-        tmp_l = (*env)->CallLongMethod(env, x, _long_longValue);
-        ERROR_CHECK(-1);
-
-        if (wtf_ds_copy_int(arena, tmp_l, &error, value, value_sz) < 0)
-        {
-            wtf_java_out_of_memory(env);
-            return -1;
-        }
-
-        *datatype = HYPERDATATYPE_INT64;
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, x, _integer) == JNI_TRUE)
-    {
-        tmp_i = (*env)->CallIntMethod(env, x, _integer_intValue);
-        ERROR_CHECK(-1);
-
-        if (wtf_ds_copy_int(arena, tmp_i, &error, value, value_sz) < 0)
-        {
-            wtf_java_out_of_memory(env);
-            return -1;
-        }
-
-        *datatype = HYPERDATATYPE_INT64;
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, x, _double) == JNI_TRUE)
-    {
-        tmp_d = (*env)->CallDoubleMethod(env, x, _double_doubleValue);
-        ERROR_CHECK(-1);
-
-        if (wtf_ds_copy_float(arena, tmp_d, &error, value, value_sz) < 0)
-        {
-            wtf_java_out_of_memory(env);
-            return -1;
-        }
-
-        *datatype = HYPERDATATYPE_FLOAT;
-        return 0;
-    }
-    else if ((*env)->IsInstanceOf(env, x, _list) == JNI_TRUE)
-    {
-        return wtf_java_client_convert_list(env, arena, x,
-                                                 value, value_sz, datatype);
-    }
-    else if ((*env)->IsInstanceOf(env, x, _set) == JNI_TRUE)
-    {
-        return wtf_java_client_convert_set(env, arena, x,
-                                                value, value_sz, datatype);
-    }
-    else if ((*env)->IsInstanceOf(env, x, _map) == JNI_TRUE)
-    {
-        return wtf_java_client_convert_map(env, arena, x,
-                                                value, value_sz, datatype);
-    }
-    else
-    {
-        wtf_java_client_throw_exception(env, WTF_CLIENT_WRONGTYPE,
-                                             "Cannot convert unknown type to a WTF type");
-        return -1;
-    }
-}
-
-static int
-wtf_java_client_convert_key(JNIEnv* env, jobject client,
-                                 struct wtf_ds_arena* arena,
-                                 jobject x,
-                                 const char** key,
-                                 size_t* key_sz)
-{
-    enum hyperdatatype datatype;
-    (void)client;
-    return wtf_java_client_convert_type(env, arena, x, key, key_sz, &datatype);
-}
-
-static int
-wtf_java_client_convert_limit(JNIEnv* env, jobject client,
-                                   struct wtf_ds_arena* arena,
-                                   jint x,
-                                   uint64_t* limit)
-{
-    *limit = x;
-    (void)env;
-    (void)client;
-    (void)arena;
-    return 0;
-}
-
-static int
-wtf_java_client_convert_maxmin(JNIEnv* env, jobject client,
-                                    struct wtf_ds_arena* arena,
-                                    jboolean x,
-                                    int* maxmin)
-{
-    *maxmin = x == JNI_TRUE ? 1 : 0;
-    (void)env;
-    (void)client;
-    (void)arena;
-    return 0;
-}
-
 /********************************** C -> Java *********************************/
 
 #define BUILD_STRING(OUT, X, X_SZ) \
@@ -621,7 +305,7 @@ struct wtf_java_client_deferred
     int64_t reqid;
     enum wtf_client_returncode status;
     jobject jdata;
-    const char* data;
+    char* data;
     size_t data_sz;
     const char* description;
     uint64_t count;
@@ -659,6 +343,7 @@ Java_org_wtf_client_Deferred__1create(JNIEnv* env, jobject deferred)
     ptr->count = 0;
     ptr->finished = 0;
     ptr->encode_return = NULL;
+    ptr->cleanup = NULL;
 }
 
 #pragma GCC diagnostic push
@@ -675,21 +360,9 @@ Java_org_wtf_client_Deferred__1destroy(JNIEnv* env, jobject dfrd)
 
     if (ptr)
     {
-        if (ptr->arena)
-        {
-            wtf_ds_arena_destroy(ptr->arena);
-        }
-
-        if (ptr->attrs)
-        {
-            wtf_client_destroy_attrs(ptr->attrs, ptr->attrs_sz);
-        }
-
-        if (ptr->description)
-        {
-            free((void*)ptr->description);
-        }
-
+        /*no dynamically allocated fields except data,
+          which is allocated by java and freed by garbage
+          collector after you call Release on that memory */
         free(ptr);
     }
 
@@ -699,12 +372,15 @@ Java_org_wtf_client_Deferred__1destroy(JNIEnv* env, jobject dfrd)
 #pragma GCC diagnostic pop
 
 JNIEXPORT WTF_API jobject JNICALL
-Java_org_wtf_client_Deferred_waitForIt(JNIEnv* env, jobject obj)
+Java_org_wtf_client_Deferred_waitForIt(JNIEnv* env, jobject client)
 {
     struct wtf_java_client_deferred* dfrd = NULL;
-    dfrd = wtf_get_deferred_ptr(env, obj);
+    struct wtf_client* ptr;
+    int64_t x;
+    wtf_client_returncode rc;
+
+    dfrd = wtf_get_deferred_ptr(env, client);
     ERROR_CHECK(0);
-    
     ptr = wtf_get_client_ptr(env, client);
     x = wtf_client_loop(ptr, dfrd->reqid, -1, &rc);
 
@@ -712,10 +388,13 @@ Java_org_wtf_client_Deferred_waitForIt(JNIEnv* env, jobject obj)
      * We need to release the bytes that are pinned
      */
     assert(dfrd->cleanup);
-    dfrd->cleanup(env, obj, dfrd);
+    if (dfrd->cleanup)
+    {
+        dfrd->cleanup(env, dfrd);
+    }
 
     assert(dfrd->encode_return);
-    return dfrd->encode_return(env, obj, dfrd);
+    return dfrd->encode_return(env, client, dfrd);
 }
 
 JNIEXPORT WTF_API void JNICALL
@@ -748,12 +427,6 @@ wtf_java_client_deferred_encode_status(JNIEnv* env, jobject obj, struct wtf_java
     {
         return NULL;
     }
-    else if (d->status == WTF_CLIENT_CMPFAIL)
-    {
-        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
-        ERROR_CHECK(0);
-        return ret;
-    }
     else
     {
         client_obj = (*env)->GetObjectField(env, obj, _deferred_c);
@@ -773,19 +446,11 @@ wtf_java_client_deferred_encode_status_data(JNIEnv* env, jobject obj, struct wtf
 
     if (d->status == WTF_CLIENT_SUCCESS)
     {
-        ret = wtf_java_client_build_data(env, d->data, d->data_sz);
-        ERROR_CHECK(0);
         return ret;
     }
     else if (d->status == WTF_CLIENT_NOTFOUND)
     {
         return NULL;
-    }
-    else if (d->status == WTF_CLIENT_CMPFAIL)
-    {
-        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
-        ERROR_CHECK(0);
-        return ret;
     }
     else
     {
@@ -797,187 +462,188 @@ wtf_java_client_deferred_encode_status_data(JNIEnv* env, jobject obj, struct wtf
 }
 
 /******************************* Iterator Class *******************************/
-
-struct wtf_java_client_iterator
-{
-    struct wtf_ds_arena* arena;
-    int64_t reqid;
-    enum wtf_client_returncode status;
-    const struct wtf_client_attribute* attrs;
-    size_t attrs_sz;
-    int finished;
-    jobject (*encode_return)(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* d);
-};
-
-JNIEXPORT WTF_API void JNICALL
-Java_org_wtf_client_Iterator__1create(JNIEnv* env, jobject iterator)
-{
-    jlong lptr;
-    struct wtf_java_client_iterator* ptr;
-
-    lptr = (*env)->GetLongField(env, iterator, _iterator_ptr);
-    ERROR_CHECK_VOID();
-    ptr = malloc(sizeof(struct wtf_java_client_iterator));
-
-    if (!ptr)
-    {
-        wtf_java_out_of_memory(env);
-        return;
-    }
-
-    memset(ptr, 0, sizeof(struct wtf_java_client_iterator));
-    lptr = (long) ptr;
-    (*env)->SetLongField(env, iterator, _iterator_ptr, lptr);
-    ERROR_CHECK_VOID();
-
-    ptr->arena = wtf_ds_arena_create();
-
-    if (!ptr->arena)
-    {
-        /* all other resources are caught by the finalizer? */
-        wtf_java_out_of_memory(env);
-        return;
-    }
-
-    ptr->reqid = -1;
-    ptr->status = WTF_CLIENT_GARBAGE;
-    ptr->attrs = NULL;
-    ptr->attrs_sz = 0;
-    ptr->finished = 0;
-    ptr->encode_return = NULL;
-}
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wcast-qual"
-JNIEXPORT WTF_API void JNICALL
-Java_org_wtf_client_Iterator__1destroy(JNIEnv* env, jobject iter)
-{
-    jlong lptr;
-    struct wtf_java_client_iterator* ptr;
-
-    lptr = (*env)->GetLongField(env, iter, _iterator_ptr);
-    ERROR_CHECK_VOID();
-    ptr = (struct wtf_java_client_iterator*)lptr;
-
-    if (ptr)
-    {
-        if (ptr->arena)
-        {
-            wtf_ds_arena_destroy(ptr->arena);
-        }
-
-        if (ptr->attrs)
-        {
-            wtf_client_destroy_attrs(ptr->attrs, ptr->attrs_sz);
-        }
-
-        free(ptr);
-    }
-
-    (*env)->SetLongField(env, iter, _iterator_ptr, 0);
-    ERROR_CHECK_VOID();
-}
-
-JNIEXPORT WTF_API jboolean JNICALL
-Java_org_wtf_client_Iterator_finished(JNIEnv* env, jobject obj)
-{
-    struct wtf_java_client_iterator* iter = NULL;
-    iter = wtf_get_iterator_ptr(env, obj);
-    return iter->finished == 1 ? JNI_TRUE : JNI_FALSE;
-}
-
-JNIEXPORT WTF_API void JNICALL
-Java_org_wtf_client_Iterator_callback(JNIEnv* env, jobject obj)
-{
-    jobject tmp;
-    jobject client_obj;
-    struct wtf_client* client;
-    struct wtf_java_client_iterator* iter = NULL;
-    iter = wtf_get_iterator_ptr(env, obj);
-    ERROR_CHECK_VOID();
-    client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
-    ERROR_CHECK_VOID();
-
-    if (iter->status == WTF_CLIENT_SEARCHDONE)
-    {
-        iter->finished = 1;
-        (*env)->CallObjectMethod(env, client_obj, _client_remove_op, iter->reqid);
-        ERROR_CHECK_VOID();
-    }
-    else if (iter->status == WTF_CLIENT_SUCCESS)
-    {
-        tmp = iter->encode_return(env, obj, iter);
-
-        if (iter->attrs)
-        {
-            wtf_client_destroy_attrs(iter->attrs, iter->attrs_sz);
-        }
-
-        iter->attrs = NULL;
-        iter->attrs_sz = 0;
-        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
-        ERROR_CHECK_VOID();
-    }
-    else
-    {
-        client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
-        client = wtf_get_client_ptr(env, client_obj);
-        tmp = wtf_java_client_create_exception(env, iter->status,
-                                                    wtf_client_error_message(client));
-        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
-        ERROR_CHECK_VOID();
-    }
-}
-
-static jobject
-wtf_java_client_iterator_encode_status_attributes(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* it)
-{
-    jobject ret;
-    jobject client_obj;
-    struct wtf_client* client;
-
-    if (it->status == WTF_CLIENT_SUCCESS)
-    {
-        ret = wtf_java_client_build_attributes(env, it->attrs, it->attrs_sz);
-        ERROR_CHECK(0);
-        return ret;
-    }
-    else if (it->status == WTF_CLIENT_NOTFOUND)
-    {
-        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_TRUE);
-        ERROR_CHECK(0);
-        return ret;
-    }
-    else if (it->status == WTF_CLIENT_CMPFAIL)
-    {
-        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
-        ERROR_CHECK(0);
-        return ret;
-    }
-    else
-    {
-        client_obj = (*env)->GetObjectField(env, obj, _deferred_c);
-        client = wtf_get_client_ptr(env, client_obj);
-        wtf_java_client_throw_exception(env, it->status, wtf_client_error_message(client));
-        return 0;
-    }
-}
-
+//struct wtf_java_client_iterator
+//{
+//    int64_t reqid;
+//    enum wtf_client_returncode status;
+//    char* data;
+//    size_t data_sz;
+//    int finished;
+//    jobject (*encode_return)(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* d);
+//};
+//
+//JNIEXPORT WTF_API void JNICALL
+//Java_org_wtf_client_Iterator__1create(JNIEnv* env, jobject iterator)
+//{
+//    jlong lptr;
+//    struct wtf_java_client_iterator* ptr;
+//
+//    lptr = (*env)->GetLongField(env, iterator, _iterator_ptr);
+//    ERROR_CHECK_VOID();
+//    ptr = malloc(sizeof(struct wtf_java_client_iterator));
+//
+//    if (!ptr)
+//    {
+//        wtf_java_out_of_memory(env);
+//        return;
+//    }
+//
+//    memset(ptr, 0, sizeof(struct wtf_java_client_iterator));
+//    lptr = (long) ptr;
+//    (*env)->SetLongField(env, iterator, _iterator_ptr, lptr);
+//    ERROR_CHECK_VOID();
+//
+//    ptr->arena = wtf_ds_arena_create();
+//
+//    if (!ptr->arena)
+//    {
+//        /* all other resources are caught by the finalizer? */
+//        wtf_java_out_of_memory(env);
+//        return;
+//    }
+//
+//    ptr->reqid = -1;
+//    ptr->status = WTF_CLIENT_GARBAGE;
+//    ptr->data= NULL;
+//    ptr->data_sz= 0;
+//    ptr->finished = 0;
+//    ptr->encode_return = NULL;
+//}
+//
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wcast-qual"
+//JNIEXPORT WTF_API void JNICALL
+//Java_org_wtf_client_Iterator__1destroy(JNIEnv* env, jobject iter)
+//{
+//    jlong lptr;
+//    struct wtf_java_client_iterator* ptr;
+//
+//    lptr = (*env)->GetLongField(env, iter, _iterator_ptr);
+//    ERROR_CHECK_VOID();
+//    ptr = (struct wtf_java_client_iterator*)lptr;
+//
+//    if (ptr)
+//    {
+//        if (ptr->arena)
+//        {
+//            wtf_ds_arena_destroy(ptr->arena);
+//        }
+//
+//        if (ptr->attrs)
+//        {
+//            wtf_client_destroy_attrs(ptr->attrs, ptr->attrs_sz);
+//        }
+//
+//        free(ptr);
+//    }
+//
+//    (*env)->SetLongField(env, iter, _iterator_ptr, 0);
+//    ERROR_CHECK_VOID();
+//}
+//
+//JNIEXPORT WTF_API jboolean JNICALL
+//Java_org_wtf_client_Iterator_finished(JNIEnv* env, jobject obj)
+//{
+//    struct wtf_java_client_iterator* iter = NULL;
+//    iter = wtf_get_iterator_ptr(env, obj);
+//    return iter->finished == 1 ? JNI_TRUE : JNI_FALSE;
+//}
+//
+//JNIEXPORT WTF_API void JNICALL
+//Java_org_wtf_client_Iterator_callback(JNIEnv* env, jobject obj)
+//{
+//    jobject tmp;
+//    jobject client_obj;
+//    struct wtf_client* client;
+//    struct wtf_java_client_iterator* iter = NULL;
+//    iter = wtf_get_iterator_ptr(env, obj);
+//    ERROR_CHECK_VOID();
+//    client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
+//    ERROR_CHECK_VOID();
+//
+//    if (iter->status == WTF_CLIENT_SEARCHDONE)
+//    {
+//        iter->finished = 1;
+//        (*env)->CallObjectMethod(env, client_obj, _client_remove_op, iter->reqid);
+//        ERROR_CHECK_VOID();
+//    }
+//    else if (iter->status == WTF_CLIENT_SUCCESS)
+//    {
+//        tmp = iter->encode_return(env, obj, iter);
+//
+//        if (iter->attrs)
+//        {
+//            wtf_client_destroy_attrs(iter->attrs, iter->attrs_sz);
+//        }
+//
+//        iter->attrs = NULL;
+//        iter->attrs_sz = 0;
+//        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
+//        ERROR_CHECK_VOID();
+//    }
+//    else
+//    {
+//        client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
+//        client = wtf_get_client_ptr(env, client_obj);
+//        tmp = wtf_java_client_create_exception(env, iter->status,
+//                                                    wtf_client_error_message(client));
+//        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
+//        ERROR_CHECK_VOID();
+//    }
+//}
+//
+//static jobject
+//wtf_java_client_iterator_encode_status_attributes(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* it)
+//{
+//    jobject ret;
+//    jobject client_obj;
+//    struct wtf_client* client;
+//
+//    if (it->status == WTF_CLIENT_SUCCESS)
+//    {
+//        ret = wtf_java_client_build_attributes(env, it->attrs, it->attrs_sz);
+//        ERROR_CHECK(0);
+//        return ret;
+//    }
+//    else if (it->status == WTF_CLIENT_NOTFOUND)
+//    {
+//        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_TRUE);
+//        ERROR_CHECK(0);
+//        return ret;
+//    }
+//    else if (it->status == WTF_CLIENT_CMPFAIL)
+//    {
+//        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
+//        ERROR_CHECK(0);
+//        return ret;
+//    }
+//    else
+//    {
+//        client_obj = (*env)->GetObjectField(env, obj, _deferred_c);
+//        client = wtf_get_client_ptr(env, client_obj);
+//        wtf_java_client_throw_exception(env, it->status, wtf_client_error_message(client));
+//        return 0;
+//    }
+//}
+//
 /******************************** Client Class ********************************/
 
 JNIEXPORT WTF_API void JNICALL
-Java_org_wtf_client_Client__1create(JNIEnv* env, jobject client, jstring _host, jint port)
+Java_org_wtf_client_Client__1create(JNIEnv* env, jobject client, jstring _host, jint port, jstring _hyperdex_host, jint hyperdex_port)
 {
     jlong lptr;
     const char* host;
+    const char* hyperdex_host;
     struct wtf_client* ptr;
 
     lptr = (*env)->GetLongField(env, client, _client_ptr);
     ERROR_CHECK_VOID();
     host = (*env)->GetStringUTFChars(env, _host, NULL);
     ERROR_CHECK_VOID();
-    ptr = wtf_client_create(host, port);
+    hyperdex_host = (*env)->GetStringUTFChars(env, _hyperdex_host, NULL);
+    ptr = wtf_client_create(host, port, hyperdex_host, hyperdex_port);
     (*env)->ReleaseStringUTFChars(env, _host, host);
+    (*env)->ReleaseStringUTFChars(env, _hyperdex_host, host);
 
     if (!ptr)
     {
@@ -1020,7 +686,7 @@ Java_org_wtf_client_Client_inner_1loop(JNIEnv* env, jobject client)
     enum wtf_client_returncode rc;
 
     ptr = wtf_get_client_ptr(env, client);
-    x = wtf_client_loop(ptr, -1, &rc);
+    x = wtf_client_loop(ptr, 0, -1, &rc);
 
     if (x < 0)
     {

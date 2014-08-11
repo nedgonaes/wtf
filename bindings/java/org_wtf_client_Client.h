@@ -49,19 +49,27 @@ JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_inner_1loop
 
 /*
  * Class:     org_wtf_client_Client
+ * Method:    async_open
+ * Signature: (Ljava/lang/String;IIII[I)Lorg/wtf/client/Deferred;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
+  (JNIEnv *, jobject, jstring, jint, jint, jint, jint, jintArray);
+
+/*
+ * Class:     org_wtf_client_Client
  * Method:    async_read
- * Signature: (Ljava/lang/String;[BII)Lorg/wtf/client/Deferred;
+ * Signature: (I[BI)Lorg/wtf/client/Deferred;
  */
 JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
-  (JNIEnv *, jobject, jstring, jbyteArray, jint, jint);
+  (JNIEnv *, jobject, jint, jbyteArray, jint);
 
 /*
  * Class:     org_wtf_client_Client
  * Method:    async_write
- * Signature: (Ljava/lang/String;Ljava/lang/Object;)Lorg/wtf/client/Deferred;
+ * Signature: (I[BI)Lorg/wtf/client/Deferred;
  */
 JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
-  (JNIEnv *, jobject, jstring, jobject);
+  (JNIEnv *, jobject, jint, jbyteArray, jint);
 
 #ifdef __cplusplus
 }

@@ -55,7 +55,7 @@ check_PROGRAMS =
 pkgconfig_DATA =
 
 jardir = $(datadir)/java
-dist_jar_DATA =
+jar_DATA =
 
 EXTRA_DIST =
 CLEANFILES =
@@ -433,41 +433,44 @@ wtf_backup_SOURCES += tools/backup.cc
 wtf_backup_LDADD = $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) libwtf-client.la
 wtf_backup_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
-################################################################################
-################################## bindings ####################################
-################################################################################
-if ENABLE_JAVA_BINDINGS
-swig_verbose = $(swig_verbose_$(V))
-swig_verbose_ = $(swig_verbose_$(AM_DEFAULT_VERBOSITY))
-swig_verbose_0 = @echo "  SWIG  " $@;
+################################# Java #########################################
+
+
 wtf_client_jarfile = bindings/java/org.wtf.client-$(VERSION).jar
 
-CLEANFILES += bindings/java/org/wtf/client/*
+if ENABLE_JAVA_BINDINGS
+lib_LTLIBRARIES += libwtf-client-java.la
+jar_DATA += $(wtf_client_jarfile)
+endif
+
+CLEANFILES += $(wtf_client_jarfile)
+CLEANFILES += bindings/java/org/wtf/client/*.class
 CLEANFILES += test/java/*.class
 
-EXTRA_DIST += test/java/Basic.java
-EXTRA_DIST += test/java/.exists
-EXTRA_DIST += bindings/java/.exists
-EXTRA_DIST += bindings/java/wtf_client.i
+EXTRA_DIST += bindings/java/org/wtf/client/ByteString.java
+EXTRA_DIST += bindings/java/org_wtf_client_Client.definitions.c
+EXTRA_DIST += bindings/java/org/wtf/client/Client.java
+EXTRA_DIST += bindings/java/org/wtf/client/Deferred.java
+EXTRA_DIST += bindings/java/org/wtf/client/WTFClientException.java
+EXTRA_DIST += bindings/java/org/wtf/client/Iterator.java
 
-lib_LTLIBRARIES += libwtf-client-java.la
-dist_jar_DATA += $(wtf_client_jarfile)
+# Client
+noinst_HEADERS += bindings/java/org_wtf_client_Client.h
+noinst_HEADERS += bindings/java/org_wtf_client_Deferred.h
+noinst_HEADERS += bindings/java/org_wtf_client_Iterator.h
 
-libwtf_client_java_la_SOURCES = bindings/java/wtf_client_wrap.cxx
+libwtf_client_java_la_SOURCES =
+libwtf_client_java_la_SOURCES += bindings/java/org_wtf_client_Client.c
 libwtf_client_java_la_CPPFLAGS = $(JNI_CPPFLAGS) $(AM_CPPFLAGS) $(CPPFLAGS)
-libwtf_client_java_la_CXXFLAGS = -fno-strict-aliasing $(AM_CXXFLAGS) -fvisibility=default $(CXXFLAGS)
+libwtf_client_java_la_CFLAGS = $(AM_CFLAGS) $(CFLAGS) -Wmissing-prototypes
 libwtf_client_java_la_LIBADD = libwtf-client.la
 
-bindings/java/wtf_client_wrap.cxx: bindings/java/wtf_client.i include/wtf/client.hpp include/wtf/client.h
-	$(swig_verbose)mkdir -p $(abs_top_builddir)/bindings/java/org/wtf/client &&  \
-	${SWIG} -I${abs_srcdir}/include -java -package org.wtf.client -c++ -outdir $(abs_builddir)/bindings/java/org/wtf/client \
-		-o $(abs_builddir)/$@ -w518 $(abs_top_srcdir)/$<
+JAVA_SRC_BASE=${abs_top_srcdir}/bindings/java
+JAVA_BUILD_BASE=${abs_top_builddir}/bindings/java
+JAVA_SRC_PKG=${JAVA_SRC_BASE}/org/wtf
+JAVA_BUILD_PKG=${JAVA_BUILD_BASE}/org/wtf
 
-$(wtf_client_jarfile): bindings/java/wtf_client_wrap.cxx
-	javac bindings/java/org/wtf/client/*.java
-	cd bindings/java ; $(JAR) cvf $(JARFLAGS) ../../$(wtf_client_jarfile) org/wtf/client/*.class
+$(wtf_client_jarfile): $(wildcard ${JAVA_SRC_PKG}/client/*.java)
+	javac -d ${JAVA_BUILD_BASE} ${JAVA_SRC_PKG}/client/*.java
+	cd ${JAVA_BUILD_BASE} && $(JAR) cvf $(JARFLAGS) ${abs_top_builddir}/${wtf_client_jarfile} org/wtf/client/*.class
 
-clean-local:
-	-rm -rf bindings/java/org
-
-endif

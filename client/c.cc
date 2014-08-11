@@ -31,6 +31,7 @@
 #include "common/macros.h"
 #include "client/client.h"
 
+#define FAKE_STATUS     wtf_client_returncode _status; wtf_client_returncode* status = &_status
 #define C_WRAP_EXCEPT(X) \
     wtf::client* cl = reinterpret_cast<wtf::client*>(_cl); \
     try \
@@ -340,7 +341,6 @@ WTF_API int64_t wtf_client_read_sync(wtf_client* _cl,
     );
 
 }
-
 
 #ifdef __cplusplus
 } // extern "C"
