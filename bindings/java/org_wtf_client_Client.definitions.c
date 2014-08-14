@@ -27,18 +27,34 @@
 
 #include "visibility.h"
 
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_open_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_open_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+{
+    TRACEC;
+}
+
 JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
   (JNIEnv* env, jobject obj, jstring jpath, jint jflags, jint jmode, jint jnum_replicas,
-        jint jblock_size, jintArray jfd)
+        jint jblock_size, jlongArray jfd)
 {
-    /* make a deferred object and get c pointer to it. */
-    jobject op = (*env)->NewObject(env, _deferred, _deferred_init, obj);
-    struct wtf_client* client = (struct wtf_client*) (*env)->GetLongField(env, obj, _client_ptr);
-    struct wtf_java_client_deferred* o = (struct wtf_java_client_deferred*) (*env)->GetLongField(env, obj, _deferred_ptr);
-    
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    jobject op = wtf_create_deferred_obj(env, obj);
+    ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
 
     jboolean is_copy;
-    o->data = (char*)(*env)->GetIntArrayElements(env, jfd, &is_copy);
+    o->data = (char*)(*env)->GetLongArrayElements(env, jfd, &is_copy);
+    printf("data: %p\n", o->data);
+    o->jdata = jfd;
+    printf("jdata: %p\n", o->jdata);
+    o->cleanup = wtf_deferred_open_cleanup;
     const char* path = (*env)->GetStringUTFChars(env, jpath, 0);
     o->reqid = wtf_client_open(client, path, jflags, jmode, jnum_replicas,
                     jblock_size, (int64_t*)o->data, &o->status);
@@ -49,18 +65,37 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
         return 0;
     }
 
+    printf("env: %p\n", env);
+    //(*env)->ReleaseLongArrayElements(env, o->jdata, (jlong*)o->data, 0);
+
+    (*env)->ReleaseLongArrayElements(env, (jlongArray)o->jdata, (jlong*)o->data, 0);
+    o->encode_return = wtf_java_client_deferred_encode_status;
     return op;
 }
 
-JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
-  (JNIEnv* env, jobject obj, jint jfd, jbyteArray jdata, jint joffset)
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_read_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_read_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
 {
-    int success = 0;
-    struct wtf_client* client = (struct wtf_client*) (*env)->GetLongField(env, obj, _client_ptr);
-    jobject op = (*env)->NewObject(env, _deferred, _deferred_init, obj);
+    TRACEC;
+    (*env)->ReleaseByteArrayElements(env, dfrd->ref, dfrd->data, 0);
+    (*env)->DeleteGlobalRef(env, dfrd->ref);
+    ERROR_CHECK_VOID();
+}
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
+  (JNIEnv* env, jobject obj, jlong jfd, jbyteArray jdata, jint joffset)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
     ERROR_CHECK(0);
-    struct wtf_java_client_deferred* o = (struct wtf_java_client_deferred*) (*env)->GetLongField(env, obj, _deferred_ptr);
+    jobject op = wtf_create_deferred_obj(env, obj);
     ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
 
     /*
      * Get references to each piece of data, and pin it in place.
@@ -73,9 +108,11 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
      */
 
     jboolean is_copy; 
-    o->data = (*env)->GetByteArrayElements(env, jdata, &is_copy);
-    o->data_sz = (*env)->GetArrayLength(env, jdata);
+    o->ref = (*env)->NewGlobalRef(env, jdata);
+    o->data = (*env)->GetByteArrayElements(env, o->ref, &is_copy);
+    o->data_sz = (*env)->GetArrayLength(env, o->ref);
     o->jdata = jdata;
+    o->cleanup = wtf_deferred_read_cleanup;
     int offset = (int)joffset;
     int fd = (int)jfd;
 
@@ -93,25 +130,28 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
 }
 
 JNIEXPORT WTF_API void JNICALL
-wtf_deferred_read_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+wtf_deferred_write_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
 
 JNIEXPORT WTF_API void JNICALL
-wtf_deferred_read_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+wtf_deferred_write_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
 {
-    (*env)->ReleaseByteArrayElements(env, dfrd->jdata, dfrd->data, 0);
+    TRACEC;
+    (*env)->ReleaseByteArrayElements(env, dfrd->ref, dfrd->data, 0);
+    (*env)->DeleteGlobalRef(env, dfrd->ref);
     ERROR_CHECK_VOID();
 }
 
 JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
-  (JNIEnv* env, jobject obj, jint jfd, jbyteArray jdata, jint joffset)
+  (JNIEnv* env, jobject obj, jlong jfd, jbyteArray jdata, jint joffset)
 {
-    const char* in_path;
-    int success = 0;
-    struct wtf_client* client = (struct wtf_client*) (*env)->GetLongField(env, obj, _client_ptr);
-    jobject op = (*env)->NewObject(env, _deferred, _deferred_init, obj);
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
     ERROR_CHECK(0);
-    struct wtf_java_client_deferred* o = (struct wtf_java_client_deferred*) (*env)->GetLongField(env, obj, _deferred_ptr);
+    jobject op = wtf_create_deferred_obj(env, obj);
     ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
 
     /*
      * Get references to each piece of data, and pin it in place.
@@ -124,9 +164,11 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
      */
 
     jboolean is_copy; 
-    o->data = (*env)->GetByteArrayElements(env, jdata, &is_copy);
-    o->data_sz = (*env)->GetArrayLength(env, jdata);
+    o->ref = (*env)->NewGlobalRef(env, jdata);
+    o->data = (*env)->GetByteArrayElements(env, o->ref, &is_copy);
+    o->data_sz = (*env)->GetArrayLength(env, o->ref);
     o->jdata = jdata;
+    o->cleanup = wtf_deferred_write_cleanup;
     int offset = (int)joffset;
 
     o->reqid = wtf_client_write(client, jfd, o->data + offset, &o->data_sz, 
@@ -138,13 +180,21 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
         return 0;
     }
 
+
+    printf("%s\n", o->data + offset);
+    printf("%lu\n", o->data_sz);
+    printf("%d\n", offset);
+    //(*env)->ReleaseByteArrayElements(env, o->jdata, o->data, 0);
     o->encode_return = wtf_java_client_deferred_encode_status;
     return op;
 }
 
-JNIEXPORT WTF_API void JNICALL
-wtf_deferred_write_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+JNIEXPORT void JNICALL Java_org_wtf_client_Client_close
+  (JNIEnv * env, jobject obj, jlong jfd)
 {
-    (*env)->ReleaseByteArrayElements(env, dfrd->jdata, dfrd->data, 0);
-    ERROR_CHECK_VOID();
+    TRACEC;
+    struct wtf_client* client = (struct wtf_client*) (*env)->GetLongField(env, obj, _client_ptr);
+    wtf_client_returncode status;
+    wtf_client_close(client, jfd, &status);
 }
+

@@ -41,18 +41,15 @@ public class Client
     }
 
     private long ptr = 0;
-    private Map<Long, Operation> ops = null;
 
     public Client(String wtf_host, Integer wtf_port, String hyperdex_host, Integer hyperdex_port)
     {
         _create(wtf_host, wtf_port.intValue(), hyperdex_host, hyperdex_port.intValue());
-        this.ops = new HashMap<Long, Operation>();
     }
 
     public Client(String wtf_host, int wtf_port, String hyperdex_host, int hyperdex_port)
     {
         _create(wtf_host, wtf_port, hyperdex_host, hyperdex_port);
-        this.ops = new HashMap<Long, Operation>();
     }
 
     protected void finalize() throws Throwable
@@ -79,15 +76,8 @@ public class Client
     /* utilities */
     public Operation loop()
     {
-        long ret = inner_loop();
-        Operation o = ops.get(ret);
-
-        if (o != null)
-        {
-            o.callback();
-        }
-
-        return o;
+        //XXX: rewrite
+        return null;
     }
 
     /* cached IDs */
@@ -101,24 +91,27 @@ public class Client
     
     /* operations */
     public native Deferred async_open(String path, int flags, int mode, 
-        int num_replicas, int block_size, int[] fd) throws WTFClientException;
-    public Object open(String path, int flags, int mode, 
-        int num_replicas, int block_size, int[] fd) throws WTFClientException
+        int num_replicas, int block_size, long[] fd) throws WTFClientException;
+    public Boolean open(String path, int flags, int mode, 
+        int num_replicas, int block_size, long[] fd) throws WTFClientException
     {
-        return (Object) async_open(path, flags, mode, num_replicas, block_size,
+        return (Boolean) async_open(path, flags, mode, num_replicas, block_size,
             fd).waitForIt();
     }
 
-    public native Deferred async_read(int fd, byte[] data, int offset) throws WTFClientException;
-    public Object read(int fd, byte[] data, int offset) throws WTFClientException
+    public native Deferred async_read(long fd, byte[] data, int offset) throws WTFClientException;
+    public Boolean read(long fd, byte[] data, int offset) throws WTFClientException
     {
-        return (Object) async_read(fd, data, offset).waitForIt();
+        return (Boolean) async_read(fd, data, offset).waitForIt();
     }
 
-    public native Deferred async_write(int fd, byte[] data, int offset) throws WTFClientException;
-    public Boolean write(int fd, byte[] data, int offset) throws WTFClientException
+    public native Deferred async_write(long fd, byte[] data, int offset) throws WTFClientException;
+    public Boolean write(long fd, byte[] data, int offset) throws WTFClientException
     {
         return (Boolean) async_write(fd, data, offset).waitForIt();
     }
+
+    public native void close(long fd);
+    
 };
 

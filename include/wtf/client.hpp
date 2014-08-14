@@ -28,10 +28,6 @@
 #ifndef wtf_client_hpp_
 #define wtf_client_hpp_
 
-// C++
-#include <iostream>
-#include <vector>
-
 //WTF 
 #include <wtf/client.h>
 
@@ -71,8 +67,6 @@ class Client
             { return wtf_client_rename(m_cl, src, dst, status); }
         int64_t getattr(const char* path, struct wtf_file_attrs* fa, wtf_client_returncode* status)
             { return wtf_client_getattr(m_cl, path, fa, status); }
-        std::vector<std::string> ls(const char* path)
-            { return wtf_client_ls(m_cl, path); }
         int64_t lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* status)
             { return wtf_client_lseek(m_cl, fd, offset, whence, status); }
         int64_t begin_tx(wtf_client_returncode* status)

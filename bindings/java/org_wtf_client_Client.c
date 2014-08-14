@@ -32,10 +32,18 @@
 
 /* WTF */
 #include <wtf/client.h>
+#include "common/macros.h"
 #include "visibility.h"
 #include "bindings/java/org_wtf_client_Client.h"
 #include "bindings/java/org_wtf_client_Deferred.h"
 #include "bindings/java/org_wtf_client_Iterator.h"
+
+//#undef TRACECALLS
+#ifdef TRACECALLS
+#define TRACEC printf("%s:%s(%i)\n", __FILE__, __func__, __LINE__);
+#else
+#define TRACEC
+#endif
 
 /********************************* Cached IDs *********************************/
 
@@ -81,8 +89,6 @@ static jmethodID _iterator_appendBacklogged;
 
 static jclass _client;
 static jfieldID _client_ptr;
-static jmethodID _client_add_op;
-static jmethodID _client_remove_op;
 
 #define CHECK_CACHE(X) assert((X))
 
@@ -97,6 +103,7 @@ static jmethodID _client_remove_op;
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
 {
+    TRACEC;
     jclass tmp_cls;
 
     /* cache class String */
@@ -142,8 +149,6 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
     /* cache class Client */
     REF(_client, (*env)->FindClass(env, "org/wtf/client/Client"));
     _client_ptr = (*env)->GetFieldID(env, _client, "ptr", "J");
-    _client_add_op = (*env)->GetMethodID(env, _client, "add_op", "(JLorg/wtf/client/Operation;)V");
-    _client_remove_op = (*env)->GetMethodID(env, _client, "remove_op", "(J)V");
 
     CHECK_CACHE(_string);
     CHECK_CACHE(_byte_string);
@@ -177,8 +182,6 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
     CHECK_CACHE(_iterator_appendBacklogged);
     CHECK_CACHE(_client);
     CHECK_CACHE(_client_ptr);
-    CHECK_CACHE(_client_add_op);
-    CHECK_CACHE(_client_remove_op);
 
     (void) client;
 }
@@ -186,6 +189,7 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Client_terminate(JNIEnv* env, jclass client)
 {
+    TRACEC;
     (*env)->DeleteGlobalRef(env, _string);
     (*env)->DeleteGlobalRef(env, _byte_string);
     (*env)->DeleteGlobalRef(env, _boolean);
@@ -200,11 +204,21 @@ Java_org_wtf_client_Client_terminate(JNIEnv* env, jclass client)
     (void) client;
 }
 
+/******************************* Construct objects ****************************/
+
+static jobject
+wtf_create_deferred_obj(JNIEnv* env, jobject obj)
+{
+    jobject op = (*env)->NewObject(env, _deferred, _deferred_init, obj);
+    return op;
+}
+
 /******************************* Pointer Unwrap *******************************/
 
 static struct wtf_client*
 wtf_get_client_ptr(JNIEnv* env, jobject obj)
 {
+    TRACEC;
     struct wtf_client* x;
     x = (struct wtf_client*) (*env)->GetLongField(env, obj, _client_ptr);
     assert(x);
@@ -214,6 +228,7 @@ wtf_get_client_ptr(JNIEnv* env, jobject obj)
 static struct wtf_java_client_deferred*
 wtf_get_deferred_ptr(JNIEnv* env, jobject obj)
 {
+    TRACEC;
     struct wtf_java_client_deferred* x;
     x = (struct wtf_java_client_deferred*) (*env)->GetLongField(env, obj, _deferred_ptr);
     assert(x);
@@ -223,6 +238,7 @@ wtf_get_deferred_ptr(JNIEnv* env, jobject obj)
 static struct wtf_java_client_iterator*
 wtf_get_iterator_ptr(JNIEnv* env, jobject obj)
 {
+    TRACEC;
     struct wtf_java_client_iterator* x;
     x = (struct wtf_java_client_iterator*) (*env)->GetLongField(env, obj, _iterator_ptr);
     assert(x);
@@ -234,6 +250,7 @@ wtf_get_iterator_ptr(JNIEnv* env, jobject obj)
 static int
 wtf_java_out_of_memory(JNIEnv* env)
 {
+    TRACEC;
     jclass oom;
     jmethodID init;
     jobject exc;
@@ -255,6 +272,7 @@ wtf_java_client_create_exception(JNIEnv* env,
                                       enum wtf_client_returncode _rc,
                                       const char* message)
 {
+    TRACEC;
     jlong rc = _rc;
     jstring str = (*env)->NewStringUTF(env, wtf_client_returncode_to_string(_rc));
     jstring msg = (*env)->NewStringUTF(env, message);
@@ -268,6 +286,7 @@ wtf_java_client_throw_exception(JNIEnv* env,
                                      enum wtf_client_returncode _rc,
                                      const char* message)
 {
+    TRACEC;
     jobject err = wtf_java_client_create_exception(env, _rc, message);
     ERROR_CHECK(-1);
     (*env)->ExceptionClear(env);
@@ -302,6 +321,7 @@ wtf_java_client_throw_exception(JNIEnv* env,
 
 struct wtf_java_client_deferred
 {
+    struct wtf_client* client;
     int64_t reqid;
     enum wtf_client_returncode status;
     jobject jdata;
@@ -312,11 +332,13 @@ struct wtf_java_client_deferred
     int finished;
     void (*cleanup)(JNIEnv* env, struct wtf_java_client_deferred* d);
     jobject (*encode_return)(JNIEnv* env, jobject obj, struct wtf_java_client_deferred* d);
+    jobject ref;
 };
 
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Deferred__1create(JNIEnv* env, jobject deferred)
 {
+    TRACEC;
     jlong lptr;
     struct wtf_java_client_deferred* ptr;
 
@@ -351,6 +373,7 @@ Java_org_wtf_client_Deferred__1create(JNIEnv* env, jobject deferred)
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Deferred__1destroy(JNIEnv* env, jobject dfrd)
 {
+    TRACEC;
     jlong lptr;
     struct wtf_java_client_deferred* ptr;
 
@@ -372,47 +395,49 @@ Java_org_wtf_client_Deferred__1destroy(JNIEnv* env, jobject dfrd)
 #pragma GCC diagnostic pop
 
 JNIEXPORT WTF_API jobject JNICALL
-Java_org_wtf_client_Deferred_waitForIt(JNIEnv* env, jobject client)
+Java_org_wtf_client_Deferred_waitForIt(JNIEnv* env, jobject obj)
 {
+    TRACEC;
     struct wtf_java_client_deferred* dfrd = NULL;
     struct wtf_client* ptr;
     int64_t x;
     wtf_client_returncode rc;
 
-    dfrd = wtf_get_deferred_ptr(env, client);
+    dfrd = wtf_get_deferred_ptr(env, obj);
     ERROR_CHECK(0);
-    ptr = wtf_get_client_ptr(env, client);
-    x = wtf_client_loop(ptr, dfrd->reqid, -1, &rc);
+    x = wtf_client_loop(dfrd->client, dfrd->reqid, -1, &rc);
 
     /*
      * We need to release the bytes that are pinned
      */
-    assert(dfrd->cleanup);
     if (dfrd->cleanup)
     {
         dfrd->cleanup(env, dfrd);
     }
 
+    TRACEC;
     assert(dfrd->encode_return);
-    return dfrd->encode_return(env, client, dfrd);
+    TRACEC;
+    return dfrd->encode_return(env, obj, dfrd);
 }
 
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Deferred_callback(JNIEnv* env, jobject obj)
 {
+    TRACEC;
     jobject client_obj;
     struct wtf_java_client_deferred* dfrd = NULL;
     dfrd = wtf_get_deferred_ptr(env, obj);
     ERROR_CHECK_VOID();
     dfrd->finished = 1;
     client_obj = (*env)->GetObjectField(env, obj, _deferred_c);
-    (*env)->CallObjectMethod(env, client_obj, _client_remove_op, dfrd->reqid);
     ERROR_CHECK_VOID();
 }
 
 static jobject
 wtf_java_client_deferred_encode_status(JNIEnv* env, jobject obj, struct wtf_java_client_deferred* d)
 {
+    TRACEC;
     jobject ret;
     jobject client_obj;
     struct wtf_client* client;
@@ -425,7 +450,9 @@ wtf_java_client_deferred_encode_status(JNIEnv* env, jobject obj, struct wtf_java
     }
     else if (d->status == WTF_CLIENT_NOTFOUND)
     {
-        return NULL;
+        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
+        ERROR_CHECK(0);
+        return ret;
     }
     else
     {
@@ -440,6 +467,7 @@ wtf_java_client_deferred_encode_status(JNIEnv* env, jobject obj, struct wtf_java
 static jobject
 wtf_java_client_deferred_encode_status_data(JNIEnv* env, jobject obj, struct wtf_java_client_deferred* d)
 {
+    TRACEC;
     jobject ret;
     jobject client_obj;
     struct wtf_client* client;
@@ -631,6 +659,7 @@ wtf_java_client_deferred_encode_status_data(JNIEnv* env, jobject obj, struct wtf
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Client__1create(JNIEnv* env, jobject client, jstring _host, jint port, jstring _hyperdex_host, jint hyperdex_port)
 {
+    TRACEC;
     jlong lptr;
     const char* host;
     const char* hyperdex_host;
@@ -643,7 +672,7 @@ Java_org_wtf_client_Client__1create(JNIEnv* env, jobject client, jstring _host, 
     hyperdex_host = (*env)->GetStringUTFChars(env, _hyperdex_host, NULL);
     ptr = wtf_client_create(host, port, hyperdex_host, hyperdex_port);
     (*env)->ReleaseStringUTFChars(env, _host, host);
-    (*env)->ReleaseStringUTFChars(env, _hyperdex_host, host);
+    (*env)->ReleaseStringUTFChars(env, _hyperdex_host, hyperdex_host);
 
     if (!ptr)
     {
@@ -661,6 +690,7 @@ Java_org_wtf_client_Client__1create(JNIEnv* env, jobject client, jstring _host, 
 JNIEXPORT WTF_API void JNICALL
 Java_org_wtf_client_Client__1destroy(JNIEnv* env, jobject client)
 {
+    TRACEC;
     jlong lptr;
     struct wtf_client* ptr;
 
@@ -680,6 +710,7 @@ Java_org_wtf_client_Client__1destroy(JNIEnv* env, jobject client)
 JNIEXPORT WTF_API jlong JNICALL
 Java_org_wtf_client_Client_inner_1loop(JNIEnv* env, jobject client)
 {
+    TRACEC;
     struct wtf_client* ptr;
     int64_t x;
     jlong y;

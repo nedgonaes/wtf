@@ -1,47 +1,45 @@
 import java.util.*;
 import org.wtf.client.Client;
-import org.wtf.client.wtf_client;
+import org.wtf.client.Deferred;
 public class Basic {
-	public static void main (String[] args) {
+	public static void main (String[] args) throws Exception {
 		System.out.println("start");
 		Client c = new Client(args[0], Integer.valueOf(args[1]), args[2], Integer.valueOf(args[3]));
-		int[] status = new int[1];
-        int[] lstatus = new int[1];
-        int[] fd = new int[1];
-		status[0] = 0;
+        long[] fd = new long[1];
 		fd[0] = 0;
-		//long fd = c.open("/file1", O_CREAT | O_RDWR, 0777, 3, 4096, status);
-		long reqid = c.open("/file1", 0x42, 0777, 3, 4096, fd, status);
-        assert(reqid > 0);
-        reqid = c.loop(reqid, -1, lstatus);
-        assert(reqid > 0);
-        assert(fd[0] > 0) : c.error_location() + ":" + c.error_message();
+        int offset = 0;
 
-		System.out.println("open fd " + fd[0] + " status " + status[0]);
+		//long fd = c.open("/file1", O_CREAT | O_RDWR, 0777, 3, 4096);
+		Boolean ok = c.open("/file1", 0x42, 0777, 3, 4096, fd);
+
+		System.out.println("open fd " + fd[0]);
 
 		//byte[] data = "hi".getBytes();
         byte[] data = new byte[2];
         data[0] = 'h';
         data[1] = 'i';
-		long[] data_sz = { 2L };
-		reqid = c.write_sync(fd[0], data, data_sz, 3, status);
-		assert(reqid > 0) : "reqid: " + reqid;
-		c.close(fd[0], status);
-		System.out.println("close fd " + fd[0] + " status " + status[0]);
 
-        reqid = c.open("/file1", 0x2, 0777, 3, 4096, fd, status);
-        assert(reqid > 0);
-        reqid = c.loop(reqid, -1, lstatus);
-        assert(reqid > 0);
-        assert(fd[0] > 0) : c.error_location() + ":" + c.error_message();
+		ok = c.write(fd[0], data, offset);
+        if (data[0] != 'h')
+        {
+           return;
+        }
 
-		System.out.println("open fd " + fd[0] + " status " + status[0]);
+		c.close(fd[0]);
+		System.out.println("close fd " + fd[0]);
+
+        ok = c.open("/file1", 0x2, 0777, 3, 4096, fd);
+
+		System.out.println("open fd " + fd[0]);
         byte[] readdata = new byte[2]; 
         readdata[0] = '\0';
         readdata[1] = '\0';
-        reqid = -1;
-        reqid = c.read_sync(fd[0], readdata, data_sz, status);
-        assert(reqid > 0);
+        ok = c.read(fd[0], readdata, offset);
+        if (readdata[0]!='h')
+        {
+            return;
+        }
+
         System.out.println(new String(readdata));
 		System.out.println("finish");
 	}

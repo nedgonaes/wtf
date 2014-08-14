@@ -311,10 +311,10 @@ wtf_CPPFLAGS = -DWTF_EXEC_DIR="\"$(wtfexecdir)\""
 ################################## tests   #####################################
 ################################################################################
 shell_wrappers =
-shell_wrappers += test/sh/readdir_test.sh
-shell_wrappers += test/sh/chdir_test.sh
-shell_wrappers += test/sh/getattr_test.sh
-shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
+#shell_wrappers += test/sh/readdir_test.sh
+#shell_wrappers += test/sh/chdir_test.sh
+#shell_wrappers += test/sh/getattr_test.sh
+#shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.2GB.sh
 
 #wtf-test_readwrite
