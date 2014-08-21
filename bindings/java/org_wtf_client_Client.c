@@ -90,6 +90,14 @@ static jmethodID _iterator_appendBacklogged;
 static jclass _client;
 static jfieldID _client_ptr;
 
+static jclass _fileattrs;
+static jmethodID _fileattrs_init;
+static jfieldID _fileattrs_sz;
+static jfieldID _fileattrs_mode;
+static jfieldID _fileattrs_flags;
+static jfieldID _fileattrs_isdir;
+
+
 #define CHECK_CACHE(X) assert((X))
 
 #define ERROR_CHECK(RET) if ((*env)->ExceptionCheck(env) == JNI_TRUE) return (RET)
@@ -149,6 +157,13 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
     /* cache class Client */
     REF(_client, (*env)->FindClass(env, "org/wtf/client/Client"));
     _client_ptr = (*env)->GetFieldID(env, _client, "ptr", "J");
+    /* cache class WTFFileAttrs */
+    REF(_fileattrs, (*env)->FindClass(env, "org/wtf/client/WTFFileAttrs"));
+    _fileattrs_init = (*env)->GetMethodID(env, _fileattrs, "<init>", "()V");
+    _fileattrs_sz = (*env)->GetFieldID(env, _fileattrs, "sz", "I");
+    _fileattrs_mode = (*env)->GetFieldID(env, _fileattrs, "mode", "I");
+    _fileattrs_flags = (*env)->GetFieldID(env, _fileattrs, "flags", "I");
+    _fileattrs_isdir = (*env)->GetFieldID(env, _fileattrs, "isDir", "I");
 
     CHECK_CACHE(_string);
     CHECK_CACHE(_byte_string);
@@ -182,6 +197,13 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
     CHECK_CACHE(_iterator_appendBacklogged);
     CHECK_CACHE(_client);
     CHECK_CACHE(_client_ptr);
+    CHECK_CACHE(_fileattrs);
+    CHECK_CACHE(_fileattrs_init);
+    CHECK_CACHE(_fileattrs_sz);
+    CHECK_CACHE(_fileattrs_mode);
+    CHECK_CACHE(_fileattrs_flags);
+    CHECK_CACHE(_fileattrs_isdir);
+
 
     (void) client;
 }
@@ -200,6 +222,7 @@ Java_org_wtf_client_Client_terminate(JNIEnv* env, jclass client)
     (*env)->DeleteGlobalRef(env, _deferred);
     (*env)->DeleteGlobalRef(env, _iterator);
     (*env)->DeleteGlobalRef(env, _client);
+    (*env)->DeleteGlobalRef(env, _fileattrs);
 
     (void) client;
 }
@@ -211,6 +234,13 @@ wtf_create_deferred_obj(JNIEnv* env, jobject obj)
 {
     jobject op = (*env)->NewObject(env, _deferred, _deferred_init, obj);
     return op;
+}
+
+static jobject
+wtf_create_fileattrs_obj(JNIEnv* env, jobject obj)
+{
+    jobject fa = (*env)->NewObject(env, _fileattrs, _fileattrs_init, obj);
+    return fa;
 }
 
 /******************************* Pointer Unwrap *******************************/
@@ -490,170 +520,111 @@ wtf_java_client_deferred_encode_status_data(JNIEnv* env, jobject obj, struct wtf
 }
 
 /******************************* Iterator Class *******************************/
-//struct wtf_java_client_iterator
-//{
-//    int64_t reqid;
-//    enum wtf_client_returncode status;
-//    char* data;
-//    size_t data_sz;
-//    int finished;
-//    jobject (*encode_return)(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* d);
-//};
-//
-//JNIEXPORT WTF_API void JNICALL
-//Java_org_wtf_client_Iterator__1create(JNIEnv* env, jobject iterator)
-//{
-//    jlong lptr;
-//    struct wtf_java_client_iterator* ptr;
-//
-//    lptr = (*env)->GetLongField(env, iterator, _iterator_ptr);
-//    ERROR_CHECK_VOID();
-//    ptr = malloc(sizeof(struct wtf_java_client_iterator));
-//
-//    if (!ptr)
-//    {
-//        wtf_java_out_of_memory(env);
-//        return;
-//    }
-//
-//    memset(ptr, 0, sizeof(struct wtf_java_client_iterator));
-//    lptr = (long) ptr;
-//    (*env)->SetLongField(env, iterator, _iterator_ptr, lptr);
-//    ERROR_CHECK_VOID();
-//
-//    ptr->arena = wtf_ds_arena_create();
-//
-//    if (!ptr->arena)
-//    {
-//        /* all other resources are caught by the finalizer? */
-//        wtf_java_out_of_memory(env);
-//        return;
-//    }
-//
-//    ptr->reqid = -1;
-//    ptr->status = WTF_CLIENT_GARBAGE;
-//    ptr->data= NULL;
-//    ptr->data_sz= 0;
-//    ptr->finished = 0;
-//    ptr->encode_return = NULL;
-//}
-//
-//#pragma GCC diagnostic push
-//#pragma GCC diagnostic ignored "-Wcast-qual"
-//JNIEXPORT WTF_API void JNICALL
-//Java_org_wtf_client_Iterator__1destroy(JNIEnv* env, jobject iter)
-//{
-//    jlong lptr;
-//    struct wtf_java_client_iterator* ptr;
-//
-//    lptr = (*env)->GetLongField(env, iter, _iterator_ptr);
-//    ERROR_CHECK_VOID();
-//    ptr = (struct wtf_java_client_iterator*)lptr;
-//
-//    if (ptr)
-//    {
-//        if (ptr->arena)
-//        {
-//            wtf_ds_arena_destroy(ptr->arena);
-//        }
-//
-//        if (ptr->attrs)
-//        {
-//            wtf_client_destroy_attrs(ptr->attrs, ptr->attrs_sz);
-//        }
-//
-//        free(ptr);
-//    }
-//
-//    (*env)->SetLongField(env, iter, _iterator_ptr, 0);
-//    ERROR_CHECK_VOID();
-//}
-//
-//JNIEXPORT WTF_API jboolean JNICALL
-//Java_org_wtf_client_Iterator_finished(JNIEnv* env, jobject obj)
-//{
-//    struct wtf_java_client_iterator* iter = NULL;
-//    iter = wtf_get_iterator_ptr(env, obj);
-//    return iter->finished == 1 ? JNI_TRUE : JNI_FALSE;
-//}
-//
-//JNIEXPORT WTF_API void JNICALL
-//Java_org_wtf_client_Iterator_callback(JNIEnv* env, jobject obj)
-//{
-//    jobject tmp;
-//    jobject client_obj;
-//    struct wtf_client* client;
-//    struct wtf_java_client_iterator* iter = NULL;
-//    iter = wtf_get_iterator_ptr(env, obj);
-//    ERROR_CHECK_VOID();
-//    client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
-//    ERROR_CHECK_VOID();
-//
-//    if (iter->status == WTF_CLIENT_SEARCHDONE)
-//    {
-//        iter->finished = 1;
-//        (*env)->CallObjectMethod(env, client_obj, _client_remove_op, iter->reqid);
-//        ERROR_CHECK_VOID();
-//    }
-//    else if (iter->status == WTF_CLIENT_SUCCESS)
-//    {
-//        tmp = iter->encode_return(env, obj, iter);
-//
-//        if (iter->attrs)
-//        {
-//            wtf_client_destroy_attrs(iter->attrs, iter->attrs_sz);
-//        }
-//
-//        iter->attrs = NULL;
-//        iter->attrs_sz = 0;
-//        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
-//        ERROR_CHECK_VOID();
-//    }
-//    else
-//    {
-//        client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
-//        client = wtf_get_client_ptr(env, client_obj);
-//        tmp = wtf_java_client_create_exception(env, iter->status,
-//                                                    wtf_client_error_message(client));
-//        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
-//        ERROR_CHECK_VOID();
-//    }
-//}
-//
-//static jobject
-//wtf_java_client_iterator_encode_status_attributes(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* it)
-//{
-//    jobject ret;
-//    jobject client_obj;
-//    struct wtf_client* client;
-//
-//    if (it->status == WTF_CLIENT_SUCCESS)
-//    {
-//        ret = wtf_java_client_build_attributes(env, it->attrs, it->attrs_sz);
-//        ERROR_CHECK(0);
-//        return ret;
-//    }
-//    else if (it->status == WTF_CLIENT_NOTFOUND)
-//    {
-//        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_TRUE);
-//        ERROR_CHECK(0);
-//        return ret;
-//    }
-//    else if (it->status == WTF_CLIENT_CMPFAIL)
-//    {
-//        ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
-//        ERROR_CHECK(0);
-//        return ret;
-//    }
-//    else
-//    {
-//        client_obj = (*env)->GetObjectField(env, obj, _deferred_c);
-//        client = wtf_get_client_ptr(env, client_obj);
-//        wtf_java_client_throw_exception(env, it->status, wtf_client_error_message(client));
-//        return 0;
-//    }
-//}
-//
+struct wtf_java_client_iterator
+{
+    int64_t reqid;
+    enum wtf_client_returncode status;
+    char* data;
+    size_t data_sz;
+    int finished;
+    jobject (*encode_return)(JNIEnv* env, jobject obj, struct wtf_java_client_iterator* d);
+};
+
+JNIEXPORT WTF_API void JNICALL
+Java_org_wtf_client_Iterator__1create(JNIEnv* env, jobject iterator)
+{
+    jlong lptr;
+    struct wtf_java_client_iterator* ptr;
+
+    lptr = (*env)->GetLongField(env, iterator, _iterator_ptr);
+    ERROR_CHECK_VOID();
+    ptr = malloc(sizeof(struct wtf_java_client_iterator));
+
+    if (!ptr)
+    {
+        wtf_java_out_of_memory(env);
+        return;
+    }
+
+    memset(ptr, 0, sizeof(struct wtf_java_client_iterator));
+    lptr = (long) ptr;
+    (*env)->SetLongField(env, iterator, _iterator_ptr, lptr);
+    ERROR_CHECK_VOID();
+
+    ptr->reqid = -1;
+    ptr->status = WTF_CLIENT_GARBAGE;
+    ptr->data= NULL;
+    ptr->data_sz= 0;
+    ptr->finished = 0;
+    ptr->encode_return = NULL;
+}
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+JNIEXPORT WTF_API void JNICALL
+Java_org_wtf_client_Iterator__1destroy(JNIEnv* env, jobject iter)
+{
+    jlong lptr;
+    struct wtf_java_client_iterator* ptr;
+
+    lptr = (*env)->GetLongField(env, iter, _iterator_ptr);
+    ERROR_CHECK_VOID();
+    ptr = (struct wtf_java_client_iterator*)lptr;
+
+    if (ptr)
+    {
+        free(ptr);
+    }
+
+    (*env)->SetLongField(env, iter, _iterator_ptr, 0);
+    ERROR_CHECK_VOID();
+}
+
+JNIEXPORT WTF_API jboolean JNICALL
+Java_org_wtf_client_Iterator_finished(JNIEnv* env, jobject obj)
+{
+    struct wtf_java_client_iterator* iter = NULL;
+    iter = wtf_get_iterator_ptr(env, obj);
+    return iter->finished == 1 ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT WTF_API void JNICALL
+Java_org_wtf_client_Iterator_callback(JNIEnv* env, jobject obj)
+{
+    jobject tmp;
+    jobject client_obj;
+    struct wtf_client* client;
+    struct wtf_java_client_iterator* iter = NULL;
+    iter = wtf_get_iterator_ptr(env, obj);
+    ERROR_CHECK_VOID();
+    client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
+    ERROR_CHECK_VOID();
+
+    //IF DONE
+    /*if (iter->status == WTF_CLIENT_SEARCHDONE)
+    {
+        iter->finished = 1;
+        (*env)->CallObjectMethod(env, client_obj, _client_remove_op, iter->reqid);
+        ERROR_CHECK_VOID();
+    }*/
+    if (iter->status == WTF_CLIENT_SUCCESS)
+    {
+        tmp = iter->encode_return(env, obj, iter);
+
+        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
+        ERROR_CHECK_VOID();
+    }
+    else
+    {
+        client_obj = (*env)->GetObjectField(env, obj, _iterator_c);
+        client = wtf_get_client_ptr(env, client_obj);
+        tmp = wtf_java_client_create_exception(env, iter->status,
+                                                    wtf_client_error_message(client));
+        (*env)->CallObjectMethod(env, obj, _iterator_appendBacklogged, tmp);
+        ERROR_CHECK_VOID();
+    }
+}
+
 /******************************** Client Class ********************************/
 
 JNIEXPORT WTF_API void JNICALL

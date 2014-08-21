@@ -111,6 +111,44 @@ public class Client
         return (Boolean) async_write(fd, data, offset).waitForIt();
     }
 
+    public native Deferred async_getattr(String path, WTFFileAttrs fa) throws WTFClientException;
+    public Boolean getattr(String path, WTFFileAttrs fa) throws WTFClientException
+    {
+        return (Boolean) async_getattr(path, fa).waitForIt();
+    }
+
+    public native Deferred async_rename(String src, String dst) throws WTFClientException;
+    public Boolean rename(String src, String dst) throws WTFClientException
+    {
+        return (Boolean) async_rename(src, dst).waitForIt();
+    }
+
+    public native Deferred async_mkdir(String path, int permissions);
+    public Boolean mkdir(String path, int permissions)
+    {
+        return (Boolean) async_mkdir(path, permissions).waitForIt();
+    }
+
+    public native Deferred async_unlink(String path);
+    public Boolean unlink(String path)
+    {
+        return (Boolean) async_unlink(path).waitForIt();
+    }
+
+    public native long async_lseek(long fd, long offset, int whence);
+
+    public native Iterator readdir(String path);
+
+    public String error_location()
+    {
+        return "";
+    }
+
+    public String error_message()
+    {
+        return "";
+    }
+
     public native void close(long fd);
     
 };

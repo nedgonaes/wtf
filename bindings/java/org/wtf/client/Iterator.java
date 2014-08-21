@@ -31,7 +31,7 @@ package org.wtf.client;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class Iterator implements Operation
+public class Iterator 
 {
     private long ptr = 0;
     private Client c;

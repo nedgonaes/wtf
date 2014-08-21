@@ -453,6 +453,7 @@ EXTRA_DIST += bindings/java/org/wtf/client/Client.java
 EXTRA_DIST += bindings/java/org/wtf/client/Deferred.java
 EXTRA_DIST += bindings/java/org/wtf/client/WTFClientException.java
 EXTRA_DIST += bindings/java/org/wtf/client/Iterator.java
+EXTRA_DIST += bindings/java/org/wtf/client/WTFFileAttrs.java
 
 # Client
 noinst_HEADERS += bindings/java/org_wtf_client_Client.h

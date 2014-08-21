@@ -1137,36 +1137,6 @@ client :: mkdir(const char* path, mode_t mode, wtf_client_returncode* status)
         return -1;
     }
 
-/*
-    XXX
-    hyperdex_client_returncode status;
-    int64_t ret = -1;
-    struct hyperdex_client_attribute attr[2];
-    uint64_t val1 = 1;
-    attr[0].attr = "directory";
-    attr[0].value = (const char*)&val1;
-    attr[0].value_sz = sizeof(val1);
-    attr[0].datatype = HYPERDATATYPE_INT64;
-
-    uint64_t val2 = mode;
-    attr[1].attr = "mode";
-    attr[1].value = (const char*)&val2;
-    attr[1].value_sz = sizeof(val2);
-    attr[1].datatype = HYPERDATATYPE_INT64;
-
- 
-    ret = m_hyperdex_client.put_if_not_exist("wtf", abspath, strlen(abspath), attr, 2, &status);
-    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
-    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, status);
-    if (res != HYPERDEX_CLIENT_SUCCESS)
-    {
-        return -1;
-    }
-    else
-    {
-        return 0;
-    }
-    */
 }
 
 int64_t 

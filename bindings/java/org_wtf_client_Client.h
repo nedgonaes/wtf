@@ -73,6 +73,54 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
 
 /*
  * Class:     org_wtf_client_Client
+ * Method:    async_getattr
+ * Signature: (Ljava/lang/String;Lorg/wtf/client/WTFFileAttrs;)Lorg/wtf/client/Deferred;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1getattr
+  (JNIEnv *, jobject, jstring, jobject);
+
+/*
+ * Class:     org_wtf_client_Client
+ * Method:    async_rename
+ * Signature: (Ljava/lang/String;Ljava/lang/String;)Lorg/wtf/client/Deferred;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1rename
+  (JNIEnv *, jobject, jstring, jstring);
+
+/*
+ * Class:     org_wtf_client_Client
+ * Method:    async_mkdir
+ * Signature: (Ljava/lang/String;I)Lorg/wtf/client/Deferred;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1mkdir
+  (JNIEnv *, jobject, jstring, jint);
+
+/*
+ * Class:     org_wtf_client_Client
+ * Method:    async_unlink
+ * Signature: (Ljava/lang/String;)Lorg/wtf/client/Deferred;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1unlink
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     org_wtf_client_Client
+ * Method:    async_lseek
+ * Signature: (JJI)J
+ */
+JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_async_1lseek
+  (JNIEnv *, jobject, jlong, jlong, jint);
+
+/*
+ * Class:     org_wtf_client_Client
+ * Method:    readdir
+ * Signature: (Ljava/lang/String;)Lorg/wtf/client/Iterator;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_readdir
+  (JNIEnv *, jobject, jstring);
+
+/*
+ * Class:     org_wtf_client_Client
  * Method:    close
  * Signature: (J)V
  */

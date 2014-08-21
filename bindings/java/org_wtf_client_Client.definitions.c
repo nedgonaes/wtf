@@ -184,17 +184,223 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
     printf("%s\n", o->data + offset);
     printf("%lu\n", o->data_sz);
     printf("%d\n", offset);
-    //(*env)->ReleaseByteArrayElements(env, o->jdata, o->data, 0);
     o->encode_return = wtf_java_client_deferred_encode_status;
     return op;
 }
 
-JNIEXPORT void JNICALL Java_org_wtf_client_Client_close
-  (JNIEnv * env, jobject obj, jlong jfd)
+    JNIEXPORT void JNICALL Java_org_wtf_client_Client_close
+(JNIEnv * env, jobject obj, jlong jfd)
 {
     TRACEC;
     struct wtf_client* client = (struct wtf_client*) (*env)->GetLongField(env, obj, _client_ptr);
     wtf_client_returncode status;
     wtf_client_close(client, jfd, &status);
+}
+
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_getattr_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_getattr_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+{
+    TRACEC;
+    struct wtf_file_attrs* fa = (struct wtf_file_attrs*)dfrd->data;
+    printf("fa->mode= %d\n", fa->mode);
+    (*env)->SetIntField(env, dfrd->ref, _fileattrs_mode, fa->mode);
+    TRACEC;
+    ERROR_CHECK_VOID();
+    (*env)->SetIntField(env, dfrd->ref, _fileattrs_sz, fa->size);
+    TRACEC;
+    ERROR_CHECK_VOID();
+    return;
+    (*env)->SetIntField(env, dfrd->ref, _fileattrs_flags, fa->flags);
+    TRACEC;
+    ERROR_CHECK_VOID();
+    (*env)->SetIntField(env, dfrd->ref, _fileattrs_isdir, fa->is_dir);
+    TRACEC;
+    ERROR_CHECK_VOID();
+    (*env)->DeleteGlobalRef(env, dfrd->ref);
+    TRACEC;
+    ERROR_CHECK_VOID();
+    free(fa);
+    dfrd->data = NULL;
+    TRACEC;
+}
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1getattr
+(JNIEnv * env, jobject obj, jstring jpath, jobject jwtfFileAttrs)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    jobject op = wtf_create_deferred_obj(env, obj);
+    ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
+    o->ref = (*env)->NewGlobalRef(env, jwtfFileAttrs);
+    o->jdata = o->ref;
+    struct wtf_file_attrs* fa = malloc(sizeof(struct wtf_file_attrs));
+    o->data = (char*)fa;
+    o->cleanup = wtf_deferred_getattr_cleanup;
+
+    fa->size = 0;
+    fa->mode = 0;
+    fa->flags = 0;
+    fa->is_dir = 0;
+    const char* path = (*env)->GetStringUTFChars(env, jpath, 0);
+    o->reqid = wtf_client_getattr(client, path, fa, &o->status);
+    
+    if (o->reqid < 0)
+    {
+        wtf_java_client_throw_exception(env, o->status, wtf_client_error_message(client));
+        return 0;
+    }
+
+    (*env)->ReleaseStringUTFChars(env, jpath, 0);
+    o->encode_return = wtf_java_client_deferred_encode_status;
+    return op;
+}
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_rename_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_rename_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+{
+    TRACEC;
+}
+
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1rename
+(JNIEnv * env, jobject obj, jstring jsrc, jstring jdst)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    jobject op = wtf_create_deferred_obj(env, obj);
+    ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
+    o->cleanup = wtf_deferred_rename_cleanup;
+    const char* src = (*env)->GetStringUTFChars(env, jsrc, 0);
+    const char* dst = (*env)->GetStringUTFChars(env, jdst, 0);
+
+    o->reqid = wtf_client_rename(client, src, dst, &o->status);
+
+    if (o->reqid < 0)
+    {
+        wtf_java_client_throw_exception(env, o->status, wtf_client_error_message(client));
+        return 0;
+    }
+
+    (*env)->ReleaseStringUTFChars(env, jsrc, 0);
+    (*env)->ReleaseStringUTFChars(env, jdst, 0);
+
+    return op;
+}
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_mkdir_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_mkdir_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+{
+    TRACEC;
+}
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1mkdir
+(JNIEnv * env, jobject obj, jstring jpath, jint jpermissions)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    jobject op = wtf_create_deferred_obj(env, obj);
+    ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
+    o->cleanup = wtf_deferred_mkdir_cleanup;
+    return op;
+}
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_unlink_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_unlink_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+{
+    TRACEC;
+}
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1unlink
+(JNIEnv * env, jobject obj, jstring jpath)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    jobject op = wtf_create_deferred_obj(env, obj);
+    ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
+    o->cleanup = wtf_deferred_unlink_cleanup;
+    const char* path = (*env)->GetStringUTFChars(env, jpath, 0);
+
+    o->reqid = wtf_client_unlink(client, path, &o->status);
+ 
+    if (o->reqid < 0)
+    {
+        wtf_java_client_throw_exception(env, o->status, wtf_client_error_message(client));
+        return 0;
+    }
+
+    (*env)->ReleaseStringUTFChars(env, jpath, 0);
+
+    return op;
+}
+
+JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_async_1lseek
+(JNIEnv * env, jobject obj, jlong jfd, jlong joffset, jint jwhence)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    
+    wtf_client_returncode status;
+
+    int64_t offset = wtf_client_lseek(client, jfd, joffset, jwhence, &status);
+    if (offset < 0)
+    {
+        wtf_java_client_throw_exception(env, status, 
+            wtf_client_error_message(client));
+    }
+
+    return offset;
+}
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_readdir_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd);
+
+JNIEXPORT WTF_API void JNICALL
+wtf_deferred_readdir_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
+{
+    TRACEC;
+}
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_readdir
+(JNIEnv * env, jobject obj, jstring jpath)
+{
+    TRACEC;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+    jobject op = wtf_create_deferred_obj(env, obj);
+    ERROR_CHECK(0);
+    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    ERROR_CHECK(0);
+    o->client = client;
+    return op;
 }
 
