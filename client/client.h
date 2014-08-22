@@ -144,6 +144,7 @@ class client
             e::intrusive_ptr<pending_aggregation> op;
         };
 
+        friend class pending_del;
         friend class pending_getattr;
         friend class pending_chdir;
         friend class pending_truncate;

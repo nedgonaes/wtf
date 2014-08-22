@@ -41,6 +41,7 @@ class pending_del : public pending_aggregation
 {
     public:
         pending_del(client* cl, uint64_t client_visible_id,
+                          std::string path, 
                           wtf_client_returncode* status);
         virtual ~pending_del() throw ();
 
@@ -57,7 +58,18 @@ class pending_del : public pending_aggregation
                                     hyperdex_client_returncode rc,
                                     wtf_client_returncode* status,
                                     e::error* error);
+        virtual bool handle_search(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
+        virtual bool handle_delete(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
         bool try_op();
+        bool send_del(std::string path);
 
    friend class e::intrusive_ptr<pending_aggregation>;
 
@@ -67,8 +79,10 @@ class pending_del : public pending_aggregation
         pending_del& operator = (const pending_del& rhs);
 
     private:
+        std::string m_path;
         client* m_cl;
         bool m_done;
+        int64_t m_search_id;
 };
 
 }

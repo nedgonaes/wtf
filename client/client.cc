@@ -636,11 +636,9 @@ client :: unlink(const char* path, wtf_client_returncode* status)
         return -1;
     }
 
-    std::vector<std::string> files = ls(abspath);
-
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_aggregation> op;
-    op = new pending_del(this, client_id, status);
+    op = new pending_del(this, client_id, std::string(abspath), status);
 
     if (op->try_op())
     {

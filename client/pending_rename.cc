@@ -108,7 +108,7 @@ typedef struct hyperdex_ds_arena* arena_t;
 typedef const struct hyperdex_client_attribute* attr_t;
 
 attr_t 
-change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst)
+change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst, std::string& src)
 {
     //XXX
     return NULL;
@@ -160,8 +160,10 @@ pending_rename :: handle_search(client* cl,
 
 
         arena_t arena = hyperdex_ds_arena_create();
-        attr_t attrs = change_name(arena, search_attrs, sz, m_dst);
-        bool ret = send_put(m_dst, arena, attrs, sz) && send_del(m_dst);
+        std::string src;
+        //needs to point src to the path from the search_attrs
+        attr_t attrs = change_name(arena, search_attrs, sz, m_dst, src);
+        bool ret = send_put(m_dst, arena, attrs, sz) && send_del(src);
         return ret;
     }
 
@@ -266,6 +268,7 @@ pending_rename :: try_op()
     }
     else
     {
+        m_search_id = msg->reqid();
         m_cl->add_hyperdex_op(msg->reqid(), this);
         e::intrusive_ptr<message> m = msg.get();
         handle_sent_to_hyperdex(m);
