@@ -41,15 +41,18 @@ public class Client
     }
 
     private long ptr = 0;
+    private Map<Long, Operation> ops = null;
 
     public Client(String wtf_host, Integer wtf_port, String hyperdex_host, Integer hyperdex_port)
     {
         _create(wtf_host, wtf_port.intValue(), hyperdex_host, hyperdex_port.intValue());
+        this.ops = new HashMap<Long, Operation>();
     }
 
     public Client(String wtf_host, int wtf_port, String hyperdex_host, int hyperdex_port)
     {
         _create(wtf_host, wtf_port, hyperdex_host, hyperdex_port);
+        this.ops = new HashMap<Long, Operation>();
     }
 
     protected void finalize() throws Throwable
@@ -76,9 +79,18 @@ public class Client
     /* utilities */
     public Operation loop()
     {
-        //XXX: rewrite
-        return null;
+        long ret = inner_loop();
+        Operation o = ops.get(ret);
+
+        if (o != null)
+        {
+            o.callback();
+        }
+
+        return o;
     }
+
+    public native Boolean waitFor(long reqid);
 
     /* cached IDs */
     private static native void initialize();
@@ -89,6 +101,24 @@ public class Client
     /* utilities */
     private native long inner_loop();
     
+    private void add_op(long l, Operation op)
+    {
+        ops.put(l, op);
+    }
+    private void remove_op(long l)
+    {
+        ops.remove(l);
+    }
+    private void callback(long l)
+    {
+        Operation o = ops.get(l);
+
+        if (o != null)
+        {
+            o.callback();
+        }
+    }
+
     /* operations */
     public native Deferred async_open(String path, int flags, int mode, 
         int num_replicas, int block_size, long[] fd) throws WTFClientException;
@@ -135,7 +165,7 @@ public class Client
         return (Boolean) async_unlink(path).waitForIt();
     }
 
-    public native long async_lseek(long fd, long offset, int whence);
+    public native long lseek(long fd, long offset, int whence);
 
     public native Iterator readdir(String path);
 

@@ -31,9 +31,10 @@ package org.wtf.client;
 import java.util.LinkedList;
 import java.util.Queue;
 
-public class Iterator 
+public class Iterator implements Operation
 {
     private long ptr = 0;
+    private long reqid = 0;
     private Client c;
     private Queue<Object> backlogged;
 
@@ -74,7 +75,7 @@ public class Iterator
     {
         while (!finished() && backlogged.isEmpty())
         {
-            this.c.loop();
+            this.c.waitFor(this.reqid);
         }
 
         return !backlogged.isEmpty();

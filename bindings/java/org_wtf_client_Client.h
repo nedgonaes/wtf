@@ -9,6 +9,14 @@ extern "C" {
 #endif
 /*
  * Class:     org_wtf_client_Client
+ * Method:    waitFor
+ * Signature: (J)Ljava/lang/Boolean;
+ */
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_waitFor
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     org_wtf_client_Client
  * Method:    initialize
  * Signature: ()V
  */
@@ -105,10 +113,10 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1unlink
 
 /*
  * Class:     org_wtf_client_Client
- * Method:    async_lseek
+ * Method:    lseek
  * Signature: (JJI)J
  */
-JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_async_1lseek
+JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_lseek
   (JNIEnv *, jobject, jlong, jlong, jint);
 
 /*

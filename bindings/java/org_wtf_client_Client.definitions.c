@@ -70,6 +70,7 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
 
     (*env)->ReleaseLongArrayElements(env, (jlongArray)o->jdata, (jlong*)o->data, 0);
     o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
@@ -126,6 +127,7 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
     }
 
     o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
@@ -185,6 +187,7 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
     printf("%lu\n", o->data_sz);
     printf("%d\n", offset);
     o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
@@ -260,6 +263,7 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1getattr
 
     (*env)->ReleaseStringUTFChars(env, jpath, 0);
     o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
@@ -299,6 +303,8 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1rename
     (*env)->ReleaseStringUTFChars(env, jsrc, 0);
     (*env)->ReleaseStringUTFChars(env, jdst, 0);
 
+    o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
@@ -323,6 +329,20 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1mkdir
     ERROR_CHECK(0);
     o->client = client;
     o->cleanup = wtf_deferred_mkdir_cleanup;
+    const char* path = (*env)->GetStringUTFChars(env, jpath, 0);
+
+    o->reqid = wtf_client_mkdir(client, path, jpermissions, &o->status);
+ 
+    if (o->reqid < 0)
+    {
+        wtf_java_client_throw_exception(env, o->status, wtf_client_error_message(client));
+        return 0;
+    }
+
+    (*env)->ReleaseStringUTFChars(env, jpath, 0);
+
+    o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
@@ -359,10 +379,12 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1unlink
 
     (*env)->ReleaseStringUTFChars(env, jpath, 0);
 
+    o->encode_return = wtf_java_client_deferred_encode_status;
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
 }
 
-JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_async_1lseek
+JNIEXPORT jlong JNICALL Java_org_wtf_client_Client_lseek
 (JNIEnv * env, jobject obj, jlong jfd, jlong joffset, jint jwhence)
 {
     TRACEC;
@@ -396,11 +418,44 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_readdir
     TRACEC;
     struct wtf_client* client = wtf_get_client_ptr(env, obj); 
     ERROR_CHECK(0);
-    jobject op = wtf_create_deferred_obj(env, obj);
+    jobject op = wtf_create_iterator_obj(env, obj);
+
     ERROR_CHECK(0);
-    struct wtf_java_client_deferred* o = wtf_get_deferred_ptr(env, op);
+    struct wtf_java_client_iterator* o = wtf_get_iterator_ptr(env, op);
     ERROR_CHECK(0);
-    o->client = client;
+    const char* path = (*env)->GetStringUTFChars(env, jpath, 0);
+
+    o->encode_return = wtf_java_client_iterator_encode_status_string;
+    o->reqid = wtf_client_readdir(client, path, &o->data, &o->status);
+
+    (*env)->SetLongField(env, op, _iterator_reqid, o->reqid);
+    (*env)->ReleaseStringUTFChars(env, jpath, 0);
+
+    (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
+}
+
+JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_waitFor
+  (JNIEnv * env, jobject obj, jlong jreqid)
+{
+    TRACEC;
+    jobject ret;
+    struct wtf_client* client = wtf_get_client_ptr(env, obj); 
+    ERROR_CHECK(0);
+
+    wtf_client_returncode rc;
+    int64_t reqid = wtf_client_loop(client, jreqid, -1, &rc);
+ 
+    if (reqid < 0)
+    {
+        wtf_java_client_throw_exception(env, rc, wtf_client_error_message(client));
+        return (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
+    }
+
+    (*env)->CallObjectMethod(env, obj, _client_callback, jreqid); 
+
+    ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_TRUE);
+    ERROR_CHECK(0);
+    return ret;
 }
 
