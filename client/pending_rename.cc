@@ -30,6 +30,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "common/macros.h"
 #include "client/pending_rename.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_search.h"
@@ -51,23 +52,27 @@ pending_rename :: pending_rename(client* cl, uint64_t client_visible_id,
     , m_search_attrs(NULL)
     , m_done(false)
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_rename :: ~pending_rename() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_rename :: can_yield()
 {
+    TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
 pending_rename :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
@@ -82,6 +87,7 @@ pending_rename :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     //XXX: search for it in m_outstanding_hyperdex
     if (reqid == m_search_id)
     {
@@ -102,36 +108,80 @@ pending_rename :: handle_wtf_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* error)
 {
+    TRACE;
 }
  
 typedef struct hyperdex_ds_arena* arena_t;
 typedef const struct hyperdex_client_attribute* attr_t;
 
 attr_t 
-change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst, std::string& src)
+pending_rename :: change_name(arena_t arena, attr_t attrs, size_t sz, std::string& dst, std::string& src)
 {
-    //XXX
-    return NULL;
+    TRACE;
+    hyperdex_ds_returncode status;
+    struct hyperdex_client_attribute* attrs_new;
+    attrs_new = hyperdex_ds_allocate_attribute(arena, sz-1);
+
+    int j = 0;
+    for (int i = 0; i < sz; ++i)
+    {
+        if (strcmp(attrs[i].attr, "path") == 0)
+        {
+            //send_del adds an op for the delete.
+            src = std::string(attrs[i].value, attrs[i].value_sz);
+            dst = src;
+            dst.replace(dst.begin(), dst.begin() + m_dst.size(), m_dst);
+        }
+        else
+        {
+            size_t size;
+
+            std::cout << "COPYING " << attrs[i].attr << std::endl;
+            attrs_new[j].datatype = attrs[i].datatype;
+            hyperdex_ds_copy_string(arena, attrs[i].attr,
+                strlen(attrs[i].attr) + 1,
+                &status, &attrs_new[j].attr, &size);
+            hyperdex_ds_copy_string(arena, attrs[i].value,
+                attrs[i].value_sz,
+                &status, &attrs_new[j].value, &attrs_new[j].value_sz);
+            ++j;
+        }
+    }
+
+    return attrs_new;
 }
 
 bool
 pending_rename :: send_put(std::string& dst, arena_t arena,
                             const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
+    TRACE;
+    std::cout << "===== HERE ======" << std::endl;
+    std::cout << dst << std::endl;
     e::intrusive_ptr<message_hyperdex_put> msg = 
         new message_hyperdex_put(m_cl, "wtf", dst.c_str(), arena, attrs, attrs_sz);
 
+    std::cout << attrs_sz << std::endl;
+    for (int i = 0; i < attrs_sz; ++i)
+    {
+        std::cout << attrs[i].attr << std::endl;
+        std::cout << attrs[i].value_sz << std::endl;
+    }
+
     if (msg->send() < 0)
     {
+        TRACE;
         PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
     }
     else
     {
+        TRACE;
         m_cl->add_hyperdex_op(msg->reqid(), this);
         e::intrusive_ptr<message> m = msg.get();
         pending_aggregation::handle_sent_to_hyperdex(m);
     }
 
+    TRACE;
     return true;
 }
 
@@ -143,6 +193,7 @@ pending_rename :: handle_search(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     if (rc < 0)
     {
         PENDING_ERROR(IO) << "Couldn't get from HyperDex";
@@ -161,9 +212,10 @@ pending_rename :: handle_search(client* cl,
 
         arena_t arena = hyperdex_ds_arena_create();
         std::string src;
+        std::string dst;
         //needs to point src to the path from the search_attrs
-        attr_t attrs = change_name(arena, search_attrs, sz, m_dst, src);
-        bool ret = send_put(m_dst, arena, attrs, sz) && send_del(src);
+        attr_t attrs = change_name(arena, search_attrs, sz, dst, src);
+        bool ret = send_put(dst, arena, attrs, sz-1) && send_del(src);
         return ret;
     }
 
@@ -177,6 +229,7 @@ pending_rename :: handle_put_and_delete(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     if (rc != HYPERDEX_CLIENT_SUCCESS)
     {
         /*
@@ -212,6 +265,7 @@ pending_rename :: handle_put_and_delete(client* cl,
 bool
 pending_rename :: send_del(std::string& src)
 {
+    TRACE;
     e::intrusive_ptr<message_hyperdex_del> msg = new message_hyperdex_del(m_cl, "wtf", src.c_str());
 
     if (msg->send() < 0)
@@ -231,30 +285,35 @@ pending_rename :: send_del(std::string& src)
 void
 pending_rename :: handle_sent_to_hyperdex(e::intrusive_ptr<message> msg)
 {
+    TRACE;
     pending_aggregation::handle_sent_to_hyperdex(msg);
 }
 
 void
 pending_rename :: handle_sent_to_wtf(const server_id& sid)
 {
+    TRACE;
     pending_aggregation::handle_sent_to_wtf(sid);
 }
 
 void
 pending_rename :: handle_hyperdex_failure(int64_t reqid)
 {
+    TRACE;
     return pending_aggregation::handle_hyperdex_failure(reqid);
 }
 
 void
 pending_rename :: handle_wtf_failure(const server_id& sid)
 {
+    TRACE;
     pending_aggregation::handle_wtf_failure(sid);
 }
 
 bool
 pending_rename :: try_op()
 {
+    TRACE;
     std::string regex("^");
     regex += m_src;
 

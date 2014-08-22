@@ -92,7 +92,10 @@ class pending_rename : public pending_aggregation
         bool send_put(std::string& dst, struct hyperdex_ds_arena* arena,
             const struct hyperdex_client_attribute* attrs, size_t attrs_sz);
         bool send_del(std::string& src);
-
+        typedef const struct hyperdex_client_attribute* attr_t;
+        typedef struct hyperdex_ds_arena* arena_t;
+        attr_t change_name(arena_t arena, attr_t attrs, 
+                        size_t sz, std::string& dst, std::string& src);
     private:
         client* m_cl;
         std::string m_src;
