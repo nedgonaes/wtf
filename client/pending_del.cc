@@ -29,6 +29,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "common/macros.h"
 #include "client/message_hyperdex_search.h"
 #include "client/message_hyperdex_del.h"
 #include "client/pending_del.h"
@@ -94,6 +95,7 @@ pending_del :: handle_hyperdex_message(client* cl,
 bool
 pending_del :: try_op()
 {
+    TRACE;
     std::string regex("^");
     regex += m_path;
 
@@ -106,6 +108,7 @@ pending_del :: try_op()
     }
     else
     {
+        m_search_id = msg->reqid();
         m_cl->add_hyperdex_op(msg->reqid(), this);
         e::intrusive_ptr<message> m = msg.get();
         pending_aggregation::handle_sent_to_hyperdex(m);
@@ -117,6 +120,9 @@ pending_del :: try_op()
 bool
 pending_del :: send_del(std::string path)
 {
+    TRACE;
+    std::cout << "Deleting " << path << std::endl;
+
     e::intrusive_ptr<message_hyperdex_del> msg = new message_hyperdex_del(m_cl, "wtf", path.c_str());
 
     if (msg->send() < 0)
@@ -162,7 +168,7 @@ pending_del :: handle_search(client* cl,
             if (strcmp(attrs[i].attr, "path") == 0)
             {
                 //send_del adds an op for the delete.
-                send_del(std::string(attrs[i].value));
+                send_del(std::string(attrs[i].value, attrs[i].value_sz));
                 break;
             }
         }
