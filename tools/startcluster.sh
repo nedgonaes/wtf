@@ -59,7 +59,7 @@ reset_cluster()
     ${PSSH} -h ${HYPERDEX_DAEMONS} -i "${HYPERDEX} daemon -D ${HYPERDEX_DAEMON_DATA_DIR} -c ${HC} -P ${HYPERDEX_PORT} -t 1"
     sleep 5
     echo "ADDING WTF SPACE...\n"
-    ssh ${HC} "echo 'space wtf key path attributes map(string, string) blockmap, int directory, int mode' | ${HYPERDEX} add-space -h ${HC} -p ${HYPERDEX_PORT}"
+    ssh ${HC} "echo 'space wtf key path attributes string blockmap, int directory, int mode' | ${HYPERDEX} add-space -h ${HC} -p ${HYPERDEX_PORT}"
     sleep 5
     echo "STARTING WTF COORDINATOR...\n"
     ssh ${WC} "${WTF} coordinator -D ${WTF_COORDINATOR_DATA_DIR} -l ${WC} -p ${WTF_PORT} -d"

@@ -1,0 +1,454 @@
+Log file created at: 2014/08/23 22:41:51
+Running on machine: sys01.systems.cs.cornell.edu
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+I0823 22:41:51.368592  2121 daemon.cc:351] started new cluster from command-line arguments: configuration(cluster=11612841472182453557, prev_token=0, this_token=10111550887570825163, version=1, command=[13947448574557395717], config=[13947448574557395717], members=[chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717)])
+I0823 22:41:51.393029  2126 object_manager.cc:1032] spawning worker thread for object 7528171833139684728
+I0823 22:41:51.394299  2121 daemon.cc:611] initializing hyperdex with "/home/sean/src/install/libexec/hyperdex-1.3.dev/libhyperdex-coordinator.so.0.0.0"
+I0823 22:41:51.394446  2121 daemon.cc:625] resuming normal operation
+I0823 22:41:51.394466  2121 daemon.cc:1284] deploying configuration configuration(cluster=11612841472182453557, prev_token=0, this_token=10111550887570825163, version=1, command=[13947448574557395717], config=[13947448574557395717], members=[chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717)])
+I0823 22:41:51.394508  2126 object_manager.cc:1104] hyperdex:init @ 2: initializing HyperDex cluster with id 3954251806647066631
+I0823 22:41:51.394522  2126 object_manager.cc:1104] hyperdex:init @ 2: issuing new configuration version 1
+I0823 22:41:51.394528  2126 object_manager.cc:1104] hyperdex:init @ 2: acked through version 1
+I0823 22:41:51.394534  2126 object_manager.cc:1104] hyperdex:init @ 2: stable through version 1
+I0823 22:41:51.394719  2121 daemon.cc:1341] the latest stable configuration is configuration(cluster=11612841472182453557, prev_token=0, this_token=10111550887570825163, version=1, command=[13947448574557395717], config=[13947448574557395717], members=[chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717)])
+I0823 22:41:51.394737  2121 daemon.cc:1342] the latest proposed configuration is configuration(cluster=11612841472182453557, prev_token=0, this_token=10111550887570825163, version=1, command=[13947448574557395717], config=[13947448574557395717], members=[chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717)])
+W0823 22:41:51.394752  2121 daemon.cc:1348] the most recently deployed configuration can tolerate at most 0 failures which is less than the 2 failures the cluster is expected to tolerate; bring 4 more servers online to restore 2-fault tolerance
+I0823 22:41:51.394767  2121 daemon.cc:2078] we are chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717) and here's some info: issued <=3 | acked <=3
+I0823 22:41:51.394776  2121 daemon.cc:2081] our stable configuration is configuration(cluster=11612841472182453557, prev_token=0, this_token=10111550887570825163, version=1, command=[13947448574557395717], config=[13947448574557395717], members=[chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717)])
+I0823 22:41:51.394785  2121 daemon.cc:2082] the suffix of the chain stabilized through 0
+I0823 22:41:51.394816  2121 daemon.cc:2346] command tail stabilizes at configuration 1
+I0823 22:41:56.952380  2121 daemon.cc:746] providing configuration to 1/128.84.167.101:49245 as part of the bootstrap process
+I0823 22:41:56.952906  2121 daemon.cc:2031] registering client 16071694884734726187
+I0823 22:41:56.953313  2126 object_manager.cc:1104] hyperdex:server_register @ 4: registered server(5552194385679880893)
+I0823 22:41:56.953333  2126 object_manager.cc:1104] hyperdex:server_register @ 4: issuing new configuration version 2
+I0823 22:41:56.953341  2126 object_manager.cc:1104] hyperdex:server_register @ 4: acked through version 2
+I0823 22:41:56.953346  2126 object_manager.cc:1104] hyperdex:server_register @ 4: stable through version 2
+I0823 22:41:56.975688  2126 object_manager.cc:1104] hyperdex:server_online @ 7: changing server(5552194385679880893) from ASSIGNED to AVAILABLE
+I0823 22:41:56.975699  2126 object_manager.cc:1104] hyperdex:server_online @ 7: issuing new configuration version 3
+I0823 22:41:56.975707  2126 object_manager.cc:1104] hyperdex:server_online @ 7: acked through version 3
+I0823 22:41:56.975713  2126 object_manager.cc:1104] hyperdex:server_online @ 7: stable through version 3
+I0823 22:41:57.011092  2121 daemon.cc:746] providing configuration to 2/128.84.167.111:40763 as part of the bootstrap process
+I0823 22:41:57.011801  2121 daemon.cc:2031] registering client 16897580959118457870
+I0823 22:41:57.012204  2121 daemon.cc:746] providing configuration to 3/128.84.167.106:42029 as part of the bootstrap process
+I0823 22:41:57.012392  2126 object_manager.cc:1104] hyperdex:server_register @ 13: registered server(4811448033430493492)
+I0823 22:41:57.012451  2126 object_manager.cc:1104] hyperdex:server_register @ 13: issuing new configuration version 4
+I0823 22:41:57.012459  2126 object_manager.cc:1104] hyperdex:server_register @ 13: acked through version 4
+I0823 22:41:57.012465  2126 object_manager.cc:1104] hyperdex:server_register @ 13: stable through version 4
+I0823 22:41:57.012889  2121 daemon.cc:2031] registering client 6571383790426387778
+I0823 22:41:57.013396  2126 object_manager.cc:1104] hyperdex:server_register @ 19: registered server(16876758547679357892)
+I0823 22:41:57.013408  2126 object_manager.cc:1104] hyperdex:server_register @ 19: issuing new configuration version 5
+I0823 22:41:57.013414  2126 object_manager.cc:1104] hyperdex:server_register @ 19: acked through version 5
+I0823 22:41:57.013420  2126 object_manager.cc:1104] hyperdex:server_register @ 19: stable through version 5
+I0823 22:41:57.025153  2121 daemon.cc:746] providing configuration to 4/128.84.167.110:40638 as part of the bootstrap process
+I0823 22:41:57.025887  2121 daemon.cc:2031] registering client 8026753794983063187
+I0823 22:41:57.026511  2126 object_manager.cc:1104] hyperdex:server_register @ 27: registered server(334252099700462550)
+I0823 22:41:57.026523  2126 object_manager.cc:1104] hyperdex:server_register @ 27: issuing new configuration version 6
+I0823 22:41:57.026530  2126 object_manager.cc:1104] hyperdex:server_register @ 27: acked through version 6
+I0823 22:41:57.026535  2126 object_manager.cc:1104] hyperdex:server_register @ 27: stable through version 6
+I0823 22:41:57.034919  2126 object_manager.cc:1104] hyperdex:server_online @ 33: changing server(16876758547679357892) from ASSIGNED to AVAILABLE
+I0823 22:41:57.034929  2126 object_manager.cc:1104] hyperdex:server_online @ 33: issuing new configuration version 7
+I0823 22:41:57.034934  2126 object_manager.cc:1104] hyperdex:server_online @ 33: acked through version 7
+I0823 22:41:57.034940  2126 object_manager.cc:1104] hyperdex:server_online @ 33: stable through version 7
+I0823 22:41:57.036015  2126 object_manager.cc:1104] hyperdex:server_online @ 42: changing server(4811448033430493492) from ASSIGNED to AVAILABLE
+I0823 22:41:57.036026  2126 object_manager.cc:1104] hyperdex:server_online @ 42: issuing new configuration version 8
+I0823 22:41:57.036032  2126 object_manager.cc:1104] hyperdex:server_online @ 42: acked through version 8
+I0823 22:41:57.036039  2126 object_manager.cc:1104] hyperdex:server_online @ 42: stable through version 8
+I0823 22:41:57.042660  2121 daemon.cc:746] providing configuration to 5/128.84.167.109:37445 as part of the bootstrap process
+I0823 22:41:57.043313  2121 daemon.cc:2031] registering client 7686679317267085235
+I0823 22:41:57.043860  2126 object_manager.cc:1104] hyperdex:server_register @ 55: registered server(17200400823928433606)
+I0823 22:41:57.043871  2126 object_manager.cc:1104] hyperdex:server_register @ 55: issuing new configuration version 9
+I0823 22:41:57.043877  2126 object_manager.cc:1104] hyperdex:server_register @ 55: acked through version 9
+I0823 22:41:57.043884  2126 object_manager.cc:1104] hyperdex:server_register @ 55: stable through version 9
+I0823 22:41:57.049381  2126 object_manager.cc:1104] hyperdex:server_online @ 66: changing server(334252099700462550) from ASSIGNED to AVAILABLE
+I0823 22:41:57.049391  2126 object_manager.cc:1104] hyperdex:server_online @ 66: issuing new configuration version 10
+I0823 22:41:57.049397  2126 object_manager.cc:1104] hyperdex:server_online @ 66: acked through version 10
+I0823 22:41:57.049403  2126 object_manager.cc:1104] hyperdex:server_online @ 66: stable through version 10
+I0823 22:41:57.055986  2121 daemon.cc:746] providing configuration to 6/128.84.167.105:55116 as part of the bootstrap process
+I0823 22:41:57.056630  2121 daemon.cc:2031] registering client 833538498240049306
+I0823 22:41:57.057173  2126 object_manager.cc:1104] hyperdex:server_register @ 82: registered server(17445632795571424576)
+I0823 22:41:57.057186  2126 object_manager.cc:1104] hyperdex:server_register @ 82: issuing new configuration version 11
+I0823 22:41:57.057219  2126 object_manager.cc:1104] hyperdex:server_register @ 82: acked through version 11
+I0823 22:41:57.057227  2126 object_manager.cc:1104] hyperdex:server_register @ 82: stable through version 11
+I0823 22:41:57.066308  2121 daemon.cc:746] providing configuration to 7/128.84.167.104:36413 as part of the bootstrap process
+I0823 22:41:57.066948  2121 daemon.cc:2031] registering client 2526376280699413982
+I0823 22:41:57.067543  2126 object_manager.cc:1104] hyperdex:server_register @ 100: registered server(3343271557046765371)
+I0823 22:41:57.067556  2126 object_manager.cc:1104] hyperdex:server_register @ 100: issuing new configuration version 12
+I0823 22:41:57.067562  2126 object_manager.cc:1104] hyperdex:server_register @ 100: acked through version 12
+I0823 22:41:57.067569  2126 object_manager.cc:1104] hyperdex:server_register @ 100: stable through version 12
+I0823 22:41:57.068106  2126 object_manager.cc:1104] hyperdex:server_online @ 106: changing server(17200400823928433606) from ASSIGNED to AVAILABLE
+I0823 22:41:57.068117  2126 object_manager.cc:1104] hyperdex:server_online @ 106: issuing new configuration version 13
+I0823 22:41:57.068125  2126 object_manager.cc:1104] hyperdex:server_online @ 106: acked through version 13
+I0823 22:41:57.068130  2126 object_manager.cc:1104] hyperdex:server_online @ 106: stable through version 13
+I0823 22:41:57.075917  2126 object_manager.cc:1104] hyperdex:server_online @ 131: changing server(17445632795571424576) from ASSIGNED to AVAILABLE
+I0823 22:41:57.075929  2126 object_manager.cc:1104] hyperdex:server_online @ 131: issuing new configuration version 14
+I0823 22:41:57.075935  2126 object_manager.cc:1104] hyperdex:server_online @ 131: acked through version 14
+I0823 22:41:57.075942  2126 object_manager.cc:1104] hyperdex:server_online @ 131: stable through version 14
+I0823 22:41:57.086386  2121 daemon.cc:746] providing configuration to 8/128.84.167.114:57966 as part of the bootstrap process
+I0823 22:41:57.087060  2121 daemon.cc:2031] registering client 3181922238009427130
+I0823 22:41:57.087668  2126 object_manager.cc:1104] hyperdex:server_register @ 155: registered server(15467076009801643516)
+I0823 22:41:57.087682  2126 object_manager.cc:1104] hyperdex:server_register @ 155: issuing new configuration version 15
+I0823 22:41:57.087688  2126 object_manager.cc:1104] hyperdex:server_register @ 155: acked through version 15
+I0823 22:41:57.087694  2126 object_manager.cc:1104] hyperdex:server_register @ 155: stable through version 15
+I0823 22:41:57.091143  2126 object_manager.cc:1104] hyperdex:server_online @ 173: changing server(3343271557046765371) from ASSIGNED to AVAILABLE
+I0823 22:41:57.091155  2126 object_manager.cc:1104] hyperdex:server_online @ 173: issuing new configuration version 16
+I0823 22:41:57.091161  2126 object_manager.cc:1104] hyperdex:server_online @ 173: acked through version 16
+I0823 22:41:57.091166  2126 object_manager.cc:1104] hyperdex:server_online @ 173: stable through version 16
+I0823 22:41:57.110283  2126 object_manager.cc:1104] hyperdex:server_online @ 199: changing server(15467076009801643516) from ASSIGNED to AVAILABLE
+I0823 22:41:57.110296  2126 object_manager.cc:1104] hyperdex:server_online @ 199: issuing new configuration version 17
+I0823 22:41:57.110301  2126 object_manager.cc:1104] hyperdex:server_online @ 199: acked through version 17
+I0823 22:41:57.110307  2126 object_manager.cc:1104] hyperdex:server_online @ 199: stable through version 17
+I0823 22:41:57.111074  2121 daemon.cc:746] providing configuration to 9/128.84.167.107:39364 as part of the bootstrap process
+I0823 22:41:57.112676  2121 daemon.cc:2031] registering client 5490653540108160924
+I0823 22:41:57.113343  2126 object_manager.cc:1104] hyperdex:server_register @ 226: registered server(196170617544862140)
+I0823 22:41:57.113355  2126 object_manager.cc:1104] hyperdex:server_register @ 226: issuing new configuration version 18
+I0823 22:41:57.113361  2126 object_manager.cc:1104] hyperdex:server_register @ 226: acked through version 18
+I0823 22:41:57.113390  2126 object_manager.cc:1104] hyperdex:server_register @ 226: stable through version 18
+I0823 22:41:57.123189  2121 daemon.cc:746] providing configuration to 10/128.84.167.115:43644 as part of the bootstrap process
+I0823 22:41:57.123821  2121 daemon.cc:2031] registering client 1793267516262012874
+I0823 22:41:57.124466  2126 object_manager.cc:1104] hyperdex:server_register @ 255: registered server(12471147479484095931)
+I0823 22:41:57.124476  2126 object_manager.cc:1104] hyperdex:server_register @ 255: issuing new configuration version 19
+I0823 22:41:57.124482  2126 object_manager.cc:1104] hyperdex:server_register @ 255: acked through version 19
+I0823 22:41:57.124488  2126 object_manager.cc:1104] hyperdex:server_register @ 255: stable through version 19
+I0823 22:41:57.135845  2126 object_manager.cc:1104] hyperdex:server_online @ 280: changing server(196170617544862140) from ASSIGNED to AVAILABLE
+I0823 22:41:57.135856  2126 object_manager.cc:1104] hyperdex:server_online @ 280: issuing new configuration version 20
+I0823 22:41:57.135864  2126 object_manager.cc:1104] hyperdex:server_online @ 280: acked through version 20
+I0823 22:41:57.135869  2126 object_manager.cc:1104] hyperdex:server_online @ 280: stable through version 20
+I0823 22:41:57.151306  2126 object_manager.cc:1104] hyperdex:server_online @ 313: changing server(12471147479484095931) from ASSIGNED to AVAILABLE
+I0823 22:41:57.151319  2126 object_manager.cc:1104] hyperdex:server_online @ 313: issuing new configuration version 21
+I0823 22:41:57.151324  2126 object_manager.cc:1104] hyperdex:server_online @ 313: acked through version 21
+I0823 22:41:57.151330  2126 object_manager.cc:1104] hyperdex:server_online @ 313: stable through version 21
+I0823 22:41:57.154219  2121 daemon.cc:746] providing configuration to 11/128.84.167.102:33658 as part of the bootstrap process
+I0823 22:41:57.154431  2121 daemon.cc:746] providing configuration to 12/128.84.167.112:59682 as part of the bootstrap process
+I0823 22:41:57.154917  2121 daemon.cc:2031] registering client 10313344125800354240
+I0823 22:41:57.155228  2121 daemon.cc:2031] registering client 2159594649511200507
+I0823 22:41:57.155704  2126 object_manager.cc:1104] hyperdex:server_register @ 347: registered server(17338020980093925998)
+I0823 22:41:57.155721  2126 object_manager.cc:1104] hyperdex:server_register @ 347: issuing new configuration version 22
+I0823 22:41:57.155732  2126 object_manager.cc:1104] hyperdex:server_register @ 347: acked through version 22
+I0823 22:41:57.155740  2126 object_manager.cc:1104] hyperdex:server_register @ 347: stable through version 22
+I0823 22:41:57.155861  2126 object_manager.cc:1104] hyperdex:server_register @ 349: registered server(6493857375956391246)
+I0823 22:41:57.155870  2126 object_manager.cc:1104] hyperdex:server_register @ 349: issuing new configuration version 23
+I0823 22:41:57.155877  2126 object_manager.cc:1104] hyperdex:server_register @ 349: acked through version 23
+I0823 22:41:57.155882  2126 object_manager.cc:1104] hyperdex:server_register @ 349: stable through version 23
+I0823 22:41:57.161202  2121 daemon.cc:746] providing configuration to 13/128.84.167.113:46098 as part of the bootstrap process
+I0823 22:41:57.161833  2121 daemon.cc:2031] registering client 6819727746159634328
+I0823 22:41:57.162626  2126 object_manager.cc:1104] hyperdex:server_register @ 385: registered server(16295539547221349980)
+I0823 22:41:57.162641  2126 object_manager.cc:1104] hyperdex:server_register @ 385: issuing new configuration version 24
+I0823 22:41:57.162647  2126 object_manager.cc:1104] hyperdex:server_register @ 385: acked through version 24
+I0823 22:41:57.162652  2126 object_manager.cc:1104] hyperdex:server_register @ 385: stable through version 24
+I0823 22:41:57.166352  2121 daemon.cc:746] providing configuration to 14/128.84.167.103:39174 as part of the bootstrap process
+I0823 22:41:57.167045  2121 daemon.cc:2031] registering client 6897539817845970331
+I0823 22:41:57.167713  2126 object_manager.cc:1104] hyperdex:server_register @ 418: registered server(11475050735069296299)
+I0823 22:41:57.167744  2126 object_manager.cc:1104] hyperdex:server_register @ 418: issuing new configuration version 25
+I0823 22:41:57.167752  2126 object_manager.cc:1104] hyperdex:server_register @ 418: acked through version 25
+I0823 22:41:57.167758  2126 object_manager.cc:1104] hyperdex:server_register @ 418: stable through version 25
+I0823 22:41:57.175967  2126 object_manager.cc:1104] hyperdex:server_online @ 449: changing server(6493857375956391246) from ASSIGNED to AVAILABLE
+I0823 22:41:57.175978  2126 object_manager.cc:1104] hyperdex:server_online @ 449: issuing new configuration version 26
+I0823 22:41:57.175984  2126 object_manager.cc:1104] hyperdex:server_online @ 449: acked through version 26
+I0823 22:41:57.175989  2126 object_manager.cc:1104] hyperdex:server_online @ 449: stable through version 26
+I0823 22:41:57.179695  2126 object_manager.cc:1104] hyperdex:server_online @ 482: changing server(17338020980093925998) from ASSIGNED to AVAILABLE
+I0823 22:41:57.179708  2126 object_manager.cc:1104] hyperdex:server_online @ 482: issuing new configuration version 27
+I0823 22:41:57.179713  2126 object_manager.cc:1104] hyperdex:server_online @ 482: acked through version 27
+I0823 22:41:57.179718  2126 object_manager.cc:1104] hyperdex:server_online @ 482: stable through version 27
+I0823 22:41:57.192956  2126 object_manager.cc:1104] hyperdex:server_online @ 528: changing server(16295539547221349980) from ASSIGNED to AVAILABLE
+I0823 22:41:57.192968  2126 object_manager.cc:1104] hyperdex:server_online @ 528: issuing new configuration version 28
+I0823 22:41:57.192975  2126 object_manager.cc:1104] hyperdex:server_online @ 528: acked through version 28
+I0823 22:41:57.192981  2126 object_manager.cc:1104] hyperdex:server_online @ 528: stable through version 28
+I0823 22:41:57.195329  2126 object_manager.cc:1104] hyperdex:server_online @ 551: changing server(11475050735069296299) from ASSIGNED to AVAILABLE
+I0823 22:41:57.195340  2126 object_manager.cc:1104] hyperdex:server_online @ 551: issuing new configuration version 29
+I0823 22:41:57.195348  2126 object_manager.cc:1104] hyperdex:server_online @ 551: acked through version 29
+I0823 22:41:57.195353  2126 object_manager.cc:1104] hyperdex:server_online @ 551: stable through version 29
+I0823 22:42:00.000989  2121 daemon.cc:2078] we are chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717) and here's some info: issued <=622 | acked <=622
+I0823 22:42:00.001008  2121 daemon.cc:2081] our stable configuration is configuration(cluster=11612841472182453557, prev_token=0, this_token=10111550887570825163, version=1, command=[13947448574557395717], config=[13947448574557395717], members=[chain_node(bind_to=128.84.167.101:1982, token=13947448574557395717)])
+I0823 22:42:00.001019  2121 daemon.cc:2082] the suffix of the chain stabilized through 1
+I0823 22:42:02.184201  2121 daemon.cc:746] providing configuration to 15/128.84.167.101:49248 as part of the bootstrap process
+I0823 22:42:02.184809  2121 daemon.cc:2031] registering client 5027471434729979260
+I0823 22:42:02.186781  2126 object_manager.cc:1104] hyperdex:space_add @ 624: successfully added space "wtf" with space(1)
+I0823 22:42:02.186805  2126 object_manager.cc:1104] hyperdex:space_add @ 624: issuing new configuration version 30
+I0823 22:42:02.996858  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: changing server(196170617544862140) from AVAILABLE to NOT_AVAILABLE because we suspect it failed
+I0823 22:42:02.996873  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(5552194385679880893) to region(8) copying from server(4811448033430493492)/virtual_server(78) using transfer(195)/virtual_server(196)
+I0823 22:42:02.996881  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(16876758547679357892) to region(13) copying from server(334252099700462550)/virtual_server(88) using transfer(197)/virtual_server(198)
+I0823 22:42:02.996887  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(4811448033430493492) to region(18) copying from server(17200400823928433606)/virtual_server(98) using transfer(199)/virtual_server(200)
+I0823 22:42:02.996933  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(334252099700462550) to region(23) copying from server(17445632795571424576)/virtual_server(108) using transfer(201)/virtual_server(202)
+I0823 22:42:02.996961  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(334252099700462550) to region(24) copying from server(17445632795571424576)/virtual_server(110) using transfer(203)/virtual_server(204)
+I0823 22:42:02.996969  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(17200400823928433606) to region(28) copying from server(3343271557046765371)/virtual_server(118) using transfer(205)/virtual_server(206)
+I0823 22:42:02.996975  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(17200400823928433606) to region(29) copying from server(3343271557046765371)/virtual_server(120) using transfer(207)/virtual_server(208)
+I0823 22:42:02.996983  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(17445632795571424576) to region(33) copying from server(15467076009801643516)/virtual_server(128) using transfer(209)/virtual_server(210)
+I0823 22:42:02.996989  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(17445632795571424576) to region(34) copying from server(15467076009801643516)/virtual_server(130) using transfer(211)/virtual_server(212)
+I0823 22:42:02.996995  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(38) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997001  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(3343271557046765371) to region(38) copying from server(15467076009801643516)/virtual_server(137) using transfer(213)/virtual_server(214)
+I0823 22:42:02.997009  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(39) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997014  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(3343271557046765371) to region(39) copying from server(15467076009801643516)/virtual_server(139) using transfer(215)/virtual_server(216)
+I0823 22:42:02.997020  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(40) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997026  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(3343271557046765371) to region(40) copying from server(15467076009801643516)/virtual_server(141) using transfer(217)/virtual_server(218)
+I0823 22:42:02.997032  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(41) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997040  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(12471147479484095931) to region(41) copying from server(15467076009801643516)/virtual_server(143) using transfer(219)/virtual_server(220)
+I0823 22:42:02.997045  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(42) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997051  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(12471147479484095931) to region(42) copying from server(15467076009801643516)/virtual_server(145) using transfer(221)/virtual_server(222)
+I0823 22:42:02.997057  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(43) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997063  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(15467076009801643516) to region(43) copying from server(12471147479484095931)/virtual_server(148) using transfer(223)/virtual_server(224)
+I0823 22:42:02.997071  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(44) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997091  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(15467076009801643516) to region(44) copying from server(12471147479484095931)/virtual_server(150) using transfer(225)/virtual_server(226)
+I0823 22:42:02.997097  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(45) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997104  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(15467076009801643516) to region(45) copying from server(12471147479484095931)/virtual_server(152) using transfer(227)/virtual_server(228)
+I0823 22:42:02.997110  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(46) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997117  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(6493857375956391246) to region(46) copying from server(12471147479484095931)/virtual_server(154) using transfer(229)/virtual_server(230)
+I0823 22:42:02.997123  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: removing server(196170617544862140) from region(47) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997129  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(6493857375956391246) to region(47) copying from server(12471147479484095931)/virtual_server(156) using transfer(231)/virtual_server(232)
+I0823 22:42:02.997135  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(17338020980093925998) to region(51) copying from server(6493857375956391246)/virtual_server(164) using transfer(233)/virtual_server(234)
+I0823 22:42:02.997141  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(17338020980093925998) to region(52) copying from server(6493857375956391246)/virtual_server(166) using transfer(235)/virtual_server(236)
+I0823 22:42:02.997148  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(16295539547221349980) to region(57) copying from server(17338020980093925998)/virtual_server(176) using transfer(237)/virtual_server(238)
+I0823 22:42:02.997153  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: adding server(11475050735069296299) to region(62) copying from server(16295539547221349980)/virtual_server(186) using transfer(239)/virtual_server(240)
+I0823 22:42:02.997159  2126 object_manager.cc:1104] hyperdex:server_suspect @ 663: issuing new configuration version 31
+I0823 22:42:02.997711  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: changing server(6493857375956391246) from AVAILABLE to NOT_AVAILABLE because we suspect it failed
+I0823 22:42:02.997721  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(16876758547679357892) to region(14) copying from server(334252099700462550)/virtual_server(90) using transfer(241)/virtual_server(242)
+I0823 22:42:02.997728  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(4811448033430493492) to region(19) copying from server(17200400823928433606)/virtual_server(100) using transfer(243)/virtual_server(244)
+I0823 22:42:02.997735  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(4811448033430493492) to region(20) copying from server(17200400823928433606)/virtual_server(102) using transfer(245)/virtual_server(246)
+I0823 22:42:02.997741  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(334252099700462550) to region(25) copying from server(17445632795571424576)/virtual_server(112) using transfer(247)/virtual_server(248)
+I0823 22:42:02.997748  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(334252099700462550) to region(26) copying from server(17445632795571424576)/virtual_server(114) using transfer(249)/virtual_server(250)
+I0823 22:42:02.997755  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17200400823928433606) to region(30) copying from server(3343271557046765371)/virtual_server(122) using transfer(251)/virtual_server(252)
+I0823 22:42:02.997792  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17200400823928433606) to region(31) copying from server(3343271557046765371)/virtual_server(124) using transfer(253)/virtual_server(254)
+I0823 22:42:02.997799  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17200400823928433606) to region(32) copying from server(3343271557046765371)/virtual_server(126) using transfer(255)/virtual_server(256)
+I0823 22:42:02.997807  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17445632795571424576) to region(35) copying from server(15467076009801643516)/virtual_server(132) using transfer(257)/virtual_server(258)
+I0823 22:42:02.997812  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17445632795571424576) to region(36) copying from server(15467076009801643516)/virtual_server(134) using transfer(259)/virtual_server(260)
+I0823 22:42:02.997818  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17445632795571424576) to region(37) copying from server(15467076009801643516)/virtual_server(136) using transfer(261)/virtual_server(262)
+I0823 22:42:02.997824  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(3343271557046765371) to region(41) copying from server(15467076009801643516)/virtual_server(143) using transfer(263)/virtual_server(264)
+I0823 22:42:02.997830  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(3343271557046765371) to region(42) copying from server(15467076009801643516)/virtual_server(145) using transfer(265)/virtual_server(266)
+I0823 22:42:02.997836  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(15467076009801643516) to region(46) copying from server(12471147479484095931)/virtual_server(154) using transfer(267)/virtual_server(268)
+I0823 22:42:02.997843  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(15467076009801643516) to region(47) copying from server(12471147479484095931)/virtual_server(156) using transfer(269)/virtual_server(270)
+I0823 22:42:02.997848  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(48) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997855  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(15467076009801643516) to region(48) copying from server(12471147479484095931)/virtual_server(157) using transfer(271)/virtual_server(272)
+I0823 22:42:02.997861  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(49) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997867  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(15467076009801643516) to region(49) copying from server(12471147479484095931)/virtual_server(159) using transfer(273)/virtual_server(274)
+I0823 22:42:02.997874  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(50) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997879  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(17338020980093925998) to region(50) copying from server(12471147479484095931)/virtual_server(161) using transfer(275)/virtual_server(276)
+I0823 22:42:02.997884  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(53) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997890  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(12471147479484095931) to region(53) copying from server(17338020980093925998)/virtual_server(168) using transfer(277)/virtual_server(278)
+I0823 22:42:02.997896  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(54) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997902  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(12471147479484095931) to region(54) copying from server(17338020980093925998)/virtual_server(170) using transfer(279)/virtual_server(280)
+I0823 22:42:02.997923  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(55) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997931  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(12471147479484095931) to region(55) copying from server(17338020980093925998)/virtual_server(172) using transfer(281)/virtual_server(282)
+I0823 22:42:02.997936  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: removing server(6493857375956391246) from region(56) because it is in state NOT_AVAILABLE
+I0823 22:42:02.997942  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: adding server(16295539547221349980) to region(56) copying from server(17338020980093925998)/virtual_server(174) using transfer(283)/virtual_server(284)
+I0823 22:42:02.997948  2126 object_manager.cc:1104] hyperdex:server_suspect @ 664: issuing new configuration version 32
+I0823 22:42:03.002403  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 699: transfer(223) is live
+I0823 22:42:03.002415  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 699: issuing new configuration version 33
+I0823 22:42:03.002593  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 700: transfer(227) is live
+I0823 22:42:03.002601  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 700: issuing new configuration version 34
+I0823 22:42:03.002771  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 701: transfer(269) is live
+I0823 22:42:03.002780  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 701: issuing new configuration version 35
+I0823 22:42:03.003093  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 703: transfer(201) is live
+I0823 22:42:03.003104  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 703: issuing new configuration version 36
+I0823 22:42:03.003286  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 704: transfer(247) is live
+I0823 22:42:03.003295  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 704: issuing new configuration version 37
+I0823 22:42:03.003581  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 706: transfer(279) is live
+I0823 22:42:03.003592  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 706: issuing new configuration version 38
+I0823 22:42:03.003934  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 709: transfer(209) is live
+I0823 22:42:03.003945  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 709: issuing new configuration version 39
+I0823 22:42:03.005631  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 721: transfer(259) is live
+I0823 22:42:03.005642  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 721: issuing new configuration version 40
+I0823 22:42:03.005995  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 723: transfer(273) is live
+I0823 22:42:03.006006  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 723: issuing new configuration version 41
+I0823 22:42:03.006321  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 724: transfer(239) is live
+I0823 22:42:03.006331  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 724: issuing new configuration version 42
+I0823 22:42:03.006559  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 725: transfer(205) is live
+I0823 22:42:03.006569  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 725: issuing new configuration version 43
+I0823 22:42:03.007040  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 727: transfer(199) is live
+I0823 22:42:03.007050  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 727: issuing new configuration version 44
+I0823 22:42:03.007643  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 732: transfer(223) is complete
+I0823 22:42:03.007654  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 732: adding server(3343271557046765371) to region(43) copying from server(15467076009801643516)/virtual_server(224) using transfer(285)/virtual_server(286)
+I0823 22:42:03.007683  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 732: issuing new configuration version 45
+I0823 22:42:03.007990  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 735: transfer(227) is complete
+I0823 22:42:03.008000  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 735: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.008007  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 735: issuing new configuration version 46
+I0823 22:42:03.008220  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 736: transfer(269) is complete
+I0823 22:42:03.008229  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 736: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.008236  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 736: issuing new configuration version 47
+I0823 22:42:03.008451  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 738: transfer(197) is live
+I0823 22:42:03.008461  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 738: issuing new configuration version 48
+I0823 22:42:03.008965  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 744: transfer(209) is complete
+I0823 22:42:03.008975  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 744: removing server(15467076009801643516) from region(33) to make progress toward desired state
+I0823 22:42:03.008981  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 744: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.008988  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 744: issuing new configuration version 49
+I0823 22:42:03.009665  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 753: transfer(195) is live
+I0823 22:42:03.009675  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 753: issuing new configuration version 50
+I0823 22:42:03.010488  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 762: transfer(201) is complete
+I0823 22:42:03.010499  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 762: removing server(17445632795571424576) from region(23) to make progress toward desired state
+I0823 22:42:03.010505  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 762: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.010512  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 762: issuing new configuration version 51
+I0823 22:42:03.010756  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 764: transfer(247) is complete
+I0823 22:42:03.010766  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 764: removing server(17445632795571424576) from region(25) to make progress toward desired state
+I0823 22:42:03.010772  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 764: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.010778  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 764: issuing new configuration version 52
+I0823 22:42:03.011893  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 780: transfer(279) is complete
+I0823 22:42:03.011904  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 780: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.011911  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 780: issuing new configuration version 53
+I0823 22:42:03.013119  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 791: transfer(213) is live
+I0823 22:42:03.013130  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 791: issuing new configuration version 54
+I0823 22:42:03.013504  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 795: transfer(245) is live
+I0823 22:42:03.013514  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 795: issuing new configuration version 55
+I0823 22:42:03.013795  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 797: transfer(199) is complete
+I0823 22:42:03.013805  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 797: removing server(17200400823928433606) from region(18) to make progress toward desired state
+I0823 22:42:03.013833  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 797: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.013839  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 797: issuing new configuration version 56
+I0823 22:42:03.014505  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 804: transfer(239) is complete
+I0823 22:42:03.014515  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 804: removing server(17338020980093925998) from region(62) to make progress toward desired state
+I0823 22:42:03.014523  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 804: issuing new configuration version 57
+I0823 22:42:03.015002  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 809: transfer(251) is live
+I0823 22:42:03.015012  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 809: issuing new configuration version 58
+I0823 22:42:03.015266  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 811: transfer(205) is complete
+I0823 22:42:03.015276  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 811: removing server(3343271557046765371) from region(28) to make progress toward desired state
+I0823 22:42:03.015283  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 811: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.015290  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 811: issuing new configuration version 59
+I0823 22:42:03.016155  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 821: transfer(197) is complete
+I0823 22:42:03.016166  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 821: removing server(334252099700462550) from region(13) to make progress toward desired state
+I0823 22:42:03.016173  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 821: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.016180  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 821: issuing new configuration version 60
+I0823 22:42:03.016471  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 824: transfer(195) is complete
+I0823 22:42:03.016481  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 824: removing server(4811448033430493492) from region(8) to make progress toward desired state
+I0823 22:42:03.016489  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 824: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.016494  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 824: issuing new configuration version 61
+I0823 22:42:03.017277  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 833: transfer(273) is complete
+I0823 22:42:03.017287  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 833: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.017294  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 833: issuing new configuration version 62
+I0823 22:42:03.018162  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 843: transfer(259) is complete
+I0823 22:42:03.018169  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 843: removing server(15467076009801643516) from region(36) to make progress toward desired state
+I0823 22:42:03.018174  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 843: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.018179  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 843: issuing new configuration version 63
+I0823 22:42:03.022909  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 886: transfer(281) is live
+I0823 22:42:03.022920  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 886: issuing new configuration version 64
+I0823 22:42:03.025372  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 908: transfer(225) is live
+I0823 22:42:03.025382  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 908: issuing new configuration version 65
+I0823 22:42:03.025547  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 909: transfer(203) is live
+I0823 22:42:03.025573  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 909: issuing new configuration version 66
+I0823 22:42:03.025845  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 911: transfer(211) is live
+I0823 22:42:03.025852  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 911: issuing new configuration version 67
+I0823 22:42:03.026021  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 912: transfer(243) is live
+I0823 22:42:03.026029  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 912: issuing new configuration version 68
+I0823 22:42:03.026234  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 913: transfer(237) is live
+I0823 22:42:03.026242  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 913: issuing new configuration version 69
+I0823 22:42:03.028332  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 938: transfer(281) is complete
+I0823 22:42:03.028342  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 938: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.028347  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 938: issuing new configuration version 70
+I0823 22:42:03.028689  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 942: transfer(207) is live
+I0823 22:42:03.028698  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 942: issuing new configuration version 71
+I0823 22:42:03.029501  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 951: transfer(241) is live
+I0823 22:42:03.029510  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 951: issuing new configuration version 72
+I0823 22:42:03.029729  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 954: transfer(271) is live
+I0823 22:42:03.029736  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 954: issuing new configuration version 73
+I0823 22:42:03.030010  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 956: transfer(225) is complete
+I0823 22:42:03.030020  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 956: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.030026  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 956: issuing new configuration version 74
+I0823 22:42:03.030513  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 962: transfer(203) is complete
+I0823 22:42:03.030524  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 962: removing server(17445632795571424576) from region(24) to make progress toward desired state
+I0823 22:42:03.030530  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 962: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.030536  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 962: issuing new configuration version 75
+I0823 22:42:03.030709  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 963: transfer(257) is live
+I0823 22:42:03.030719  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 963: issuing new configuration version 76
+I0823 22:42:03.030989  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 965: transfer(211) is complete
+I0823 22:42:03.030999  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 965: removing server(15467076009801643516) from region(34) to make progress toward desired state
+I0823 22:42:03.031007  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 965: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.031013  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 965: issuing new configuration version 77
+I0823 22:42:03.031579  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 971: transfer(243) is complete
+I0823 22:42:03.031589  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 971: removing server(17200400823928433606) from region(19) to make progress toward desired state
+I0823 22:42:03.031595  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 971: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.031601  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 971: issuing new configuration version 78
+I0823 22:42:03.032248  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 978: transfer(237) is complete
+I0823 22:42:03.032259  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 978: removing server(6493857375956391246) from region(57) because it is in state NOT_AVAILABLE
+I0823 22:42:03.032266  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 978: issuing new configuration version 79
+I0823 22:42:03.033438  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 990: transfer(253) is live
+I0823 22:42:03.033450  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 990: issuing new configuration version 80
+I0823 22:42:03.034106  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 996: transfer(207) is complete
+I0823 22:42:03.034117  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 996: removing server(3343271557046765371) from region(29) to make progress toward desired state
+I0823 22:42:03.034123  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 996: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.034129  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 996: issuing new configuration version 81
+I0823 22:42:03.034559  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1001: transfer(241) is complete
+I0823 22:42:03.034572  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1001: removing server(334252099700462550) from region(14) to make progress toward desired state
+I0823 22:42:03.034579  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1001: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.034585  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1001: issuing new configuration version 82
+I0823 22:42:03.035434  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1011: transfer(213) is complete
+I0823 22:42:03.035444  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1011: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.035451  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1011: issuing new configuration version 83
+I0823 22:42:03.035852  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1015: transfer(245) is complete
+I0823 22:42:03.035862  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1015: removing server(17200400823928433606) from region(20) to make progress toward desired state
+I0823 22:42:03.035871  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1015: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.035878  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1015: issuing new configuration version 84
+I0823 22:42:03.038754  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1042: transfer(267) is live
+I0823 22:42:03.038765  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1042: issuing new configuration version 85
+I0823 22:42:03.039752  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1052: transfer(261) is live
+I0823 22:42:03.039762  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1052: issuing new configuration version 86
+I0823 22:42:03.040045  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1055: transfer(257) is complete
+I0823 22:42:03.040055  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1055: removing server(15467076009801643516) from region(35) to make progress toward desired state
+I0823 22:42:03.040061  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1055: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.040112  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1055: issuing new configuration version 87
+I0823 22:42:03.041895  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1073: transfer(251) is complete
+I0823 22:42:03.041908  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1073: removing server(3343271557046765371) from region(30) to make progress toward desired state
+I0823 22:42:03.041935  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1073: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.041942  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1073: issuing new configuration version 88
+I0823 22:42:03.043083  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1084: transfer(275) is live
+I0823 22:42:03.043095  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1084: issuing new configuration version 89
+I0823 22:42:03.043287  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1085: transfer(267) is complete
+I0823 22:42:03.043297  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1085: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.043303  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1085: issuing new configuration version 90
+I0823 22:42:03.043642  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1089: transfer(249) is live
+I0823 22:42:03.043653  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1089: issuing new configuration version 91
+I0823 22:42:03.044476  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1098: transfer(261) is complete
+I0823 22:42:03.044487  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1098: removing server(15467076009801643516) from region(37) to make progress toward desired state
+I0823 22:42:03.044494  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1098: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.044502  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1098: issuing new configuration version 92
+I0823 22:42:03.045363  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1107: transfer(277) is live
+I0823 22:42:03.045374  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1107: issuing new configuration version 93
+I0823 22:42:03.047102  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1124: transfer(253) is complete
+I0823 22:42:03.047114  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1124: removing server(3343271557046765371) from region(31) to make progress toward desired state
+I0823 22:42:03.047122  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1124: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.047128  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1124: issuing new configuration version 94
+I0823 22:42:03.047777  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1130: transfer(271) is complete
+I0823 22:42:03.047787  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1130: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.047794  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1130: issuing new configuration version 95
+I0823 22:42:03.048207  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1134: transfer(249) is complete
+I0823 22:42:03.048218  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1134: removing server(17445632795571424576) from region(26) to make progress toward desired state
+I0823 22:42:03.048224  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1134: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.048230  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1134: issuing new configuration version 96
+I0823 22:42:03.049837  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1151: transfer(277) is complete
+I0823 22:42:03.049849  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1151: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.049854  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1151: issuing new configuration version 97
+I0823 22:42:03.051687  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1168: transfer(275) is complete
+I0823 22:42:03.051698  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1168: issuing new configuration version 98
+I0823 22:42:03.077713  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1222: transfer(283) is live
+I0823 22:42:03.077749  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1222: issuing new configuration version 99
+I0823 22:42:03.079764  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1235: transfer(263) is live
+I0823 22:42:03.079776  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1235: issuing new configuration version 100
+I0823 22:42:03.080131  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1238: transfer(255) is live
+I0823 22:42:03.080139  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1238: issuing new configuration version 101
+I0823 22:42:03.082041  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1257: transfer(283) is complete
+I0823 22:42:03.082054  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1257: issuing new configuration version 102
+I0823 22:42:03.084504  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1281: transfer(215) is live
+I0823 22:42:03.084517  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1281: issuing new configuration version 103
+I0823 22:42:03.085302  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1289: transfer(255) is complete
+I0823 22:42:03.085314  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1289: removing server(3343271557046765371) from region(32) to make progress toward desired state
+I0823 22:42:03.085320  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1289: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.085327  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1289: issuing new configuration version 104
+I0823 22:42:03.088768  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1321: transfer(263) is complete
+I0823 22:42:03.088779  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1321: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.088786  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1321: issuing new configuration version 105
+I0823 22:42:03.089081  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1324: transfer(215) is complete
+I0823 22:42:03.089090  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1324: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.089097  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1324: issuing new configuration version 106
+I0823 22:42:03.129462  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1378: transfer(217) is live
+I0823 22:42:03.129474  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1378: issuing new configuration version 107
+I0823 22:42:03.131758  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1393: transfer(285) is live
+I0823 22:42:03.131770  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1393: issuing new configuration version 108
+I0823 22:42:03.133581  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1414: transfer(217) is complete
+I0823 22:42:03.133591  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1414: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.133599  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1414: issuing new configuration version 109
+I0823 22:42:03.193415  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1469: transfer(265) is live
+I0823 22:42:03.193426  2126 object_manager.cc:1104] hyperdex:transfer_go_live @ 1469: issuing new configuration version 110
+I0823 22:42:03.196516  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1491: transfer(265) is complete
+I0823 22:42:03.196528  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1491: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.196534  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1491: issuing new configuration version 111
+I0823 22:42:03.201345  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1539: transfer(285) is complete
+I0823 22:42:03.201357  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1539: removing server(12471147479484095931) from region(43) to make progress toward desired state
+I0823 22:42:03.201390  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1539: postponing convergence until after checkpoint 1 is stable
+I0823 22:42:03.201402  2126 object_manager.cc:1104] hyperdex:transfer_complete @ 1539: issuing new configuration version 112
+I0823 22:42:07.213912  2121 daemon.cc:746] providing configuration to 16/128.84.167.101:49250 as part of the bootstrap process
+I0823 22:42:07.214462  2121 daemon.cc:2031] registering client 17153648987955656671
+I0823 22:42:21.502337  2126 object_manager.cc:1104] hyperdex:alarm @ 1582: establishing checkpoint 1

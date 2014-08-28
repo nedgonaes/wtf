@@ -202,10 +202,12 @@ noinst_HEADERS += client/pending_mkdir.h
 noinst_HEADERS += client/pending_del.h
 noinst_HEADERS += client/pending_creat.h
 noinst_HEADERS += client/pending_open.h
+noinst_HEADERS += client/message.h
 noinst_HEADERS += client/message_hyperdex_get.h
 noinst_HEADERS += client/message_hyperdex_put.h
 noinst_HEADERS += client/message_hyperdex_del.h
 noinst_HEADERS += client/message_hyperdex_search.h
+noinst_HEADERS += client/rereplicate.h
 
 libwtf_client_la_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
@@ -453,6 +455,7 @@ EXTRA_DIST += bindings/java/org/wtf/client/Client.java
 EXTRA_DIST += bindings/java/org/wtf/client/Deferred.java
 EXTRA_DIST += bindings/java/org/wtf/client/WTFClientException.java
 EXTRA_DIST += bindings/java/org/wtf/client/Iterator.java
+EXTRA_DIST += bindings/java/org/wtf/client/Operation.java
 EXTRA_DIST += bindings/java/org/wtf/client/WTFFileAttrs.java
 
 # Client
