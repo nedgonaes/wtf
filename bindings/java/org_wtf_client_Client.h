@@ -66,10 +66,10 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
 /*
  * Class:     org_wtf_client_Client
  * Method:    async_read
- * Signature: (J[BI)Lorg/wtf/client/Deferred;
+ * Signature: (J[BI[J)Lorg/wtf/client/Deferred;
  */
 JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
-  (JNIEnv *, jobject, jlong, jbyteArray, jint);
+  (JNIEnv *, jobject, jlong, jbyteArray, jint, jlongArray);
 
 /*
  * Class:     org_wtf_client_Client

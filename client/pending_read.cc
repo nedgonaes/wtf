@@ -73,6 +73,9 @@ pending_read :: yield(wtf_client_returncode* status, e::error* err)
     *err = e::error();
     assert(this->can_yield());
     m_done = true;
+    std::cout << "==========" << std::endl;
+    std::cout << "m_buf_sz = " << *m_buf_sz << std::endl;
+    std::cout << "==========" << std::endl;
     return true;
 }
 
@@ -181,6 +184,8 @@ pending_read :: handle_hyperdex_message(client* cl,
 void
 pending_read :: parse_metadata(const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
+    std::cout << "PARSING METADATA WITH " << attrs_sz << " ATTRIBUTES." << std::endl;
+    fflush(stdout);
     for (size_t i = 0; i < attrs_sz; ++i)
     {
         if (strcmp(attrs[i].attr, "blockmap") == 0)

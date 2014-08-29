@@ -381,12 +381,14 @@ struct wtf_java_client_deferred
     jobject jdata;
     char* data;
     size_t data_sz;
+    size_t* len;
     const char* description;
     uint64_t count;
     int finished;
     void (*cleanup)(JNIEnv* env, struct wtf_java_client_deferred* d);
     jobject (*encode_return)(JNIEnv* env, jobject obj, struct wtf_java_client_deferred* d);
     jobject ref;
+    jobject lenref;
 };
 
 JNIEXPORT WTF_API void JNICALL

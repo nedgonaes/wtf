@@ -129,10 +129,10 @@ public class Client
             fd).waitForIt();
     }
 
-    public native Deferred async_read(long fd, byte[] data, int offset) throws WTFClientException;
-    public Boolean read(long fd, byte[] data, int offset) throws WTFClientException
+    public native Deferred async_read(long fd, byte[] data, int offset, long[] len) throws WTFClientException;
+    public Boolean read(long fd, byte[] data, int offset, long[] len) throws WTFClientException
     {
-        return (Boolean) async_read(fd, data, offset).waitForIt();
+        return (Boolean) async_read(fd, data, offset, len).waitForIt();
     }
 
     public native Deferred async_write(long fd, byte[] data, int offset) throws WTFClientException;

@@ -83,11 +83,14 @@ wtf_deferred_read_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
     TRACEC;
     (*env)->ReleaseByteArrayElements(env, dfrd->ref, dfrd->data, 0);
     (*env)->DeleteGlobalRef(env, dfrd->ref);
+    printf("LEN = %lu\n", *dfrd->len);
+    (*env)->ReleaseLongArrayElements(env, dfrd->lenref, dfrd->len, 0);
+    (*env)->DeleteGlobalRef(env, dfrd->lenref);
     ERROR_CHECK_VOID();
 }
 
 JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
-  (JNIEnv* env, jobject obj, jlong jfd, jbyteArray jdata, jint joffset)
+  (JNIEnv* env, jobject obj, jlong jfd, jbyteArray jdata, jint joffset, jlongArray jlen)
 {
     TRACEC;
     struct wtf_client* client = wtf_get_client_ptr(env, obj); 
@@ -113,11 +116,14 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
     o->data = (*env)->GetByteArrayElements(env, o->ref, &is_copy);
     o->data_sz = (*env)->GetArrayLength(env, o->ref);
     o->jdata = jdata;
+    o->lenref = (*env)->NewGlobalRef(env, jlen);
+    o->len = (size_t*)(*env)->GetLongArrayElements(env, o->lenref, &is_copy);
     o->cleanup = wtf_deferred_read_cleanup;
+
     int offset = (int)joffset;
     int fd = (int)jfd;
 
-    o->reqid = wtf_client_read(client, fd, o->data + offset, &o->data_sz, &o->status);
+    o->reqid = wtf_client_read(client, fd, o->data + offset, o->len, &o->status);
 
     if (o->reqid < 0)
     {
