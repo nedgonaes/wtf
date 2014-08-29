@@ -27,6 +27,9 @@
 
 // C
 #include <string.h>
+#include <pwd.h>
+#include <grp.h>
+#include <ctype.h>
 
 // e
 #include <e/endian.h>
@@ -607,6 +610,12 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         m_fds[*fd] = f; 
         f->flags = flags;
         f->mode = mode;
+        struct passwd *pass = getpwuid(getuid()); 
+        struct group *grp = getgrgid(pass->pw_gid);
+        std::cerr << std::string(pass->pw_name) << std::endl;
+        std::cerr << std::string(grp->gr_name) << std::endl;
+        f->owner = std::string(pass->pw_name);
+        f->group = std::string(grp->gr_name); //XXX: get actual group name
         e::intrusive_ptr<pending_creat> op = new pending_creat(this, client_id, status, f, fd);
         op->try_op();
         return client_id;
@@ -1216,221 +1225,6 @@ client :: ls(const char* path)
 
     return output;
 }
-
-/* HYPERDEX */
-/*
-int64_t
-client :: get_file_metadata(const char* path, e::intrusive_ptr<file> f, bool create)
-{
-	TRACE;
-    const struct hyperdex_client_attribute* attrs;
-    size_t attrs_sz;
-    int64_t ret = 0;
-    hyperdex_client_returncode hstatus;
-    wtf_client_returncode lstatus;
-    wtf_client_returncode* status = &lstatus;
-
-    ret = m_hyperdex_client.get("wtf", path, strlen(path), &hstatus, &attrs, &attrs_sz);
-    if (ret == -1)
-    {
-        ERROR(INTERNAL) << "failed to retrieve file metadata from HyperDex." << ret;
-        return -1;
-    }
-
-    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
-    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res == HYPERDEX_CLIENT_NOTFOUND)
-    {
-        if (!create)
-        {
-            ERROR(NOTFOUND) << "path not found in HyperDex.";
-            return -1;
-        }
-    }
-    else
-    {
-        for (size_t i = 0; i < attrs_sz; ++i)
-        {
-            if (strcmp(attrs[i].attr, "blockmap") == 0)
-            {
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                LOGMETADATA;
-
-                if (attrs[i].value_sz == 0)
-                {
-                    continue;
-                }
-
-                up = up >> f;
-            }
-            else if (strcmp(attrs[i].attr, "directory") == 0)
-            {
-                uint64_t is_dir;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> is_dir;
-                e::unpack64be((uint8_t*)&is_dir, &is_dir);
-
-                if (is_dir == 0)
-                {
-                    f->is_directory = false;
-                }
-                else
-                {
-                    f->is_directory = true;
-                }
-            }
-            else if (strcmp(attrs[i].attr, "mode") == 0)
-            {
-                uint64_t mode;
-
-                e::unpacker up(attrs[i].value, attrs[i].value_sz);
-                up = up >> mode;
-                e::unpack64be((uint8_t*)&mode, &mode);
-                f->mode = mode;
-            }
-        }
-    }
-
-    
-    return 0;
-}
-
-int64_t
-client :: update_file_metadata(e::intrusive_ptr<file> f, 
-                               const char* old_blockmap,
-                               size_t old_blockmap_sz,
-                               wtf_client_returncode *status)
-{
-	TRACE;
-    int64_t ret = -1;
-    int i = 0;
-
-    hyperdex_client_returncode hstatus;
-
-    typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
-
-    uint64_t mode = f->mode;
-    uint64_t directory = f->is_directory;
-    std::auto_ptr<e::buffer> blockmap_update = f->serialize_blockmap();
-    struct hyperdex_client_attribute update_attr[3];
-
-    update_attr[0].attr = "mode";
-    update_attr[0].value = (const char*)&mode;
-    update_attr[0].value_sz = sizeof(mode);
-    update_attr[0].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[1].attr = "directory";
-    update_attr[1].value = (const char*)&directory;
-    update_attr[1].value_sz = sizeof(directory);
-    update_attr[1].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[2].attr = "blockmap";
-    update_attr[2].value = reinterpret_cast<const char*>(blockmap_update->data());
-    update_attr[2].value_sz = blockmap_update->size();
-    update_attr[2].datatype = HYPERDATATYPE_STRING;
-
-    struct hyperdex_client_attribute_check cond_attr;
-
-    cond_attr.attr = "blockmap";
-    cond_attr.value = old_blockmap; 
-    cond_attr.value_sz = old_blockmap_sz;
-    cond_attr.datatype = HYPERDATATYPE_STRING;
-    cond_attr.predicate = HYPERPREDICATE_EQUALS;
-
-    ret = m_hyperdex_client.cond_put("wtf", f->path().get(), strlen(f->path().get()), &cond_attr, 1,
-                                     update_attr, 3, &hstatus);
-
-    if (ret < 0)
-    {
-        ERROR(INTERNAL) << "HyperDex returned " << ret;
-        return -1;
-    }
-
-    return ret;
-}
-
-
-int64_t
-client :: put_file_metadata(e::intrusive_ptr<file> f, wtf_client_returncode *status)
-{
-	TRACE;
-    int64_t ret = -1;
-    int i = 0;
-
-    hyperdex_client_returncode hstatus;
-
-    typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
-
-    uint64_t mode = f->mode;
-    uint64_t directory = f->is_directory;
-    std::auto_ptr<e::buffer> blockmap_update = f->serialize_blockmap();
-    struct hyperdex_client_attribute update_attr[3];
-
-    update_attr[0].attr = "mode";
-    update_attr[0].value = (const char*)&mode;
-    update_attr[0].value_sz = sizeof(mode);
-    update_attr[0].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[1].attr = "directory";
-    update_attr[1].value = (const char*)&directory;
-    update_attr[1].value_sz = sizeof(directory);
-    update_attr[1].datatype = HYPERDATATYPE_INT64;
-
-    update_attr[2].attr = "blockmap";
-    update_attr[2].value = reinterpret_cast<const char*>(blockmap_update->data());
-    update_attr[2].value_sz = blockmap_update->size();
-    update_attr[2].datatype = HYPERDATATYPE_STRING;
-
-    ret = m_hyperdex_client.put("wtf", f->path().get(), strlen(f->path().get()), update_attr, 3, &hstatus);
-
-    if (ret < 0)
-    {
-        ERROR(INTERNAL) << "HyperDex returned " << ret;
-        return -1;
-    }
-
-    //XXX: add op to pending_hyperdex_ops and pass id of op to client.
-    //hyperdex_client_returncode res = hyperdex_wait_for_result(ret, hstatus);
-
-    if (res != HYPERDEX_CLIENT_SUCCESS)
-    {
-        ERROR(INTERNAL) << "HyperDex returned " << ret;
-        return -1;
-    }
-
-    return ret;
-}
-*/
-
-/*
-XXX: make sure new inner_loop logic makes this unnecessary.
-hyperdex_client_returncode
-client::hyperdex_wait_for_result(int64_t reqid, hyperdex_client_returncode& status)
-{
-	TRACE;
-    while(1)
-    {
-        hyperdex_client_returncode lstatus;
-        int64_t id = m_hyperdex_client.loop(-1, &lstatus);
-
-        if (id < 0) 
-        {
-            return lstatus;
-        }
-        else if (id != reqid)
-        {
-            abort();
-        }
-        else
-        {
-            return status;
-        }
-    } 
-}
-*/
-
 
 /* BOILERPLATE */
 void

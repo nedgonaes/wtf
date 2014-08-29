@@ -138,6 +138,16 @@ pending_getattr :: handle_hyperdex_message(client* cl,
                 e::unpack64be((uint8_t*)&mode, &mode);
                 f->mode = mode;
             }
+            else if (strcmp(attrs[i].attr, "owner") == 0)
+            {
+                std::string owner(attrs[i].value, attrs[i].value_sz);
+                f->owner = owner;
+            }
+            else if (strcmp(attrs[i].attr, "group") == 0)
+            {
+                std::string group(attrs[i].value, attrs[i].value_sz);
+                f->group = group;
+            }
         }
 
         /*fill out file_attrs*/
@@ -145,6 +155,10 @@ pending_getattr :: handle_hyperdex_message(client* cl,
         m_file_attrs->mode = f->mode;
         m_file_attrs->flags = f->flags;
         m_file_attrs->is_dir = f->is_directory;
+        m_file_attrs->owner = new char[f->owner.length() + 1];
+        m_file_attrs->group = new char[f->group.length() + 1];
+        std::strcpy (m_file_attrs->owner, f->owner.c_str());
+        std::strcpy (m_file_attrs->group, f->group.c_str());
 
         std::cout << "SIZE IS " << f->length() << std::endl;
     }

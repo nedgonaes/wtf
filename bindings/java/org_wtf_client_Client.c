@@ -100,6 +100,8 @@ static jfieldID _fileattrs_sz;
 static jfieldID _fileattrs_mode;
 static jfieldID _fileattrs_flags;
 static jfieldID _fileattrs_isdir;
+static jfieldID _fileattrs_owner;
+static jfieldID _fileattrs_group;
 
 
 #define CHECK_CACHE(X) assert((X))
@@ -172,6 +174,8 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
     _fileattrs_mode = (*env)->GetFieldID(env, _fileattrs, "mode", "I");
     _fileattrs_flags = (*env)->GetFieldID(env, _fileattrs, "flags", "I");
     _fileattrs_isdir = (*env)->GetFieldID(env, _fileattrs, "isDir", "I");
+    _fileattrs_owner = (*env)->GetFieldID(env, _fileattrs, "owner", "Ljava/lang/String;");
+    _fileattrs_group = (*env)->GetFieldID(env, _fileattrs, "group", "Ljava/lang/String;");
 
     CHECK_CACHE(_string);
     CHECK_CACHE(_byte_string);
@@ -215,6 +219,8 @@ Java_org_wtf_client_Client_initialize(JNIEnv* env, jclass client)
     CHECK_CACHE(_fileattrs_mode);
     CHECK_CACHE(_fileattrs_flags);
     CHECK_CACHE(_fileattrs_isdir);
+    CHECK_CACHE(_fileattrs_owner);
+    CHECK_CACHE(_fileattrs_group);
 
 
     (void) client;

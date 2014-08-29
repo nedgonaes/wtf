@@ -127,6 +127,8 @@ class file
         bool is_directory;
         int flags;
         uint64_t mode;
+        std::string owner;
+        std::string group;
 
     public:
         std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator blocks_begin() { return m_block_map.begin(); }

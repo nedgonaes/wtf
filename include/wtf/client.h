@@ -84,6 +84,8 @@ extern "C"
         mode_t mode;
         int flags;
         int is_dir;
+        char* owner;
+        char* group;
     };
 
     struct wtf_client* wtf_client_create(const char* host,

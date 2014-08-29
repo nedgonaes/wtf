@@ -129,7 +129,7 @@ pending_creat :: try_op()
 
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 3);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 5);
 
     attrs[0].datatype = HYPERDATATYPE_INT64;
     hyperdex_ds_copy_string(arena, "mode", 5,
@@ -150,8 +150,22 @@ pending_creat :: try_op()
                             reinterpret_cast<const char*>(blockmap_update->data()), 
                             blockmap_update->size(),
                             &status, &attrs[2].value, &attrs[2].value_sz);
+    attrs[3].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "owner", 6,
+                            &status, &attrs[3].attr, &sz);
+    hyperdex_ds_copy_string(arena,
+                            m_file->owner.c_str(),
+                            m_file->owner.length() + 1,
+                            &status, &attrs[3].value, &attrs[3].value_sz);
+    attrs[4].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "group", 6,
+                            &status, &attrs[4].attr, &sz);
+    hyperdex_ds_copy_string(arena,
+                            m_file->group.c_str(),
+                            m_file->group.length() + 1,
+                            &status, &attrs[4].value, &attrs[4].value_sz);
 
     std::string path(m_file->path().get()); 
 
-    return send_put(path, arena, attrs, 3);
+    return send_put(path, arena, attrs, 5);
 }
