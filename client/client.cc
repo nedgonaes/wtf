@@ -873,7 +873,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
          * has gone horribly wrong and return failure.
          */
 
-        while (true)
+        /*while (true)
         {
             int64_t ret = inner_loop(-1, status, client_id);
 
@@ -887,6 +887,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
                 retval = -1;
             }
         }
+        */
     }
 
     return retval;

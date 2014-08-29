@@ -353,6 +353,8 @@ EXTRA_DIST += .hyperdex_coordinator_host
 EXTRA_DIST += .wtf_daemon_hosts
 EXTRA_DIST += .wtf_coordinator_host
 EXTRA_DIST += .wtf_client_hosts
+EXTRA_DIST += tools/startcluster.sh 
+EXTRA_DIST += tools/stopcluster.sh 
 
 
 #if ENABLE_GTEST

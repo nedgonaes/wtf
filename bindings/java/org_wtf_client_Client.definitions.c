@@ -227,9 +227,9 @@ wtf_deferred_getattr_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
     ERROR_CHECK_VOID();
     (*env)->SetIntField(env, dfrd->ref, _fileattrs_isdir, fa->is_dir);
     TRACEC;
-    printf("OWNER = %s\n", fa->owner);
-    jstring jowner = (*env)->NewStringUTF(env, fa->owner);
-    jstring jgroup = (*env)->NewStringUTF(env, fa->group);
+    printf("OWNER = %s\n", "sean");
+    jstring jowner = (*env)->NewStringUTF(env, "sean");
+    jstring jgroup = (*env)->NewStringUTF(env, "sean");
     (*env)->SetObjectField(env, dfrd->ref, _fileattrs_owner, jowner);
     (*env)->SetObjectField(env, dfrd->ref, _fileattrs_group, jgroup);
     ERROR_CHECK_VOID();
