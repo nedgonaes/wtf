@@ -456,6 +456,8 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_waitFor
     struct wtf_client* client = wtf_get_client_ptr(env, obj); 
     ERROR_CHECK(0);
 
+    printf("waitFor(%ld)\n",jreqid);
+
     wtf_client_returncode rc;
     int64_t reqid = wtf_client_loop(client, jreqid, -1, &rc);
  

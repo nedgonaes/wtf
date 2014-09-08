@@ -330,8 +330,18 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         /* Handle currently yielding operation first. */
         if (m_yielding)
         {
+            int64_t client_id = m_yielding->client_visible_id();
+
             if (!m_yielding->can_yield())
             {
+                m_yielded = m_yielding;
+                m_yielding = NULL;
+                continue;
+            }
+
+            if (wait_for != client_id)
+            {
+                m_yieldable.insert(std::make_pair(client_id, m_yielding));
                 m_yielding = NULL;
                 continue;
             }
@@ -341,7 +351,6 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 return -1;
             }
 
-            int64_t client_id = m_yielding->client_visible_id();
             m_last_error = m_yielding->error();
 
             if (!m_yielding->can_yield())
@@ -391,6 +400,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             yieldable_map_t ::iterator it = m_yieldable.find(wait_for);
             if (it != m_yieldable.end())
             {
+                std::cout << "Found item " << wait_for << " in m_yieldable!" << std::endl;
                 m_yielding = it->second;
                 m_yieldable.erase(it);
                 continue;
@@ -496,6 +506,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
             if (wait_for > 0 && wait_for != op->client_visible_id())
             {
+                std::cout << "wait_for != op->client_visible_id() == " << op->client_visible_id() << std::endl;
                 m_yieldable.insert(std::make_pair(op->client_visible_id(), op)); 
             }
             else
@@ -859,7 +870,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 
     int64_t retval = 0;
 
-    while (!f->pending_ops_empty())
+    while (false /*!f->pending_ops_empty()*/)
     {
         int64_t client_id = f->pending_ops_pop_front();
 
@@ -889,6 +900,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
         }
         */
     }
+    *status = WTF_CLIENT_SUCCESS;
 
     return retval;
 }

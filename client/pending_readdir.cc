@@ -29,6 +29,7 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "common/macros.h"
 #include "client/message_hyperdex_search.h"
 #include "client/pending_readdir.h"
 #include "common/response_returncode.h"
@@ -45,33 +46,41 @@ pending_readdir :: pending_readdir(client* cl, uint64_t client_visible_id,
     , m_path(path)
     , m_done(false)
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_readdir :: ~pending_readdir() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_readdir :: can_yield()
 {
+    TRACE;
     return !m_results.empty() && !m_done;
 }
 
 bool
 pending_readdir :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = *m_status;
     *err = e::error();
     assert(this->can_yield());
-    std::string* res = &m_results[m_results.size()-1];
+    std::string* res = &m_results.front();
     *m_entry = (char*)malloc(res->size()+1);
     strcpy(*m_entry, res->c_str());
-    m_results.pop_back();
+    std::cout << "m_results.size() = " << m_results.size() << std::endl;
+    m_results.pop();
+    std::cout << "m_results.size() = " << m_results.size() << std::endl;
 
     if (m_results.empty() && pending_aggregation::aggregation_done())
     {
+        std::cout << "Setting status to WTF_CLIENT_READDIRDONE" << std::endl;
+        set_status(WTF_CLIENT_READDIRDONE);
         m_done = true;
     }
 
@@ -81,6 +90,7 @@ pending_readdir :: yield(wtf_client_returncode* status, e::error* err)
 void
 pending_readdir :: handle_hyperdex_failure(int64_t reqid)
 {
+    TRACE;
     return pending_aggregation::handle_hyperdex_failure(reqid);
 }
 
@@ -91,6 +101,7 @@ pending_readdir :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     std::cout << "HYPERDEX RETURNED " << rc << std::endl;
     e::intrusive_ptr<message_hyperdex_search> msg = 
         dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
@@ -102,8 +113,8 @@ pending_readdir :: handle_hyperdex_message(client* cl,
     }
     else if (msg->status() == HYPERDEX_CLIENT_SEARCHDONE)
     {
-        m_results.push_back(std::string(""));
-        set_status(WTF_CLIENT_READDIRDONE);
+        std::cout << "m_results += EMPTYSTRING" << std::endl;
+        m_results.push(std::string(""));
         return pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     }
     else
@@ -115,7 +126,8 @@ pending_readdir :: handle_hyperdex_message(client* cl,
         {
             if (strcmp(attrs[i].attr, "path") == 0)
             {
-                m_results.push_back(std::string(attrs[i].value, attrs[i].value_sz));
+                std::cout << "m_results += " << std::string(attrs[i].value, attrs[i].value_sz) << std::endl;
+                m_results.push(std::string(attrs[i].value, attrs[i].value_sz));
                 break;
             }
         }
@@ -129,6 +141,7 @@ pending_readdir :: handle_hyperdex_message(client* cl,
 bool
 pending_readdir :: try_op()
 {
+    TRACE;
     std::string regex("^");
     regex += m_path;
 

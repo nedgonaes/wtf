@@ -30,7 +30,7 @@
 
 // STL
 #include <map>
-#include <vector>
+#include <queue>
 
 // WTF
 #include "client/pending_aggregation.h"
@@ -71,7 +71,7 @@ class pending_readdir : public pending_aggregation
     private:
         client* m_cl;
         char** m_entry;
-        std::vector<std::string> m_results;
+        std::queue<std::string> m_results;
         std::string m_path;
         bool m_done;
 };
