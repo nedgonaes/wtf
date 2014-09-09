@@ -108,6 +108,7 @@ pending_read :: handle_wtf_message(client* cl,
     struct buffer_block_len bbl = m_offset_map[std::make_pair(si.get(), bi)];
     e::slice data = up.as_slice();
     size_t len = std::min(data.size() - bbl.block_offset, m_max_buf_sz - bbl.buf_offset);
+    std::cout << "READING DATA LEN = " << len << std::endl;
     memmove(m_buf + bbl.buf_offset, data.data() + bbl.block_offset, len); 
     *m_buf_sz += len; 
     return true;

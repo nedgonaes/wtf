@@ -118,6 +118,7 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1read
     o->jdata = jdata;
     o->lenref = (*env)->NewGlobalRef(env, jlen);
     o->len = (size_t*)(*env)->GetLongArrayElements(env, o->lenref, &is_copy);
+    *o->len = o->data_sz;
     o->cleanup = wtf_deferred_read_cleanup;
 
     int offset = (int)joffset;

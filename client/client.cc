@@ -540,6 +540,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         }
 
         const pending_server_pair psp(it->second);
+        std::cout << "ADDRESS OF PENDING OP IS " << psp.op.get() << std::endl;
         e::intrusive_ptr<pending_aggregation> op = psp.op;
         m_pending_ops.erase(it);
 
