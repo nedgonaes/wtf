@@ -152,6 +152,13 @@ pending_read :: handle_hyperdex_message(client* cl,
         parse_metadata(attrs, attrs_sz);
         size_t rem = std::min(*m_buf_sz, m_file->bytes_left_in_file());
         std::cout << "REM = " << rem << std::endl;
+
+        if (rem == 0)
+        {
+            std::cout << "m_buf_sz == " << *m_buf_sz << std::endl;
+            std::cout << "bytes left in file == " << m_file->bytes_left_in_file() << std::endl;
+        }
+        
         size_t buf_offset = 0;
         *m_buf_sz = 0;
 

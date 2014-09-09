@@ -146,6 +146,7 @@ operator << (std::ostream& lhs, const file& rhs)
     lhs << "\toffset: " << rhs.m_offset<< std::endl;
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
     lhs << "\tblock_size: " << rhs.m_block_size << std::endl;
+    lhs << "\tbytes left in file: " << rhs.m_bytes_left_in_file << std::endl;
     lhs << "\tblocks: " << std::endl;
 
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();

@@ -130,7 +130,7 @@ pending_rename :: change_name(arena_t arena, attr_t attrs, size_t sz, std::strin
             //send_del adds an op for the delete.
             src = std::string(attrs[i].value, attrs[i].value_sz);
             dst = src;
-            dst.replace(dst.begin(), dst.begin() + m_dst.size(), m_dst);
+            dst.replace(dst.begin(), dst.begin() + m_src.size(), m_dst);
         }
         else
         {
