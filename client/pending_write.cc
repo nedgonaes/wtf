@@ -222,7 +222,6 @@ pending_write :: handle_hyperdex_message(client* cl,
     else
     {
         e::intrusive_ptr<message_hyperdex_put> msg = dynamic_cast<message_hyperdex_put*>(m_outstanding_hyperdex[0].get());
-        std::cout << reqid << " : " << msg->status() << std::endl;
         pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
         return true;
     }
@@ -243,7 +242,6 @@ pending_write :: send_metadata_update()
 
     size_t sz;
 
-    std::cout << *m_file << std::endl;
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
     uint64_t mode = m_file->mode;
     uint64_t directory = m_file->is_directory;
@@ -271,14 +269,12 @@ pending_write :: send_metadata_update()
                             reinterpret_cast<const char*>(blockmap_update->data()), 
                             blockmap_update->size(),
                             &status, &attrs[2].value, &attrs[2].value_sz);
-    std::cout << blockmap_update->as_slice().hex() << std::endl;
 
     e::intrusive_ptr<message_hyperdex_put> msg = 
         new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 3);
 
     if (msg->send() < 0)
     {
-        std::cout << "TEST" << std::endl;
         PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
     }
     else

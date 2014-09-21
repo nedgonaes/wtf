@@ -100,6 +100,8 @@ bin_PROGRAMS += wtf
 wtfexec_PROGRAMS += wtf-coordinator
 wtfexec_PROGRAMS += wtf-daemon 
 wtfexec_PROGRAMS += wtf-mkfs
+wtfexec_PROGRAMS += wtf-wtfio
+wtfexec_PROGRAMS += wtf-wtfio-checker
 wtfexec_PROGRAMS += wtf-server-register
 wtfexec_PROGRAMS += wtf-server-online
 wtfexec_PROGRAMS += wtf-server-offline
@@ -318,6 +320,7 @@ shell_wrappers =
 #shell_wrappers += test/sh/getattr_test.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.2GB.sh
+shell_wrappers += test/sh/closetest.sh
 
 #wtf-test_readwrite
 check_PROGRAMS += test/readwrite-sync-stress-test
@@ -332,6 +335,10 @@ check_PROGRAMS += test/readdir-test
 test_readdir_test_SOURCES = test/readdir_test.cc 
 test_readdir_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
+check_PROGRAMS += test/closetest
+test_closetest_SOURCES = test/closetest.cc 
+test_closetest_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
+
 check_PROGRAMS += test/getattr-test
 test_getattr_test_SOURCES = test/getattr_test.cc 
 test_getattr_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
@@ -339,7 +346,7 @@ test_getattr_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 #java tests
 if ENABLE_JAVA_BINDINGS
 java_wrappers =
-java_wrappers += test/sh/bindings.java.Basic.sh
+#java_wrappers += test/sh/bindings.java.Basic.sh
 shell_wrappers += $(java_wrappers)
 endif
 TESTS += $(shell_wrappers)
@@ -361,6 +368,18 @@ EXTRA_DIST += tools/stopcluster.sh
 #wtf_test_blockstore_SOURCES = test/test_blockstore.cc
 #wtf_test_blockstore_LDADD = libwtfblockstore.la -lpopt -lglog -lgtest
 #endif
+
+################################################################################
+################################## benchmarks ##################################
+################################################################################
+
+wtf_wtfio_SOURCES = benchmarks/wtfio.cc
+wtf_wtfio_CPPFLAGS = $(CPPFLAGS)
+wtf_wtfio_LDADD = libwtf-client.la $(E_LIBS) -lpopt
+
+wtf_wtfio_checker_SOURCES = benchmarks/wtfio-checker.cc
+wtf_wtfio_checker_CPPFLAGS = $(CPPFLAGS)
+wtf_wtfio_checker_LDADD = libwtf-client.la $(E_LIBS) -lpopt
 
 
 ################################################################################

@@ -149,6 +149,7 @@ pending_open :: try_op()
     }
     else
     {
+        TRACE;
         m_cl->add_hyperdex_op(msg->reqid(), this);
         e::intrusive_ptr<message> m = msg.get();
         handle_sent_to_hyperdex(m);

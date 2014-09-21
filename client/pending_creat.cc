@@ -86,7 +86,7 @@ pending_creat :: handle_hyperdex_message(client* cl,
 {
     TRACE;
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
-    TRACE;
+    return true;
 }
 
 typedef struct hyperdex_ds_arena* arena_t;

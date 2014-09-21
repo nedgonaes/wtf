@@ -1,7 +1,7 @@
 #include "common/macros.h"
 #include "blockstore/blockmap.h"
 
-#define BACKING_SIZE 2147483648
+#define BACKING_SIZE 1000000000 
 #define ROUND_UP(X, Y) ((X + Y - 1) & (X))
 
 using wtf::blockmap;
@@ -314,8 +314,6 @@ blockmap :: update(const e::slice& data,
         return status;
     }
 
-    LOG(INFO) << "disk_offset: " << disk_offset;
-
     vblock vb;
     if (read_offset_map(bid, vb) < 0)
     {
@@ -324,11 +322,7 @@ blockmap :: update(const e::slice& data,
 
     bid = m_block_id++;
 
-    std::cout << "BLOCK IS " << vb.length() << " BYTES" << std::endl;
-    std::cout  << "ADDING " << data.size() << " BYTES" << std::endl;
     vb.update(offset, data.size(), disk_offset);
-    std::cout << "BLOCK IS " << vb.length() << " BYTES" << std::endl;
-    fflush(stdout);
     block_len = vb.length();
 
 

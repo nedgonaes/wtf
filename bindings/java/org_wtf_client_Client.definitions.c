@@ -51,9 +51,7 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
 
     jboolean is_copy;
     o->data = (char*)(*env)->GetLongArrayElements(env, jfd, &is_copy);
-    printf("data: %p\n", o->data);
     o->jdata = jfd;
-    printf("jdata: %p\n", o->jdata);
     o->cleanup = wtf_deferred_open_cleanup;
     const char* path = (*env)->GetStringUTFChars(env, jpath, 0);
     o->reqid = wtf_client_open(client, path, jflags, jmode, jnum_replicas,
@@ -65,7 +63,6 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1open
         return 0;
     }
 
-    printf("env: %p\n", env);
     //(*env)->ReleaseLongArrayElements(env, o->jdata, (jlong*)o->data, 0);
 
     (*env)->ReleaseLongArrayElements(env, (jlongArray)o->jdata, (jlong*)o->data, 0);
@@ -83,7 +80,6 @@ wtf_deferred_read_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
     TRACEC;
     (*env)->ReleaseByteArrayElements(env, dfrd->ref, dfrd->data, 0);
     (*env)->DeleteGlobalRef(env, dfrd->ref);
-    printf("LEN = %lu\n", *dfrd->len);
     (*env)->ReleaseLongArrayElements(env, dfrd->lenref, dfrd->len, 0);
     (*env)->DeleteGlobalRef(env, dfrd->lenref);
     ERROR_CHECK_VOID();
@@ -190,9 +186,6 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_async_1write
     }
 
 
-    printf("%s\n", o->data + offset);
-    printf("%lu\n", o->data_sz);
-    printf("%d\n", offset);
     o->encode_return = wtf_java_client_deferred_encode_status;
     (*env)->CallObjectMethod(env, obj, _client_add_op, o->reqid, op);
     return op;
@@ -216,7 +209,6 @@ wtf_deferred_getattr_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
 {
     TRACEC;
     struct wtf_file_attrs* fa = (struct wtf_file_attrs*)dfrd->data;
-    printf("fa->mode= %d\n", fa->mode);
     (*env)->SetIntField(env, dfrd->ref, _fileattrs_mode, fa->mode);
     TRACEC;
     ERROR_CHECK_VOID();
@@ -228,7 +220,6 @@ wtf_deferred_getattr_cleanup(JNIEnv* env, struct wtf_java_client_deferred* dfrd)
     ERROR_CHECK_VOID();
     (*env)->SetIntField(env, dfrd->ref, _fileattrs_isdir, fa->is_dir);
     TRACEC;
-    printf("OWNER = %s\n", "sean");
     jstring jowner = (*env)->NewStringUTF(env, "sean");
     jstring jgroup = (*env)->NewStringUTF(env, "sean");
     (*env)->SetObjectField(env, dfrd->ref, _fileattrs_owner, jowner);
@@ -456,8 +447,6 @@ JNIEXPORT jobject JNICALL Java_org_wtf_client_Client_waitFor
     jobject ret;
     struct wtf_client* client = wtf_get_client_ptr(env, obj); 
     ERROR_CHECK(0);
-
-    printf("waitFor(%ld)\n",jreqid);
 
     wtf_client_returncode rc;
     int64_t reqid = wtf_client_loop(client, jreqid, -1, &rc);

@@ -135,7 +135,6 @@ pending_chdir :: parse_metadata(const hyperdex_client_attribute* attrs, size_t a
     {
         if (strcmp(attrs[i].attr, "directory") == 0)
         {
-            std::cout << "directory" << std::endl;
             uint64_t is_dir;
 
             e::unpacker up(attrs[i].value, attrs[i].value_sz);
@@ -149,7 +148,6 @@ pending_chdir :: parse_metadata(const hyperdex_client_attribute* attrs, size_t a
         }
         else if (strcmp(attrs[i].attr, "mode") == 0)
         {
-            std::cout << "mode" << std::endl;
             uint64_t mode;
 
             e::unpacker up(attrs[i].value, attrs[i].value_sz);

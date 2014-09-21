@@ -66,3 +66,7 @@ wtf-backup
 readdir-test
 getattr-test
 chdir-test
+wtf-wtfio
+wtf-wtfio-checker
+test/test
+test/closetest

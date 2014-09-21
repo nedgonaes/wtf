@@ -73,9 +73,6 @@ pending_read :: yield(wtf_client_returncode* status, e::error* err)
     *err = e::error();
     assert(this->can_yield());
     m_done = true;
-    std::cout << "==========" << std::endl;
-    std::cout << "m_buf_sz = " << *m_buf_sz << std::endl;
-    std::cout << "==========" << std::endl;
     return true;
 }
 
@@ -108,7 +105,6 @@ pending_read :: handle_wtf_message(client* cl,
     struct buffer_block_len bbl = m_offset_map[std::make_pair(si.get(), bi)];
     e::slice data = up.as_slice();
     size_t len = std::min(data.size() - bbl.block_offset, m_max_buf_sz - bbl.buf_offset);
-    std::cout << "READING DATA LEN = " << len << std::endl;
     memmove(m_buf + bbl.buf_offset, data.data() + bbl.block_offset, len); 
     *m_buf_sz += len; 
     return true;
@@ -151,14 +147,7 @@ pending_read :: handle_hyperdex_message(client* cl,
         size_t attrs_sz = msg->attrs_sz();
         parse_metadata(attrs, attrs_sz);
         size_t rem = std::min(*m_buf_sz, m_file->bytes_left_in_file());
-        std::cout << "REM = " << rem << std::endl;
 
-        if (rem == 0)
-        {
-            std::cout << "m_buf_sz == " << *m_buf_sz << std::endl;
-            std::cout << "bytes left in file == " << m_file->bytes_left_in_file() << std::endl;
-        }
-        
         size_t buf_offset = 0;
         *m_buf_sz = 0;
 
@@ -192,16 +181,10 @@ pending_read :: handle_hyperdex_message(client* cl,
 void
 pending_read :: parse_metadata(const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
-    std::cout << "PARSING METADATA WITH " << attrs_sz << " ATTRIBUTES." << std::endl;
-    fflush(stdout);
     for (size_t i = 0; i < attrs_sz; ++i)
     {
         if (strcmp(attrs[i].attr, "blockmap") == 0)
         {
-            std::cout << "blockmap(" << attrs[i].value_sz << ")" << std::endl;
-            
-            std::cout << "GET " << e::slice(attrs[i].value, attrs[i].value_sz).hex() << std::endl;
-
             e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
             if (attrs[i].value_sz == 0)
@@ -213,7 +196,6 @@ pending_read :: parse_metadata(const hyperdex_client_attribute* attrs, size_t at
         }
         else if (strcmp(attrs[i].attr, "directory") == 0)
         {
-            std::cout << "directory" << std::endl;
             uint64_t is_dir;
 
             e::unpacker up(attrs[i].value, attrs[i].value_sz);
@@ -231,7 +213,6 @@ pending_read :: parse_metadata(const hyperdex_client_attribute* attrs, size_t at
         }
         else if (strcmp(attrs[i].attr, "mode") == 0)
         {
-            std::cout << "mode" << std::endl;
             uint64_t mode;
 
             e::unpacker up(attrs[i].value, attrs[i].value_sz);
@@ -240,8 +221,6 @@ pending_read :: parse_metadata(const hyperdex_client_attribute* attrs, size_t at
             m_file->mode = mode;
         }
     }
-
-    std::cout << *m_file << std::endl;
 } 
 
 void 

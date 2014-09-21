@@ -83,11 +83,9 @@ pending_getattr :: handle_hyperdex_message(client* cl,
         e::error* err)
 {
     TRACE;
-    std::cout << "HYPERDEX RETURNED " << rc << std::endl;
     e::intrusive_ptr<message_hyperdex_get> msg = 
         dynamic_cast<message_hyperdex_get*>(m_outstanding_hyperdex[0].get());
 
-    std::cout << "HYPERDEX RETURNED " << msg->status() << std::endl;
     if (msg->status() == HYPERDEX_CLIENT_NOTFOUND)
     {
         PENDING_ERROR(NOTFOUND);
@@ -160,7 +158,6 @@ pending_getattr :: handle_hyperdex_message(client* cl,
         std::strcpy (m_file_attrs->owner, f->owner.c_str());
         std::strcpy (m_file_attrs->group, f->group.c_str());
 
-        std::cout << "SIZE IS " << f->length() << std::endl;
     }
 
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);

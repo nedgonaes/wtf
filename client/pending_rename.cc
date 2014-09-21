@@ -136,7 +136,6 @@ pending_rename :: change_name(arena_t arena, attr_t attrs, size_t sz, std::strin
         {
             size_t size;
 
-            std::cout << "COPYING " << attrs[i].attr << std::endl;
             attrs_new[j].datatype = attrs[i].datatype;
             hyperdex_ds_copy_string(arena, attrs[i].attr,
                 strlen(attrs[i].attr) + 1,
@@ -156,17 +155,8 @@ pending_rename :: send_put(std::string& dst, arena_t arena,
                             const hyperdex_client_attribute* attrs, size_t attrs_sz)
 {
     TRACE;
-    std::cout << "===== HERE ======" << std::endl;
-    std::cout << dst << std::endl;
     e::intrusive_ptr<message_hyperdex_put> msg = 
         new message_hyperdex_put(m_cl, "wtf", dst.c_str(), arena, attrs, attrs_sz);
-
-    std::cout << attrs_sz << std::endl;
-    for (int i = 0; i < attrs_sz; ++i)
-    {
-        std::cout << attrs[i].attr << std::endl;
-        std::cout << attrs[i].value_sz << std::endl;
-    }
 
     if (msg->send() < 0)
     {

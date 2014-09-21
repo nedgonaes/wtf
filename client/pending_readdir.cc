@@ -73,13 +73,10 @@ pending_readdir :: yield(wtf_client_returncode* status, e::error* err)
     std::string* res = &m_results.front();
     *m_entry = (char*)malloc(res->size()+1);
     strcpy(*m_entry, res->c_str());
-    std::cout << "m_results.size() = " << m_results.size() << std::endl;
     m_results.pop();
-    std::cout << "m_results.size() = " << m_results.size() << std::endl;
 
     if (m_results.empty() && pending_aggregation::aggregation_done())
     {
-        std::cout << "Setting status to WTF_CLIENT_READDIRDONE" << std::endl;
         set_status(WTF_CLIENT_READDIRDONE);
         m_done = true;
     }
@@ -102,10 +99,8 @@ pending_readdir :: handle_hyperdex_message(client* cl,
                                     e::error* err)
 {
     TRACE;
-    std::cout << "HYPERDEX RETURNED " << rc << std::endl;
     e::intrusive_ptr<message_hyperdex_search> msg = 
         dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
-    std::cout << "READDIR RETURNED " << msg->status() << std::endl;
 
     if (rc < 0)
     {
@@ -113,7 +108,6 @@ pending_readdir :: handle_hyperdex_message(client* cl,
     }
     else if (msg->status() == HYPERDEX_CLIENT_SEARCHDONE)
     {
-        std::cout << "m_results += EMPTYSTRING" << std::endl;
         m_results.push(std::string(""));
         return pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     }
@@ -126,7 +120,6 @@ pending_readdir :: handle_hyperdex_message(client* cl,
         {
             if (strcmp(attrs[i].attr, "path") == 0)
             {
-                std::cout << "m_results += " << std::string(attrs[i].value, attrs[i].value_sz) << std::endl;
                 m_results.push(std::string(attrs[i].value, attrs[i].value_sz));
                 break;
             }

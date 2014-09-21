@@ -313,19 +313,30 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
            !m_pending_hyperdex_ops.empty() ||
            !m_yieldable.empty())
     {
-        m_gc.quiescent_state(&m_gc_ts);
+        if (0)
+        {
+            std::cout << "WAIT FOR = " << wait_for << std::endl;
 
-        std::cout << "wait_for = " << wait_for << std::endl;
-        if (m_yielding)
-            std::cout << "m_yielding" << std::endl;
-        if (!m_failed.empty())
-            std::cout << "m_failed not empty" << std::endl;
-        if (!m_pending_ops.empty())
-            std::cout << "m_pending_ops not empty" << std::endl;
-        if (!m_pending_hyperdex_ops.empty())
-            std::cout << "m_pending_hyperdex_ops not empty" << std::endl;
-        if (!m_yieldable.empty())
-            std::cout << "m_yieldable not empty" << std::endl;
+            for (std::map<uint64_t, e::intrusive_ptr<pending_aggregation> >::iterator it = m_yieldable.begin(); 
+                    it != m_yieldable.end(); ++it)
+            {
+                std::cout << "YIELDABLE " << it->first << std::endl; 
+            }
+
+            for (std::map<uint64_t, pending_server_pair>::iterator it = m_pending_hyperdex_ops.begin(); 
+                    it != m_pending_hyperdex_ops.end(); ++it)
+            {
+                std::cout << "PENDINGHYPERDEX " << it->first << std::endl; 
+            }
+
+            for (std::map<uint64_t, pending_server_pair>::iterator it = m_pending_ops.begin(); 
+                    it != m_pending_ops.end(); ++it)
+            {
+                std::cout << "PENDINGWTF " << it->first << std::endl; 
+            }
+        }
+
+        m_gc.quiescent_state(&m_gc_ts);
 
         /* Handle currently yielding operation first. */
         if (m_yielding)
@@ -348,6 +359,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
             if (!m_yielding->yield(status, &m_last_error))
             {
+                TRACE;
                 return -1;
             }
 
@@ -364,9 +376,11 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                    */
                 m_yielded = m_yielding;
                 m_yielding = NULL;
+                TRACE;
                 return client_id;
             }
 
+            TRACE;
             return client_id;
         }
 
@@ -400,7 +414,6 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             yieldable_map_t ::iterator it = m_yieldable.find(wait_for);
             if (it != m_yieldable.end())
             {
-                std::cout << "Found item " << wait_for << " in m_yieldable!" << std::endl;
                 m_yielding = it->second;
                 m_yieldable.erase(it);
                 continue;
@@ -408,6 +421,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             /* nothing left to do here.*/
             else if (m_pending_ops.empty() && m_pending_hyperdex_ops.empty())
             {
+                TRACE;
                 return -1;
             }
         }
@@ -425,6 +439,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
         if (!maintain_coord_connection(status))
         {
+            TRACE;
             return -1;
         }
 
@@ -447,9 +462,11 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 break;
             case BUSYBEE_INTERRUPTED:
                 ERROR(INTERRUPTED) << "signal received";
+                TRACE;
                 return -1;
             case BUSYBEE_TIMEOUT:
                 ERROR(TIMEOUT) << "operation timed out";
+                TRACE;
                 return -1;
             case BUSYBEE_DISRUPTED:
                 handle_disruption(id);
@@ -467,6 +484,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             default:
                 ERROR(INTERNAL) << "internal error: BusyBee unexpectedly returned "
                                 << (unsigned) rc << ": please file a bug";
+                TRACE;
                 return -1;
         }
 
@@ -501,12 +519,12 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             if (!op->handle_hyperdex_message(this, reqid, hstatus,
                                     status, &m_last_error))
             {
+                TRACE;
                 return -1;
             }
 
             if (wait_for > 0 && wait_for != op->client_visible_id())
             {
-                std::cout << "wait_for != op->client_visible_id() == " << op->client_visible_id() << std::endl;
                 m_yieldable.insert(std::make_pair(op->client_visible_id(), op)); 
             }
             else
@@ -528,6 +546,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                                << sid_num << " sent message="
                                << msg->as_slice().hex()
                                << " with invalid header";
+            TRACE;
             return -1;
         }
 
@@ -540,7 +559,6 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         }
 
         const pending_server_pair psp(it->second);
-        std::cout << "ADDRESS OF PENDING OP IS " << psp.op.get() << std::endl;
         e::intrusive_ptr<pending_aggregation> op = psp.op;
         m_pending_ops.erase(it);
 
@@ -556,6 +574,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             if (!op->handle_wtf_message(this, id, 
                                     msg, up, status, &m_last_error))
             {
+                TRACE;
                 return -1;
             }
 
@@ -576,6 +595,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                                << psp.si
                                << "; it came from "
                                << id;
+            TRACE; 
             return -1;
         }
         else
@@ -586,6 +606,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
     }
 
     ERROR(NONEPENDING) << "no outstanding operations to process";
+    TRACE;
     return -1;
 }
 
@@ -605,6 +626,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
 
     if (!maintain_coord_connection(status))
     {
+        TRACE;
         return -1;
     }
 
@@ -612,20 +634,19 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
 
     if (canon_path(path, abspath, PATH_MAX) != 0)
     {
+        TRACE;
         return -1;
     }
 
     if (flags & O_CREAT)
     {
-        std::cerr << "Creating file " << abspath << std::endl;
+        std::cout << path << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[*fd] = f; 
         f->flags = flags;
         f->mode = mode;
         struct passwd *pass = getpwuid(getuid()); 
         struct group *grp = getgrgid(pass->pw_gid);
-        std::cerr << std::string(pass->pw_name) << std::endl;
-        std::cerr << std::string(grp->gr_name) << std::endl;
         f->owner = std::string(pass->pw_name);
         f->group = std::string(grp->gr_name); //XXX: get actual group name
         e::intrusive_ptr<pending_creat> op = new pending_creat(this, client_id, status, f, fd);
@@ -634,7 +655,6 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
     }
     else
     {
-        std::cerr << "Opening file " << abspath << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[*fd] = f; 
         f->flags = flags;
@@ -755,12 +775,9 @@ client :: write(int64_t fd, const char* buf,
 	TRACE;
     if (m_fds.find(fd) == m_fds.end())
     {
-        std::cout << "fd " << fd << " is invalid." << std::endl;
         ERROR(BADF) << "file descriptor " << fd << " is invalid.";
         return -1;
     }
-
-    std::cerr << "Wrting " << *buf_sz << " bytes to file " << fd << std::endl;
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
@@ -805,7 +822,6 @@ client :: read(int64_t fd, char* buf,
         return -1;
     }
 
-    std::cerr << "Reading " << *buf_sz << " bytes from file." << std::endl;
 
     e::intrusive_ptr<file> f = m_fds[fd];
 
@@ -871,7 +887,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 
     int64_t retval = 0;
 
-    while (false /*!f->pending_ops_empty()*/)
+    while (!f->pending_ops_empty())
     {
         int64_t client_id = f->pending_ops_pop_front();
 
@@ -885,23 +901,24 @@ client :: close(int64_t fd, wtf_client_returncode* status)
          * has gone horribly wrong and return failure.
          */
 
-        /*while (true)
-        {
-            int64_t ret = inner_loop(-1, status, client_id);
+        int64_t ret = inner_loop(-1, status, client_id);
 
-            if (ret < 0 && *status == WTF_CLIENT_NONEPENDING) 
-            {
-                break;
-            }
-            else if (ret < 0)
-            {
-                ERROR(IO) << "there was an IO error somewhere.";
-                retval = -1;
-            }
+        if (ret < 0 && *status == WTF_CLIENT_NONEPENDING) 
+        {
+            continue;
         }
-        */
+        else if (ret < 0)
+        {
+            ERROR(IO) << "there was an IO error somewhere."; 
+            retval = -1;
+        }
+        //XXX: return bad status if bad
     }
-    *status = WTF_CLIENT_SUCCESS;
+
+    if (retval >= 0) 
+    {
+        *status = WTF_CLIENT_SUCCESS;
+    }
 
     return retval;
 }

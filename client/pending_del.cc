@@ -121,7 +121,6 @@ bool
 pending_del :: send_del(std::string path)
 {
     TRACE;
-    std::cout << "Deleting " << path << std::endl;
 
     e::intrusive_ptr<message_hyperdex_del> msg = new message_hyperdex_del(m_cl, "wtf", path.c_str());
 
@@ -146,7 +145,6 @@ pending_del :: handle_search(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
-    std::cout << "HYPERDEX RETURNED " << rc << std::endl;
     e::intrusive_ptr<message_hyperdex_search> msg = 
         dynamic_cast<message_hyperdex_search* >(m_outstanding_hyperdex[0].get());
 

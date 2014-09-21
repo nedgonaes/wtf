@@ -73,7 +73,6 @@ vblock :: length()
 
     uint64_t offset = end->first;
     uint64_t len = end->second->length();
-    std::cout << len << " + " << offset << " = " << len + offset << std::endl;
     return offset + len;
 }
 
@@ -87,7 +86,6 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
     vblock::slice_map::iterator after = m_slice_map.lower_bound(new_start);
     e::intrusive_ptr<vblock::slice> new_slice(new vblock::slice(new_start, len, disk_off));
 
-    std::cout << "UPDATE " << new_start << "," << new_slice->length() << std::endl;
     
 
     //new block
@@ -291,7 +289,6 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
 
         //just put it at the end.
         m_slice_map[new_start] = new_slice;
-        std::cout << m_slice_map[new_start]->length() << std::endl;
 
         e::intrusive_ptr<slice> old_slice = after->second;
         size_t old_length = old_slice->m_length;

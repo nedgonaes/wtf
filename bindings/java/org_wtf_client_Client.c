@@ -518,14 +518,12 @@ wtf_java_client_deferred_encode_status(JNIEnv* env, jobject obj, struct wtf_java
 
     if (d->status == WTF_CLIENT_SUCCESS)
     {
-        printf("SUCCESS!!!\n");
         ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_TRUE);
         ERROR_CHECK(0);
         return ret;
     }
     else if (d->status == WTF_CLIENT_NOTFOUND)
     {
-        printf("NOT FOUND!!!\n");
         ret = (*env)->NewObject(env, _boolean, _boolean_init, JNI_FALSE);
         ERROR_CHECK(0);
         return ret;

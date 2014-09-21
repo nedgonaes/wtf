@@ -195,7 +195,7 @@ def main(argv):
     try:
         hdc.setup()
         adm = hyperdex.admin.Admin('127.0.0.1', 1982)
-        space = str("space wtf key path attributes string blockmap, int directory, int mode")
+        space = str("space wtf key path attributes string blockmap, int directory, int mode, string owner, string group")
         time.sleep(1) # XXX use a barrier tool on cluster
         adm.add_space(space)
         time.sleep(1) # XXX use a barrier tool on cluster

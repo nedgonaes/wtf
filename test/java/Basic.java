@@ -6,6 +6,8 @@ public class Basic {
 		System.out.println("start");
 		Client c = new Client(args[0], Integer.valueOf(args[1]), args[2], Integer.valueOf(args[3]));
         long[] fd = new long[1];
+        long[] len = new long[1];
+        len[0] = 0;
 		fd[0] = 0;
         int offset = 0;
 
@@ -34,7 +36,7 @@ public class Basic {
         byte[] readdata = new byte[2]; 
         readdata[0] = '\0';
         readdata[1] = '\0';
-        ok = c.read(fd[0], readdata, offset);
+        ok = c.read(fd[0], readdata, offset, len);
         if (readdata[0]!='h')
         {
             return;
