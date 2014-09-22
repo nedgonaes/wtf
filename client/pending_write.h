@@ -78,6 +78,7 @@ class pending_write : public pending_aggregation
 
     private:
         void send_metadata_update();
+        bool send_data();
         void prepare_write_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
                               std::vector<block_location>& bl,

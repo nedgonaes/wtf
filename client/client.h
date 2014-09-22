@@ -247,6 +247,7 @@ class client
         uint64_t m_next_fileno;
         file_map_t m_fds;
         std::string m_cwd;
+        po6::net::ipaddr m_addr;
 };
 
 std::ostream&

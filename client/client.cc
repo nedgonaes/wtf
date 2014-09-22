@@ -110,8 +110,10 @@ client :: client(const char* host, in_port_t port,
     , m_next_fileno(1)
     , m_fds()
     , m_cwd("/")
+    , m_addr()
 {
 	TRACE;
+    busybee_discover(&m_addr);
     m_gc.register_thread(&m_gc_ts);
 }
 
@@ -216,7 +218,7 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
                               size_t& slice_len)
 {
     f->copy_current_block_locations(bl);
-    m_coord.config()->assign_random_block_locations(bl);
+    m_coord.config()->assign_random_block_locations(bl, m_addr);
     block_offset = f->current_block_offset();
     block_capacity = f->current_block_capacity();
     file_offset = f->current_block_start();

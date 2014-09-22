@@ -145,23 +145,57 @@ pending_write :: handle_wtf_message(client* cl,
 }
 
 bool
+pending_write :: send_data()
+{
+    size_t rem = *m_buf_sz;
+    size_t next_buf_offset = 0;
+
+    while(rem > 0)
+    {
+        std::vector<block_location> bl;
+        size_t buf_offset = next_buf_offset;
+        uint32_t block_offset;
+        uint32_t block_capacity;
+        uint64_t file_offset;
+        size_t slice_len;
+        m_cl->prepare_write_op(m_file, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
+        e::slice data = e::slice(m_buf + buf_offset, slice_len);
+
+        for (size_t i = 0; i < bl.size(); ++i)
+        {
+            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                + sizeof(uint64_t) // bl.bi (remote block number) 
+                + sizeof(uint32_t) // block_offset (remote block offset) 
+                + sizeof(uint32_t) // block_capacity 
+                + sizeof(uint64_t) // file_offset 
+                + data.size();     // user data 
+            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+            e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+            pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
+            pa.copy(data);
+
+            std::vector<server_id> servers;
+            servers.push_back(server_id(bl[i].si));
+
+            //SEND
+            wtf_client_returncode status;
+            m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, &status);
+        }
+    }
+
+    m_state = 1;
+    return true;
+}
+
+bool
 pending_write :: try_op()
 {
     TRACE;
     /* Get the file metadata from HyperDex */
-    const char* path = m_file->path().get();
-    e::intrusive_ptr<message_hyperdex_get> msg =
-        new message_hyperdex_get(m_cl, "wtf", path); 
        
-    if (msg->send() < 0)
+    if (!send_data())
     {
-        PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
-    }
-    else
-    {
-        m_cl->add_hyperdex_op(msg->reqid(), this);
-        e::intrusive_ptr<message> m = msg.get();
-        handle_sent_to_hyperdex(m);
+        PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
     }
 
     return true;
@@ -179,44 +213,6 @@ pending_write :: handle_hyperdex_message(client* cl,
     if (m_state == 0)
     {
 
-        size_t rem = *m_buf_sz;
-        size_t next_buf_offset = 0;
-
-        while(rem > 0)
-        {
-            std::vector<block_location> bl;
-            size_t buf_offset = next_buf_offset;
-            uint32_t block_offset;
-            uint32_t block_capacity;
-            uint64_t file_offset;
-            size_t slice_len;
-            m_cl->prepare_write_op(m_file, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
-            e::slice data = e::slice(m_buf + buf_offset, slice_len);
-
-            for (size_t i = 0; i < bl.size(); ++i)
-            {
-                size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                    + sizeof(uint64_t) // bl.bi (remote block number) 
-                    + sizeof(uint32_t) // block_offset (remote block offset) 
-                    + sizeof(uint32_t) // block_capacity 
-                    + sizeof(uint64_t) // file_offset 
-                    + data.size();     // user data 
-                std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-                e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-                pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
-                pa.copy(data);
-
-                std::vector<server_id> servers;
-                servers.push_back(server_id(bl[i].si));
-
-                //SEND
-                m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, status);
-            }
-        }
-
-        pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
-        m_state = 1;
-        return true;
     }
     //response from final metadata update
     else

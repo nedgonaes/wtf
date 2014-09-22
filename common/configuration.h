@@ -59,10 +59,10 @@ class configuration
         server::state_t get_state(const server_id& id) const;
         po6::net::location get_address(const server_id& id) const;
         const server* server_from_id(server_id id) const;
-        const server* get_random_server(uint64_t id) const;
+        const server* get_random_server() const;
 
     public:
-        void assign_random_block_locations(std::vector<block_location>& bl) const;
+        void assign_random_block_locations(std::vector<block_location>& bl, po6::net::ipaddr& my_addr) const;
 
     // iterators
     public:

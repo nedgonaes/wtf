@@ -164,7 +164,7 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
                 uint32_t block_capacity = 4096;
                 uint64_t file_offset = it->second->offset();
 
-                wc->m_coord.config()->assign_random_block_locations(block_locations);
+                wc->m_coord.config()->assign_random_block_locations(block_locations, wc->m_addr);
                 std::vector<wtf::block_location>::iterator it3;
                 std::vector<server_id> write_servers;
                 for (it3 = block_locations.begin(); it3 != block_locations.end(); ++it3)
