@@ -90,6 +90,8 @@ class daemon
                           uint64_t nonce,
                           std::auto_ptr<e::buffer> msg,
                           e::unpacker up);
+        void forward_message(std::vector<block_location>& bl,
+                          std::auto_ptr<e::buffer> msg);
 
 
     // Manage communication

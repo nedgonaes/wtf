@@ -63,11 +63,14 @@
 #include <busybee_single.h>
 
 // WTF
-#include "common/macros.h"
 #include "common/network_msgtype.h"
 #include "common/response_returncode.h"
 #include "common/special_objects.h"
 #include "daemon/daemon.h"
+#include "common/block_location.h"
+
+#define TRACE LOG(INFO) << __FILE__ << ":" << __func__ << "(" \
+    << __LINE__ << ")"
 
 using wtf::daemon;
 
@@ -154,6 +157,7 @@ daemon :: daemon()
     , m_gc()
     , m_gc_ts()
 {
+    TRACE;
     m_gc.register_thread(&m_gc_ts);
     trip_periodic(0, &daemon::periodic_stat);
 }
@@ -161,6 +165,7 @@ daemon :: daemon()
 static bool
 install_signal_handler(int signum, void (*f)(int))
 {
+    TRACE;
     struct sigaction handle;
     handle.sa_handler = f;
     sigfillset(&handle.sa_mask);
@@ -179,6 +184,7 @@ daemon :: run(bool daemonize,
               po6::net::hostname coordinator,
               unsigned threads)
 {
+    TRACE;
     if (!install_signal_handler(SIGHUP, exit_on_signal))
     {
         std::cerr << "could not install SIGHUP handler; exiting" << std::endl;
@@ -425,6 +431,7 @@ daemon :: run(bool daemonize,
 void
 daemon :: loop(size_t thread)
 {
+    TRACE;
     sigset_t ss;
 
     size_t core = thread % sysconf(_SC_NPROCESSORS_ONLN);
@@ -477,6 +484,7 @@ daemon :: loop(size_t thread)
         switch (mt)
         {
             case PACKET_NOP:
+                LOG(INFO) << "RECVD PACKET_NOP";
                 break;
             case REQ_GET:
                 process_get(conn, nonce, msg, up);
@@ -500,6 +508,7 @@ daemon :: loop(size_t thread)
 bool
 daemon :: recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg)
 {
+    TRACE;
     while (true)
     {
         busybee_returncode rc = m_busybee->recv(&conn->token, msg);
@@ -534,6 +543,7 @@ daemon :: recv(wtf::connection* conn, std::auto_ptr<e::buffer>* msg)
 bool
 daemon :: send(const wtf::connection& conn, std::auto_ptr<e::buffer> msg)
 {
+    TRACE;
     switch (m_busybee->send(conn.token, msg))
     {
         case BUSYBEE_SUCCESS:
@@ -554,6 +564,7 @@ daemon :: send(const wtf::connection& conn, std::auto_ptr<e::buffer> msg)
 bool
 daemon :: send(const server& node, std::auto_ptr<e::buffer> msg)
 {
+    TRACE;
     switch (m_busybee->send(node.id.get(), msg))
     {
         case BUSYBEE_SUCCESS:
@@ -597,6 +608,7 @@ daemon :: process_get(const wtf::connection& conn,
                       std::auto_ptr<e::buffer> msg, 
                       e::unpacker up)
 {
+    TRACE;
     wtf::response_returncode rc;
     uint64_t bid;
     uint32_t len;
@@ -643,6 +655,7 @@ daemon :: process_update(const wtf::connection& conn,
                             std::auto_ptr<e::buffer> msg,
                             e::unpacker up)
 {
+    TRACE;
     wtf::response_returncode rc;
     uint64_t sid;
     uint64_t bid;
@@ -650,8 +663,22 @@ daemon :: process_update(const wtf::connection& conn,
     uint32_t block_capacity;
     uint64_t file_offset;
     uint64_t block_len;
+    uint64_t sender;
+    uint32_t num_replicas;
     ssize_t ret = 0;
 
+    up = up >> sender >>  num_replicas;
+
+    LOG(INFO) << "NUM REPLICAS: " << num_replicas; 
+
+    std::vector<block_location> block_locations;
+
+    for (int i = 0; i < num_replicas; ++i)
+    {
+        block_location bl;
+        up = up >> bl;
+        block_locations.push_back(bl);
+    }
 
     up = up >> bid >> block_offset >> block_capacity >> file_offset;
     //LOG(INFO) << "block_offset = " << block_offset;
@@ -684,7 +711,34 @@ daemon :: process_update(const wtf::connection& conn,
 
     //LOG(INFO) << "Returning " << rc << " to client.";
 
+    //first server is responsible for forwarding message.
+    if (server_id(block_locations[0].si) == m_us)
+    {
+        LOG(INFO) << "WERE MASTER";
+        std::vector<block_location> forward_locations;
+        for (int i = 1; i < block_locations.size(); ++i)
+        {
+            forward_locations.push_back(block_locations[i]);
+        }
 
+        forward_message(forward_locations, msg);
+    }
+
+    LOG(INFO) << "SENT TO FORWARD LOCATIONS";
+
+    //Nonce offset for reply
+    for (int i = 0; i < block_locations.size(); ++i)
+    {
+        if (block_locations[i].si == m_us.get())
+        {
+            nonce += i;
+            break;
+        }
+    }
+
+
+    LOG(INFO) << "NONCE IS " << nonce;
+    
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */
                 sizeof(uint64_t) + /* file_offset */
@@ -694,7 +748,28 @@ daemon :: process_update(const wtf::connection& conn,
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << RESP_UPDATE << nonce << rc 
             << bid << file_offset << block_capacity << block_len;
-    send(conn, resp);
+
+    //Send an ack back to the client that originated the first transfer.
+    wtf::connection c;
+    c.token = sender;
+    c.is_client = true;
+    if (!send(c, resp))
+    {
+        LOG(INFO) << "Failed to send to client.";
+    }
+}
+
+void
+daemon :: forward_message(std::vector<block_location>& block_locations, std::auto_ptr<e::buffer> msg)
+{
+    TRACE;
+    for (int i = 0; i < block_locations.size(); ++i)
+    {
+        wtf::connection c;
+        c.token = block_locations[i].si;
+        c.is_client = false;
+        send(c, msg);
+    }
 }
 
 typedef void (daemon::*_periodic_fptr)(uint64_t now);

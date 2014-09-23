@@ -232,6 +232,7 @@ class client
         wtf::coordinator_link m_coord;
         e::garbage_collector m_gc;
         e::garbage_collector::thread_state m_gc_ts;
+        uint64_t m_token;
         wtf::mapper m_busybee_mapper;
         busybee_st m_busybee;
         int64_t m_next_client_id;

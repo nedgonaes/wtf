@@ -186,6 +186,7 @@ main(int argc, const char* argv[])
         }
     }
 
+    FLAGS_logbufsecs = 0;
     google::InitGoogleLogging(argv[0]);
     google::InstallFailureSignalHandler();
 

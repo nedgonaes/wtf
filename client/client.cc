@@ -96,8 +96,9 @@ client :: client(const char* host, in_port_t port,
     : m_coord(host, port)
     , m_gc()
     , m_gc_ts()
+    , m_token(busybee_generate_id())
     , m_busybee_mapper(m_coord.config())
-    , m_busybee(&m_gc, &m_busybee_mapper, busybee_generate_id())
+    , m_busybee(&m_gc, &m_busybee_mapper, m_token)
     , m_next_client_id(1)
     , m_next_server_nonce(1)
     , m_pending_ops()
@@ -182,31 +183,6 @@ client :: maintain_coord_connection(wtf_client_returncode* status)
     return true;
 }
 
-int64_t
-client :: perform_aggregation(const std::vector<server_id>& servers,
-                              e::intrusive_ptr<pending_aggregation> _op,
-                              wtf_network_msgtype mt,
-                              std::auto_ptr<e::buffer> msg,
-                              wtf_client_returncode* status)
-{
-	TRACE;
-    e::intrusive_ptr<pending_aggregation> op(_op.get());
-
-    for (size_t i = 0; i < servers.size(); ++i)
-    {
-        uint64_t nonce = m_next_server_nonce++;
-        pending_server_pair psp(servers[i], op);
-        std::auto_ptr<e::buffer> msg_copy(msg->copy());
-
-        if (!send(mt, psp.si, nonce, msg_copy, op, status))
-        {
-            m_failed.push_back(psp);
-        }
-    }
-
-    return op->client_visible_id();
-}
-
 void
 client :: prepare_write_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
@@ -227,6 +203,54 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
     rem -= slice_len;
 }
 
+int64_t
+client :: perform_aggregation(const std::vector<server_id>& servers,
+                              e::intrusive_ptr<pending_aggregation> _op,
+                              wtf_network_msgtype mt,
+                              std::auto_ptr<e::buffer> msg,
+                              wtf_client_returncode* status)
+{
+	TRACE;
+    e::intrusive_ptr<pending_aggregation> op(_op.get());
+
+
+    for (size_t i = servers.size()-1; i > -1; --i)
+    {
+        std::cout << "SERVER COUNT IS " << servers.size() << std::endl;
+        uint64_t nonce = m_next_server_nonce++;
+        pending_server_pair psp(servers[i], op);
+
+        if (i == 0)
+        {
+            //sleep(1);
+            //Send the data to the master replica
+            std::auto_ptr<e::buffer> msg_copy(msg->copy());
+
+            if (!send(mt, psp.si, nonce, msg_copy, op, status))
+            {
+                std::cout << "FAILED TO SEND TO " << psp.si << std::endl;
+                std::cout << "NONCE WAS " << nonce << std::endl;
+                m_failed.push_back(psp);
+            }
+        }
+        else
+        {
+            //Send a NOP to set up a channel to the other servers.
+            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ;
+            std::auto_ptr<e::buffer> msg_copy(e::buffer::create(sz));
+            mt = PACKET_NOP;
+
+            if (!send(mt, psp.si, nonce, msg_copy, op, status))
+            {
+                std::cout << "FAILED TO SEND TO " << psp.si << std::endl;
+                std::cout << "NONCE WAS " << nonce << std::endl;
+                m_failed.push_back(psp);
+            }
+        }
+    }
+
+    return op->client_visible_id();
+}
 
 bool
 client :: send(wtf_network_msgtype mt,
@@ -315,26 +339,32 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
            !m_pending_hyperdex_ops.empty() ||
            !m_yieldable.empty())
     {
-        if (0)
+        if (1)
         {
-            std::cout << "WAIT FOR = " << wait_for << std::endl;
+            std::cerr << "WAIT FOR = " << wait_for << std::endl;
 
             for (std::map<uint64_t, e::intrusive_ptr<pending_aggregation> >::iterator it = m_yieldable.begin(); 
                     it != m_yieldable.end(); ++it)
             {
-                std::cout << "YIELDABLE " << it->first << std::endl; 
+                std::cerr << "YIELDABLE " << it->first << std::endl; 
             }
 
             for (std::map<uint64_t, pending_server_pair>::iterator it = m_pending_hyperdex_ops.begin(); 
                     it != m_pending_hyperdex_ops.end(); ++it)
             {
-                std::cout << "PENDINGHYPERDEX " << it->first << std::endl; 
+                std::cerr << "PENDINGHYPERDEX " << it->first << std::endl; 
             }
 
             for (std::map<uint64_t, pending_server_pair>::iterator it = m_pending_ops.begin(); 
                     it != m_pending_ops.end(); ++it)
             {
-                std::cout << "PENDINGWTF " << it->first << std::endl; 
+                std::cerr << "PENDINGWTF " << it->first << std::endl; 
+            }
+
+            for (std::list<pending_server_pair>::iterator it = m_failed.begin(); 
+                    it != m_failed.end(); ++it)
+            {
+                std::cerr << "FAILED " << it->si << std::endl; 
             }
         }
 
@@ -349,14 +379,14 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             {
                 m_yielded = m_yielding;
                 m_yielding = NULL;
-                continue;
+                TRACE;continue;
             }
 
             if (wait_for != client_id)
             {
                 m_yieldable.insert(std::make_pair(client_id, m_yielding));
                 m_yielding = NULL;
-                continue;
+                TRACE;continue;
             }
 
             if (!m_yielding->yield(status, &m_last_error))
@@ -403,7 +433,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             }
 
             m_failed.pop_front();
-            continue;
+            TRACE;continue;
         }
 
         /* the previously yielded operation can be destroyed now
@@ -418,7 +448,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             {
                 m_yielding = it->second;
                 m_yieldable.erase(it);
-                continue;
+                TRACE;continue;
             }
             /* nothing left to do here.*/
             else if (m_pending_ops.empty() && m_pending_hyperdex_ops.empty())
@@ -432,7 +462,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             yieldable_map_t::iterator it = m_yieldable.begin();
             m_yielding = it->second;
             m_yieldable.erase(it);
-            continue;
+            TRACE;continue;
         }
 
 
@@ -454,6 +484,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         busybee_returncode rc = m_busybee.recv(&sid_num, &msg);
 
         server_id id(sid_num);
+        std::cout << "RECVD " << rc << " FROM " << id << std::endl;
 
         bool hyperdex_message = false;
 
@@ -472,14 +503,15 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 return -1;
             case BUSYBEE_DISRUPTED:
                 handle_disruption(id);
-                continue;
+                TRACE;continue;
             case BUSYBEE_EXTERNAL:
+                std::cout << "GOT MESSAGE FROM " << sid_num << " HYPERDEX IS " << m_hyperdex_client.poll_fd() << std::endl;
                 if (sid_num == m_hyperdex_client.poll_fd())
                 {
                     hyperdex_message = true;
                     break;
                 }
-                continue;
+                TRACE;continue;
             BUSYBEE_ERROR_CASE(POLLFAILED);
             BUSYBEE_ERROR_CASE(ADDFDFAIL);
             BUSYBEE_ERROR_CASE(SHUTDOWN);
@@ -511,7 +543,8 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
             if (it == m_pending_hyperdex_ops.end())
             {
-                continue;
+                std::cout << hstatus << " FROM HYPERDEX." << std::endl;
+                TRACE;continue;
             }
 
             const pending_server_pair psp(it->second);
@@ -534,7 +567,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 m_yielding = op;
             }
  
-            continue;
+            TRACE;continue;
         }
 
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
@@ -557,7 +590,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
         if (it == m_pending_ops.end())
         {
-            continue;
+            TRACE;continue;
         }
 
         const pending_server_pair psp(it->second);
@@ -567,7 +600,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         if (msg_type == CONFIGMISMATCH)
         {
             m_failed.push_back(psp);
-            continue;
+            TRACE;continue;
         }
 
         if (id == psp.si &&

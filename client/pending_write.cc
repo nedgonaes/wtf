@@ -160,27 +160,36 @@ pending_write :: send_data()
         size_t slice_len;
         m_cl->prepare_write_op(m_file, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
         e::slice data = e::slice(m_buf + buf_offset, slice_len);
+        uint32_t num_replicas = bl.size();
 
-        for (size_t i = 0; i < bl.size(); ++i)
-        {
-            size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+        size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+                + sizeof(uint64_t) // m_token
+                + sizeof(uint32_t) // number of block locations
+                + num_replicas*block_location::pack_size()
                 + sizeof(uint64_t) // bl.bi (remote block number) 
                 + sizeof(uint32_t) // block_offset (remote block offset) 
                 + sizeof(uint32_t) // block_capacity 
                 + sizeof(uint64_t) // file_offset 
                 + data.size();     // user data 
-            std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-            e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-            pa = pa << bl[i].bi << block_offset << block_capacity << file_offset;
-            pa.copy(data);
+        std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+        e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+        pa = pa << m_cl->m_token << num_replicas;
 
-            std::vector<server_id> servers;
+        std::vector<server_id> servers;
+
+        for (int i = 0; i < num_replicas; ++i)
+        {
+            pa = pa << bl[i];
             servers.push_back(server_id(bl[i].si));
-
-            //SEND
-            wtf_client_returncode status;
-            m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, &status);
         }
+
+        pa = pa << block_offset << block_capacity << file_offset;
+        pa.copy(data);
+
+
+        //SEND
+        wtf_client_returncode status;
+        m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, &status);
     }
 
     m_state = 1;

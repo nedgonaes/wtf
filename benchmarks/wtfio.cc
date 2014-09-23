@@ -56,6 +56,7 @@ static long _size = 10;
 static const char* _file = "foo";
 static const char* _connect_host = "127.0.0.1";
 static const char* _hyper_host = "127.0.0.1";
+static const char* _benchmark = "write";
 
 #define BILLION (1000ULL * 1000ULL * 1000ULL)
 
@@ -68,7 +69,7 @@ static const char* _hyper_host = "127.0.0.1";
     } while (0)
 
     void 
-do_benchmark()
+do_write_benchmark()
 {
     try
     {
@@ -142,6 +143,84 @@ do_benchmark()
     }
 }
 
+
+    void 
+do_read_benchmark()
+{
+    //XXX: Change this to do reads.
+    try
+    {
+
+        wtf::Client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
+        char* buf = new char[_size];
+        int64_t reqid = -1;
+        int64_t fd;
+        wtf_client_returncode status = WTF_CLIENT_GARBAGE;
+        wtf_client_returncode lstatus = WTF_CLIENT_GARBAGE;
+
+        reqid = cl.open(_file, O_CREAT | O_RDWR, mode_t(0777), _replication, _block_size, &fd, &status);
+        if (reqid < 0)
+        {
+            std::cout << "Can't open file: " << status << std::endl;
+            abort();
+        }
+
+        reqid = cl.loop(reqid, -1, &lstatus);
+        if (reqid < 0)
+        {
+            std::cout << "Can't open file: " << lstatus << std::endl;
+            abort();
+        }
+
+        char j = 0;
+
+        for (int i = 0; i < _number; ++i)
+        {
+
+            size_t sz = _size;
+            char* tempbuf = buf;
+
+            for (int k = 0; k < sz; ++k)
+            {
+                *tempbuf = j++;
+                tempbuf++;
+            }
+
+            /* Write some stuff */
+            reqid = cl.write(fd, buf, &sz, 1, &status);
+
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0, "XXX");;
+
+            }
+
+            if (0)
+            {
+                reqid = cl.loop(reqid, -1, &status);
+                if (reqid < 0)
+                {
+                    WTF_TEST_FAIL(0, "XXX");;
+
+                }
+            }
+
+        }
+
+        /* close the random file */
+        cl.close(fd, &status);
+    }
+    catch (po6::error& e)
+    {
+        WTF_TEST_FAIL(0, "system error: " << e.what());
+    }
+    catch (std::exception& e)
+    {
+        WTF_TEST_FAIL(0, "error: " << e.what());
+    }
+}
+
+
     int
 main(int argc, const char* argv[])
 {
@@ -183,12 +262,25 @@ main(int argc, const char* argv[])
         .description("file to write to in WTF")
         .metavar("f")
         .as_string(&_file);
+    ap.arg().long_name("benchmark")
+        .description("benchmark to run")
+        .as_string(&_benchmark);
+
+
 
     if (!ap.parse(argc, argv))
     {
         return EXIT_FAILURE;
     }
 
-    do_benchmark();
+    if (strcmp(_benchmark, "read") == 0)
+    {
+        do_read_benchmark();
+    }
+    else
+    {
+        do_write_benchmark();
+    }
+
     return EXIT_SUCCESS;
 }
