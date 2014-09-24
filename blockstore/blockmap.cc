@@ -1,7 +1,7 @@
 #include "common/macros.h"
 #include "blockstore/blockmap.h"
 
-#define BACKING_SIZE 1000000000 
+#define BACKING_SIZE 100000000000 
 #define ROUND_UP(X, Y) ((X + Y - 1) & (X))
 
 using wtf::blockmap;
@@ -142,6 +142,8 @@ blockmap :: setup(const po6::pathname& path, const po6::pathname& backing_path)
             PLOG(ERROR) << "could not extend backing file to size " << m_backing_size;
             return false;
         }
+
+        LOG(INFO) << "Backing size is " << m_backing_size;
 
         char* backing = (char*)mmap(NULL, m_backing_size, PROT_READ | PROT_WRITE, MAP_SHARED, m_fd.get(), 0);
 

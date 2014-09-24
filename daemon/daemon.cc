@@ -69,8 +69,12 @@
 #include "daemon/daemon.h"
 #include "common/block_location.h"
 
+#ifdef TRACECALLS
 #define TRACE LOG(INFO) << __FILE__ << ":" << __func__ << "(" \
     << __LINE__ << ")"
+#else
+#define TRACE
+#endif
 
 using wtf::daemon;
 
@@ -485,13 +489,13 @@ daemon :: loop(size_t thread)
         switch (mt)
         {
             case PACKET_NOP:
-                LOG(INFO) << "RECVD PACKET_NOP";
+                //LOG(INFO) << "RECVD PACKET_NOP";
                 break;
             case REQ_GET:
                 process_get(conn, nonce, msg, up);
                 break;
             case REQ_UPDATE:
-                LOG(INFO) << "RECVD UPDATE";
+                //LOG(INFO) << "RECVD UPDATE";
                 process_update(conn, nonce, msg, up);
                 break;
             default:

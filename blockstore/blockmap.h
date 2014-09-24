@@ -62,7 +62,7 @@ namespace wtf __attribute__ ((visibility("default")))
         private:
             typedef std::tr1::shared_ptr<leveldb::DB> leveldb_db_ptr;
             leveldb_db_ptr m_db;
-            uint32_t m_backing_size;
+            uint64_t m_backing_size;
             disk* m_disk;
             po6::io::fd m_fd;
             uint64_t m_block_id;
