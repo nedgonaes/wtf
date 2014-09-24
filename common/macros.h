@@ -36,7 +36,7 @@
 #define XCONCAT(x, y) x ## y
 #define CONCAT(x, y) XCONCAT(x, y)
 
-#define TRACECALLS
+//#define TRACECALLS
 //#define LOG_METADATA
 
 #ifdef TRACECALLS

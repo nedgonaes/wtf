@@ -44,16 +44,16 @@ ssize_t
 disk::write(const e::slice& data,
             size_t& offset)
 {
-    char* buffer = m_log + m_log_offset;
+    size_t sz = data.size();
+    offset = __sync_fetch_and_add(&m_log_offset, sz);
+    char* buffer = m_log + offset;
 
-    if (m_log_offset + data.size() > m_log_len)
+    if (offset + data.size() > m_log_len)
     {
         return -1;
     }
 
     memmove(buffer, data.data(), data.size());
-    offset = m_log_offset;
-    m_log_offset += data.size();
     return data.size();
 }
 

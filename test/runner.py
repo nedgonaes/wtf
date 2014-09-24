@@ -202,6 +202,7 @@ def main(argv):
         ctx = {'WTF_HOST': '127.0.0.1', 'WTF_PORT': 2982,
                 'HYPERDEX_HOST': '127.0.0.1', 'HYPERDEX_PORT': 1982}
         cmd_args = [arg.format(**ctx) for arg in args.args]
+        print(cmd_args)
         status = subprocess.call(cmd_args)
         if status != 0:
             hdc.log_output = True

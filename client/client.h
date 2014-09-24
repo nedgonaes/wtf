@@ -168,6 +168,7 @@ class client
 
     private:
         bool maintain_coord_connection(wtf_client_returncode* status);
+        bool send_nop(const server_id& to);
         bool send(wtf_network_msgtype mt,
                   const server_id& to,
                   uint64_t nonce,

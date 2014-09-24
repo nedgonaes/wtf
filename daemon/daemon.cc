@@ -480,6 +480,7 @@ daemon :: loop(size_t thread)
         wtf_network_msgtype mt = PACKET_NOP;
         e::unpacker up = msg->unpack_from(BUSYBEE_HEADER_SIZE);
         up = up >> mt >> nonce;
+        //LOG(INFO) << "RECVD NONCE " << nonce;
 
         switch (mt)
         {
@@ -490,6 +491,7 @@ daemon :: loop(size_t thread)
                 process_get(conn, nonce, msg, up);
                 break;
             case REQ_UPDATE:
+                LOG(INFO) << "RECVD UPDATE";
                 process_update(conn, nonce, msg, up);
                 break;
             default:
@@ -502,7 +504,7 @@ daemon :: loop(size_t thread)
 
     m_gc.deregister_thread(&ts);
 
-    LOG(INFO) << "network thread shutting down";
+    //LOG(INFO) << "network thread shutting down";
 }
 
 bool
@@ -669,7 +671,7 @@ daemon :: process_update(const wtf::connection& conn,
 
     up = up >> sender >>  num_replicas;
 
-    LOG(INFO) << "NUM REPLICAS: " << num_replicas; 
+    //LOG(INFO) << "NUM REPLICAS: " << num_replicas; 
 
     std::vector<block_location> block_locations;
 
@@ -714,7 +716,7 @@ daemon :: process_update(const wtf::connection& conn,
     //first server is responsible for forwarding message.
     if (server_id(block_locations[0].si) == m_us)
     {
-        LOG(INFO) << "WERE MASTER";
+        //LOG(INFO) << "WERE MASTER";
         std::vector<block_location> forward_locations;
         for (int i = 1; i < block_locations.size(); ++i)
         {
@@ -724,7 +726,7 @@ daemon :: process_update(const wtf::connection& conn,
         forward_message(forward_locations, msg);
     }
 
-    LOG(INFO) << "SENT TO FORWARD LOCATIONS";
+    //LOG(INFO) << "SENT TO FORWARD LOCATIONS";
 
     //Nonce offset for reply
     for (int i = 0; i < block_locations.size(); ++i)
@@ -737,7 +739,7 @@ daemon :: process_update(const wtf::connection& conn,
     }
 
 
-    LOG(INFO) << "NONCE IS " << nonce;
+    //LOG(INFO) << "NONCE IS " << nonce;
     
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */
@@ -755,7 +757,7 @@ daemon :: process_update(const wtf::connection& conn,
     c.is_client = true;
     if (!send(c, resp))
     {
-        LOG(INFO) << "Failed to send to client.";
+        LOG(WARNING) << "Failed to send to client.";
     }
 }
 
@@ -768,7 +770,8 @@ daemon :: forward_message(std::vector<block_location>& block_locations, std::aut
         wtf::connection c;
         c.token = block_locations[i].si;
         c.is_client = false;
-        send(c, msg);
+        std::auto_ptr<e::buffer> msg_copy(msg->copy());
+        send(c, msg_copy);
     }
 }
 

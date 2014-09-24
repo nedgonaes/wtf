@@ -336,7 +336,7 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl, 
         if (bl[i] == block_location())
         {
             /* find the next available server and assign it to the block location. */
-            for (size_t j = 0; j < m_servers.size(); ++j)
+            while (true)
             {
                 const server *s = get_random_server();
                 if (location_set.find(s->id.get()) == location_set.end()
@@ -349,6 +349,7 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl, 
             }
         }
 
+        assert(bl[i] != block_location());
         /* if not enough unique servers, then this server could be any server */
         if (bl[i] == block_location())
         {
@@ -362,6 +363,19 @@ configuration :: assign_random_block_locations(std::vector<block_location>& bl, 
                     break;
                 }
             }
+        }
+    }
+
+    for (size_t i = 0; i < bl.size(); ++i)
+    {
+        int count = 0;
+        for (size_t j = 0; i < bl.size(); ++i)
+        {
+            if (bl[i] == bl[j])
+            {
+                ++count;
+            }
+            assert(count == 1);
         }
     }
 }
@@ -403,7 +417,7 @@ wtf :: operator >> (e::unpacker up, configuration& c)
     {
         server s;
         up = up >> s;
-        c.m_servers.push_back(s);
+        c.add_server(s);
     }
 
     return up;

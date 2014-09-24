@@ -103,10 +103,12 @@ do_write_benchmark()
             size_t sz = _size;
             char* tempbuf = buf;
 
+            if (0){
             for (int k = 0; k < sz; ++k)
             {
                 *tempbuf = j++;
                 tempbuf++;
+            }
             }
 
             /* Write some stuff */

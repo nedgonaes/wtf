@@ -160,6 +160,15 @@ client :: maintain_coord_connection(wtf_client_returncode* status)
     if (old_version < new_version)
     {
         pending_map_t::iterator it = m_pending_ops.begin();
+        for (const server * s = m_coord.config()->servers_begin();
+             s != m_coord.config()->servers_end();
+             ++s)
+        {
+            send_nop(server_id(s->id));
+        }
+
+        //std::cout << "SLEEPING 5" << std::endl;
+        sleep(0);
 
         while (it != m_pending_ops.end())
         {
@@ -212,44 +221,64 @@ client :: perform_aggregation(const std::vector<server_id>& servers,
 {
 	TRACE;
     e::intrusive_ptr<pending_aggregation> op(_op.get());
+    //std::cout << "SERVER COUNT IS " << servers.size() << std::endl;
 
+    m_next_server_nonce += servers.size();
+    uint64_t nonce = m_next_server_nonce;
 
-    for (size_t i = servers.size()-1; i > -1; --i)
+    for (int i = servers.size()-1; i > -1; --i)
     {
-        std::cout << "SERVER COUNT IS " << servers.size() << std::endl;
-        uint64_t nonce = m_next_server_nonce++;
+        //std::cout << "SERVER COUNT IS " << servers.size() << std::endl;
+        nonce--;
         pending_server_pair psp(servers[i], op);
 
         if (i == 0)
         {
             //sleep(1);
             //Send the data to the master replica
+            //std::cout << "SENDING DATA" << std::endl;
             std::auto_ptr<e::buffer> msg_copy(msg->copy());
 
+            //std::cout << "NONCE WAS " << nonce << std::endl;
             if (!send(mt, psp.si, nonce, msg_copy, op, status))
             {
-                std::cout << "FAILED TO SEND TO " << psp.si << std::endl;
-                std::cout << "NONCE WAS " << nonce << std::endl;
+                //std::cout << "FAILED TO SEND TO " << psp.si << std::endl;
+                //std::cout << "NONCE WAS " << nonce << std::endl;
                 m_failed.push_back(psp);
             }
         }
         else
         {
             //Send a NOP to set up a channel to the other servers.
+            //std::cout << "SENDING NOP" << std::endl;
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ;
             std::auto_ptr<e::buffer> msg_copy(e::buffer::create(sz));
-            mt = PACKET_NOP;
+            wtf_network_msgtype msgtype = PACKET_NOP;
 
-            if (!send(mt, psp.si, nonce, msg_copy, op, status))
+            //std::cout << "NONCE WAS " << nonce << std::endl;
+            if (!send(msgtype, psp.si, nonce, msg_copy, op, status))
             {
-                std::cout << "FAILED TO SEND TO " << psp.si << std::endl;
-                std::cout << "NONCE WAS " << nonce << std::endl;
+                //std::cout << "FAILED TO SEND TO " << psp.si << std::endl;
+                //std::cout << "NONCE WAS " << nonce << std::endl;
                 m_failed.push_back(psp);
             }
         }
     }
 
     return op->client_visible_id();
+}
+
+bool
+client :: send_nop(const server_id& to)
+{
+	TRACE;
+    std::auto_ptr<e::buffer> msg(e::buffer::create(WTF_CLIENT_HEADER_SIZE_REQ));
+    const uint8_t type = static_cast<uint8_t>(PACKET_NOP);
+    const uint8_t flags = 0;
+    msg->pack_at(BUSYBEE_HEADER_SIZE)
+        << type << m_next_server_nonce++;
+    m_busybee.set_timeout(-1);
+    m_busybee.send(to.get(), msg);
 }
 
 bool
@@ -339,7 +368,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
            !m_pending_hyperdex_ops.empty() ||
            !m_yieldable.empty())
     {
-        if (1)
+        if (0)
         {
             std::cerr << "WAIT FOR = " << wait_for << std::endl;
 
@@ -484,7 +513,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         busybee_returncode rc = m_busybee.recv(&sid_num, &msg);
 
         server_id id(sid_num);
-        std::cout << "RECVD " << rc << " FROM " << id << std::endl;
+        //std::cout << "RECVD " << rc << " FROM " << id << std::endl;
 
         bool hyperdex_message = false;
 
@@ -505,7 +534,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 handle_disruption(id);
                 TRACE;continue;
             case BUSYBEE_EXTERNAL:
-                std::cout << "GOT MESSAGE FROM " << sid_num << " HYPERDEX IS " << m_hyperdex_client.poll_fd() << std::endl;
+                //std::cout << "GOT MESSAGE FROM " << sid_num << " HYPERDEX IS " << m_hyperdex_client.poll_fd() << std::endl;
                 if (sid_num == m_hyperdex_client.poll_fd())
                 {
                     hyperdex_message = true;
@@ -543,7 +572,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
 
             if (it == m_pending_hyperdex_ops.end())
             {
-                std::cout << hstatus << " FROM HYPERDEX." << std::endl;
+                //std::cout << hstatus << " FROM HYPERDEX." << std::endl;
                 TRACE;continue;
             }
 
@@ -575,6 +604,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
         int64_t nonce;
         up = up >> mt >> nonce;
 
+        //std::cout << "NONCE IS " << nonce << std::endl;
         if (up.error())
         {
             ERROR(SERVERERROR) << "communication error: server "
@@ -675,7 +705,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
 
     if (flags & O_CREAT)
     {
-        std::cout << path << std::endl;
+        //std::cout << path << std::endl;
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[*fd] = f; 
         f->flags = flags;
@@ -940,6 +970,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 
         if (ret < 0 && *status == WTF_CLIENT_NONEPENDING) 
         {
+            //std::cout << "ret = " << ret << " status = " << status << std::endl;
             continue;
         }
         else if (ret < 0)

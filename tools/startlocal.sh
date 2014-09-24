@@ -50,8 +50,10 @@ clean_cluster()
     rm wtf-*.log
     mkdir ${WTF_DAEMON_DATA_DIR}/data1
     mkdir ${WTF_DAEMON_DATA_DIR}/data2
+    mkdir ${WTF_DAEMON_DATA_DIR}/data3
     mkdir ${WTF_DAEMON_DATA_DIR}/1
     mkdir ${WTF_DAEMON_DATA_DIR}/2
+    mkdir ${WTF_DAEMON_DATA_DIR}/3
 }
 
 reset_cluster()
@@ -72,11 +74,11 @@ reset_cluster()
     ${WTF} coordinator -D ${WTF_COORDINATOR_DATA_DIR} -l ${WC} -p ${WTF_PORT} -d
     sleep 1
     echo "STARTING WTF DAEMON #1...\n"
-    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/1 -M ${WTF_DAEMON_DATA_DIR}/data1/metadata -p 2013 -c ${WC} -P ${WTF_PORT} -t 1 -d
+#    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/1 -M ${WTF_DAEMON_DATA_DIR}/data1/metadata -p 2013 -c ${WC} -P ${WTF_PORT} -t 1 -d
     sleep 1
     echo "STARTING WTF DAEMON #2...\n"
-    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -d
-    #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR} -M ${WTF_DAEMON_DATA_DIR}/data/metadata -c ${WC} -P ${WTF_PORT} -t 1 -f
+    #${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -f
+    libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -f
 }
 #
 #run_iteration()
