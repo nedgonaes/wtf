@@ -131,7 +131,7 @@ do_benchmark()
 
             for (int k = 0; k < sz; ++k)
             {
-                if (*tempbuf != j)
+                if (*tempbuf != j % 257)
                 {
                     WTF_TEST_FAIL(0, "byte " << z << " is " << (int)*buf << " expected " << (int)j);
                 }

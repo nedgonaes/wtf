@@ -95,18 +95,18 @@ do_write_benchmark()
             abort();
         }
 
-        char j = 0;
+        uint32_t j = 0;
 
         for (int i = 0; i < _number; ++i)
         {
 
             size_t sz = _size;
-            char* tempbuf = buf;
+            uint32_t* tempbuf = (uint32_t*)buf;
 
             if (0){
             for (int k = 0; k < sz; ++k)
             {
-                *tempbuf = j++;
+                *tempbuf = j++ % 257;
                 tempbuf++;
             }
             }
