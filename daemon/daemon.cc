@@ -69,6 +69,7 @@
 #include "daemon/daemon.h"
 #include "common/block_location.h"
 
+#define TRACECALLS
 #ifdef TRACECALLS
 #define TRACE LOG(INFO) << __FILE__ << ":" << __func__ << "(" \
     << __LINE__ << ")"
@@ -489,13 +490,13 @@ daemon :: loop(size_t thread)
         switch (mt)
         {
             case PACKET_NOP:
-                //LOG(INFO) << "RECVD PACKET_NOP";
+                LOG(INFO) << "RECVD PACKET_NOP";
                 break;
             case REQ_GET:
                 process_get(conn, nonce, msg, up);
                 break;
             case REQ_UPDATE:
-                //LOG(INFO) << "RECVD UPDATE";
+                LOG(INFO) << "RECVD UPDATE";
                 process_update(conn, nonce, msg, up);
                 break;
             default:
@@ -675,20 +676,30 @@ daemon :: process_update(const wtf::connection& conn,
 
     up = up >> sender >>  num_replicas;
 
-    //LOG(INFO) << "NUM REPLICAS: " << num_replicas; 
+    LOG(INFO) << "NUM REPLICAS: " << num_replicas; 
 
     std::vector<block_location> block_locations;
+
+    bid = UINT64_MAX;
 
     for (int i = 0; i < num_replicas; ++i)
     {
         block_location bl;
         up = up >> bl;
+
+        if (bl.si == m_us.get())
+        {
+            bid = bl.bi;
+        }
+
+        LOG(INFO) << "block location: " << bl;
         block_locations.push_back(bl);
     }
 
-    up = up >> bid >> block_offset >> block_capacity >> file_offset;
-    //LOG(INFO) << "block_offset = " << block_offset;
-    //LOG(INFO) << "block_capacity = " << block_capacity;
+    up = up >> block_offset >> block_capacity >> file_offset;
+    LOG(INFO) << "block_offset = " << block_offset;
+    LOG(INFO) << "block_capacity = " << block_capacity;
+    LOG(INFO) << "file_offset= " << file_offset;
     e::slice data = up.as_slice();
     sid = m_us.get();
 
@@ -696,15 +707,15 @@ daemon :: process_update(const wtf::connection& conn,
     {
         ret = m_blockman.write_block(data, sid, bid); 
         block_len = ret; 
-        //LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
+        LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
     else
     {
         ret = m_blockman.update_block(data, block_offset, sid, bid, block_len); 
-        //LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
+        LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
     }
 
-    //LOG(INFO) << "UPDATE(" << bid << "): " << data.hex();
+    LOG(INFO) << "UPDATE(" << bid << "): " << data.hex();
 
     if (ret < data.size())
     {
@@ -715,12 +726,12 @@ daemon :: process_update(const wtf::connection& conn,
         rc = wtf::RESPONSE_SUCCESS;
     }
 
-    //LOG(INFO) << "Returning " << rc << " to client.";
+    LOG(INFO) << "Returning " << rc << " to client.";
 
     //first server is responsible for forwarding message.
     if (server_id(block_locations[0].si) == m_us)
     {
-        //LOG(INFO) << "WERE MASTER";
+        LOG(INFO) << "WERE MASTER";
         std::vector<block_location> forward_locations;
         for (int i = 1; i < block_locations.size(); ++i)
         {
@@ -743,7 +754,7 @@ daemon :: process_update(const wtf::connection& conn,
     }
 
 
-    //LOG(INFO) << "NONCE IS " << nonce;
+    LOG(INFO) << "NONCE IS " << nonce;
     
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */

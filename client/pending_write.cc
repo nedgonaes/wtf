@@ -113,6 +113,12 @@ pending_write :: handle_wtf_message(client* cl,
     response_returncode rc;
     up = up >> rc >> bi >> file_offset >> block_capacity >> block_length;
 
+    std::cout << "RECEIVED " << rc << std::endl;
+    std::cout << "bi = " << bi << std::endl;
+    std::cout << "file_offset = " << file_offset << std::endl;
+    std::cout << "block_capacity = " << block_capacity << std::endl;
+    std::cout << "block_length = " << block_length << std::endl;
+
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
 

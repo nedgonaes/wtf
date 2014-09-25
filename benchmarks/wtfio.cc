@@ -103,7 +103,7 @@ do_write_benchmark()
             size_t sz = _size;
             uint32_t* tempbuf = (uint32_t*)buf;
 
-            if (0){
+            if (1){
             for (int k = 0; k < sz; ++k)
             {
                 *tempbuf = j++ % 257;

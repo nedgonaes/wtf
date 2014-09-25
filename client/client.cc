@@ -207,6 +207,7 @@ client :: prepare_write_op(e::intrusive_ptr<file> f,
     block_offset = f->current_block_offset();
     block_capacity = f->current_block_capacity();
     file_offset = f->current_block_start();
+    std::cout << "XXX FILE OFFSET: " << file_offset << std::endl;
     slice_len = f->advance_to_end_of_block(rem);
     buf_offset += slice_len;
     rem -= slice_len;
