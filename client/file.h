@@ -39,12 +39,12 @@
 #include <po6/pathname.h>
 
 //WTF
-#include <client/client.h>
-#include <common/block.h>
-#include <common/block_location.h>
+#include "client/client.h"
+#include "common/block.h"
+#include "common/block_location.h"
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-
+class pending;
 class file
 {
 
@@ -105,6 +105,7 @@ class file
 
     private:
         typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
+        typedef std::map<uint64_t, e::intrusive_ptr<wtf::pending> > op_map_t;
         file& operator = (const file&);
 
     private:
@@ -113,6 +114,7 @@ class file
         int64_t m_fd;
         std::list<int64_t> m_pending;
         block_map m_block_map;
+        op_map_t m_last_op;
         e::intrusive_ptr<block> m_current_block;
         size_t m_bytes_left_in_block;
         size_t m_bytes_left_in_file;

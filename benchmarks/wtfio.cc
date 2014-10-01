@@ -75,7 +75,7 @@ do_write_benchmark()
     {
 
         wtf::Client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
-        char* buf = new char[_size];
+        char* buf = new char[_size*sizeof(uint32_t)];
         int64_t reqid = -1;
         int64_t fd;
         wtf_client_returncode status = WTF_CLIENT_GARBAGE;
@@ -100,11 +100,11 @@ do_write_benchmark()
         for (int i = 0; i < _number; ++i)
         {
 
-            size_t sz = _size;
+            size_t sz = _size*sizeof(uint32_t);
             uint32_t* tempbuf = (uint32_t*)buf;
 
             if (1){
-            for (int k = 0; k < sz; ++k)
+            for (int k = 0; k < _size; ++k)
             {
                 *tempbuf = j++ % 257;
                 tempbuf++;
@@ -120,7 +120,7 @@ do_write_benchmark()
 
             }
 
-            if (0)
+            if (1)
             {
                 reqid = cl.loop(reqid, -1, &status);
                 if (reqid < 0)
@@ -133,7 +133,7 @@ do_write_benchmark()
         }
 
         /* close the random file */
-        cl.close(fd, &status);
+        //cl.close(fd, &status);
     }
     catch (po6::error& e)
     {

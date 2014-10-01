@@ -80,7 +80,7 @@ do_benchmark()
     {
 
         wtf::Client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
-        char* buf = new char[_size];
+        char* buf = new char[_size*_number*sizeof(uint32_t)];
         int64_t reqid = -1;
         int64_t fd;
         wtf_client_returncode status = WTF_CLIENT_GARBAGE;
@@ -100,13 +100,13 @@ do_benchmark()
             abort();
         }
 
-        char j = 0;
-        long z = 0;
+        uint32_t j = 0;
+        uint64_t z = 0;
 
-        for (int i = 0; i < _number; ++i)
+        //for (int i = 0; i < _number; ++i)
         {
 
-            size_t sz = _size;
+            size_t sz = _size*_number*sizeof(uint32_t);
             
 
             /* Write some stuff */
@@ -121,22 +121,28 @@ do_benchmark()
             reqid = cl.loop(reqid, -1, &status);
             if (reqid < 0)
             {
-                WTF_TEST_FAIL(0, "XXX");;
+                WTF_TEST_FAIL(0, status);;
 
             }
 
             std::cout << sz << std::endl;
 
-            char* tempbuf = buf;
+            uint32_t* tempbuf = (uint32_t*)buf;
 
-            for (int k = 0; k < sz; ++k)
+            for (int k = 0; k < _size*_number; ++k)
             {
                 if (*tempbuf != j % 257)
                 {
-                    WTF_TEST_FAIL(0, "byte " << z << " is " << (int)*buf << " expected " << (int)j);
+                    std::cout << "XXX byte " << z << " is " << *tempbuf << " expected " << j % 257 << std::endl;
+                    //WTF_TEST_FAIL(0, "byte " << z << " is " << (int)*buf << " expected " << (int)j);
                 }
-                ++tempbuf;
+                else
+                {
+                    std::cout << "byte " << z << " is " << *tempbuf << " expected " << j % 257 << std::endl;
+                }
+
                 ++j;
+                ++tempbuf;
                 ++z;
             }
 

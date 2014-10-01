@@ -190,6 +190,7 @@ pkgconfig_DATA += wtf-client.pc
 noinst_HEADERS += include/wtf/client.h
 noinst_HEADERS += include/wtf/client.hpp
 noinst_HEADERS += client/file.h
+noinst_HEADERS += client/buffer_descriptor.h
 noinst_HEADERS += client/pending.h
 noinst_HEADERS += client/pending_aggregation.h
 noinst_HEADERS += client/pending_getattr.h
@@ -244,6 +245,7 @@ libwtf_client_la_SOURCES += client/message_hyperdex_del.cc
 libwtf_client_la_SOURCES += client/message_hyperdex_search.cc
 libwtf_client_la_SOURCES += common/coordinator_link.cc
 libwtf_client_la_SOURCES += client/file.cc
+libwtf_client_la_SOURCES += client/buffer_descriptor.cc
 libwtf_client_la_SOURCES += client/client.cc
 libwtf_client_la_SOURCES += client/rereplicate.cc
 

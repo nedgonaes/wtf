@@ -35,6 +35,7 @@
 
 // WTF
 #include "client/file.h"
+#include "client/pending.h"
 #include "common/block.h"
 #include "common/block_location.h"
 
@@ -49,6 +50,7 @@ file :: file(const char* path, size_t reps, size_t block_sz)
     , m_pending()
     , m_fd(0)
     , m_block_map()
+    , m_last_op()
     , m_current_block()
     , m_bytes_left_in_block(0)
     , m_bytes_left_in_file(0)

@@ -77,9 +77,9 @@ reset_cluster()
     ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/1 -M ${WTF_DAEMON_DATA_DIR}/data1/metadata -p 2013 -c ${WC} -P ${WTF_PORT} -t 1 -d
     sleep 1
     echo "STARTING WTF DAEMON #2...\n"
-    #${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -d
+#    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -d
     echo "STARTING WTF DAEMON #3...\n"
-    #${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/3 -M ${WTF_DAEMON_DATA_DIR}/data3/metadata -p 2015 -c ${WC} -P ${WTF_PORT} -t 1 -d
+#    ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/3 -M ${WTF_DAEMON_DATA_DIR}/data3/metadata -p 2015 -c ${WC} -P ${WTF_PORT} -t 1 -d
     #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -f
     #libtool --mode=execute gdb --args ${WTF} daemon -D ${WTF_DAEMON_DATA_DIR}/2 -M ${WTF_DAEMON_DATA_DIR}/data2/metadata -p 2014 -c ${WC} -P ${WTF_PORT} -t 1 -f
 }
