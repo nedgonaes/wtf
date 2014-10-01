@@ -33,6 +33,7 @@
 
 // WTF
 #include "client/pending_aggregation.h"
+#include "client/buffer_descriptor.h"
 #include "client/file.h"
 #include "client/client.h"
 
@@ -42,7 +43,10 @@ class pending_write : public pending_aggregation
 {
     public:
         pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
-                               const char* buf, size_t* buf_sz, 
+                               e::slice& data, std::vector<block_location>& bl,
+                               uint32_t block_offset, uint32_t block_capacity,
+                               uint64_t file_offset,
+                               e::intrusive_ptr<buffer_descriptor> bd,
                                wtf_client_returncode* status);
         virtual ~pending_write() throw ();
 
@@ -90,8 +94,12 @@ class pending_write : public pending_aggregation
 
     private:
         client* m_cl;
-        const char* m_buf;
-        const size_t* m_buf_sz;
+        e::slice m_data;
+        std::vector<block_location> m_block_locations;
+        uint32_t m_block_offset;
+        uint32_t m_block_capacity;
+        uint64_t m_file_offset;
+        e::intrusive_ptr<buffer_descriptor> m_buffer_descriptor;
         e::intrusive_ptr<file> m_file;
         std::string m_path;
         std::auto_ptr<e::buffer> m_old_blockmap;

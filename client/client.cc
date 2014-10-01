@@ -64,6 +64,7 @@
 #include "client/pending_mkdir.h"
 #include "client/pending_creat.h"
 #include "client/pending_open.h"
+#include "client/buffer_descriptor.h"
 #include "visibility.h"
 
 #define ERROR(CODE) \
@@ -860,10 +861,27 @@ client :: write(int64_t fd, const char* buf,
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_write> op;
 
-	TRACE;
-    op = new pending_write(this, client_id, f, buf, buf_sz, status);
-    f->add_pending_op(client_id);
-    bool result = op->try_op();
+    size_t rem = *buf_sz;
+    size_t next_buf_offset = 0;
+
+    e::intrusive_ptr<buffer_descriptor> bd(new buffer_descriptor(buf, 0));
+
+    while(rem > 0)
+    {
+        std::vector<block_location> bl;
+        size_t buf_offset = next_buf_offset;
+        uint32_t block_offset;
+        uint32_t block_capacity;
+        uint64_t file_offset;
+        size_t slice_len;
+        prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
+        e::slice data = e::slice(buf+ buf_offset, slice_len);
+        op = new pending_write(this, client_id, f, data, bl, block_offset, block_capacity, file_offset, bd, status);
+        bd->add_op();
+        //XXX: make this a set
+        f->add_pending_op(client_id);
+        bool result = op->try_op();
+    }
 
     return client_id;
 }

@@ -452,6 +452,7 @@ wtf_backup_SOURCES += common/response_returncode.cc
 wtf_backup_SOURCES += common/block.cc
 wtf_backup_SOURCES += common/coordinator_link.cc
 wtf_backup_SOURCES += client/file.cc
+wtf_backup_SOURCES += client/buffer_descriptor.cc
 wtf_backup_SOURCES += client/client.cc
 wtf_backup_SOURCES += client/rereplicate.cc
 wtf_backup_SOURCES += tools/backup.cc

@@ -41,12 +41,19 @@
 using wtf::pending_write;
 
 pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
-                               const char* buf, size_t* buf_sz, 
+                               e::slice& data, std::vector<block_location>& bl, 
+                               uint32_t block_offset, uint32_t block_capacity,
+                               uint64_t file_offset,
+                               e::intrusive_ptr<buffer_descriptor> bd,
                                wtf_client_returncode* status)
     : pending_aggregation(id, status)
     , m_cl(cl)
-    , m_buf(buf)
-    , m_buf_sz(buf_sz)
+    , m_data(data)
+    , m_block_locations(bl)
+    , m_block_offset(block_offset)
+    , m_block_capacity(block_capacity)
+    , m_file_offset(file_offset)
+    , m_buffer_descriptor(bd)
     , m_old_blockmap(f->serialize_blockmap())
     , m_file(f)
     , m_done(false)
@@ -66,7 +73,7 @@ bool
 pending_write :: can_yield()
 {
     TRACE;
-    return this->aggregation_done() && !m_done;
+    return this->aggregation_done() && !m_done && m_buffer_descriptor->done();
 }
 
 bool
@@ -140,6 +147,7 @@ pending_write :: handle_wtf_message(client* cl,
 
     if (this->aggregation_done())
     {
+        m_buffer_descriptor->remove_op();
         /* This applying change set and putting file metadata
            should be done atomically so that no other op
            can modify the metadata after we apply our changes
@@ -153,50 +161,36 @@ pending_write :: handle_wtf_message(client* cl,
 bool
 pending_write :: send_data()
 {
-    size_t rem = *m_buf_sz;
-    size_t next_buf_offset = 0;
+    uint32_t num_replicas = m_block_locations.size();
 
-    while(rem > 0)
+    size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+        + sizeof(uint64_t) // m_token
+        + sizeof(uint32_t) // number of block locations
+        + num_replicas*block_location::pack_size()
+        + sizeof(uint64_t) // bl.bi (remote block number) 
+        + sizeof(uint32_t) // block_offset (remote block offset) 
+        + sizeof(uint32_t) // block_capacity 
+        + sizeof(uint64_t) // file_offset 
+        + m_data.size();     // user data 
+    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+    e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+    pa = pa << m_cl->m_token << num_replicas;
+
+    std::vector<server_id> servers;
+
+    for (int i = 0; i < num_replicas; ++i)
     {
-        std::vector<block_location> bl;
-        size_t buf_offset = next_buf_offset;
-        uint32_t block_offset;
-        uint32_t block_capacity;
-        uint64_t file_offset;
-        size_t slice_len;
-        m_cl->prepare_write_op(m_file, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
-        e::slice data = e::slice(m_buf + buf_offset, slice_len);
-        uint32_t num_replicas = bl.size();
-
-        size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
-                + sizeof(uint64_t) // m_token
-                + sizeof(uint32_t) // number of block locations
-                + num_replicas*block_location::pack_size()
-                + sizeof(uint64_t) // bl.bi (remote block number) 
-                + sizeof(uint32_t) // block_offset (remote block offset) 
-                + sizeof(uint32_t) // block_capacity 
-                + sizeof(uint64_t) // file_offset 
-                + data.size();     // user data 
-        std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
-        e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
-        pa = pa << m_cl->m_token << num_replicas;
-
-        std::vector<server_id> servers;
-
-        for (int i = 0; i < num_replicas; ++i)
-        {
-            pa = pa << bl[i];
-            servers.push_back(server_id(bl[i].si));
-        }
-
-        pa = pa << block_offset << block_capacity << file_offset;
-        pa.copy(data);
-
-
-        //SEND
-        wtf_client_returncode status;
-        m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, &status);
+        pa = pa << m_block_locations[i];
+        servers.push_back(server_id(m_block_locations[i].si));
     }
+
+    pa = pa << m_block_offset << m_block_capacity << m_file_offset;
+    pa.copy(m_data);
+
+
+    //SEND
+    wtf_client_returncode status;
+    m_cl->perform_aggregation(servers, this, REQ_UPDATE, msg, &status);
 
     m_state = 1;
     return true;

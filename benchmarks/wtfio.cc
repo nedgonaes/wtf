@@ -120,7 +120,7 @@ do_write_benchmark()
 
             }
 
-            if (1)
+            if (0)
             {
                 reqid = cl.loop(reqid, -1, &status);
                 if (reqid < 0)
@@ -133,7 +133,7 @@ do_write_benchmark()
         }
 
         /* close the random file */
-        //cl.close(fd, &status);
+        cl.close(fd, &status);
     }
     catch (po6::error& e)
     {

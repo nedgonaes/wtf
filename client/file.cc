@@ -35,7 +35,7 @@
 
 // WTF
 #include "client/file.h"
-#include "client/pending.h"
+#include "client/pending_write.h"
 #include "common/block.h"
 #include "common/block_location.h"
 

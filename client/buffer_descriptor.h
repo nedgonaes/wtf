@@ -39,18 +39,24 @@ class buffer_descriptor
 {
 
     public:
-        buffer_descriptor(const char* buffer);
+        buffer_descriptor(const char* buffer, int count);
         ~buffer_descriptor() throw ();
 
     private:
         buffer_descriptor(const buffer_descriptor&);
 
     private:
+        friend class e::intrusive_ptr<buffer_descriptor>;
         void inc() { ++m_ref; }
         void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
 
     private:
         buffer_descriptor& operator = (const buffer_descriptor&);
+
+    public:
+        void add_op() { ++m_count; }
+        void remove_op() { --m_count; assert(m_count >= 0); }
+        bool done() { return m_count == 0; }
 
     private:
         size_t m_ref;

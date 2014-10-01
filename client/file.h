@@ -44,7 +44,7 @@
 #include "common/block_location.h"
 namespace wtf __attribute__ ((visibility("hidden")))
 {
-class pending;
+class pending_write;    
 class file
 {
 
@@ -105,7 +105,7 @@ class file
 
     private:
         typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
-        typedef std::map<uint64_t, e::intrusive_ptr<wtf::pending> > op_map_t;
+        typedef std::map<uint64_t, e::intrusive_ptr<wtf::pending_write> > op_map_t;
         file& operator = (const file&);
 
     private:
