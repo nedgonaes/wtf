@@ -100,6 +100,7 @@ do_write_benchmark()
         for (int i = 0; i < _number; ++i)
         {
 
+            char* buf = new char[_size*sizeof(uint32_t)];
             size_t sz = _size*sizeof(uint32_t);
             uint32_t* tempbuf = (uint32_t*)buf;
 
