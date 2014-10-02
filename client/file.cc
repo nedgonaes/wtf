@@ -80,6 +80,24 @@ file :: current_block_location()
     return m_current_block->first_location();
 }
 
+bool
+file :: has_last_op(uint32_t block_offset)
+{
+    return (m_last_op.find(block_offset) != m_last_op.end());
+}
+
+e::intrusive_ptr<wtf::pending_write>
+file :: last_op(uint32_t block_offset)
+{
+    return m_last_op.find(block_offset)->second;
+}
+
+void
+file :: set_last_op(uint32_t block_offset, e::intrusive_ptr<wtf::pending_write> op)
+{
+    m_last_op[block_offset] = op;
+}
+
 size_t 
 file :: bytes_left_in_block()
 {
@@ -133,6 +151,12 @@ file :: copy_current_block_locations(std::vector<block_location>& bl)
         bl = m_current_block->m_block_list;
     }
 
+}
+
+void 
+file :: copy_block_locations(uint32_t file_offset, std::vector<block_location>& bl)
+{
+    bl = m_block_map[file_offset]->m_block_list;
 }
 
 size_t

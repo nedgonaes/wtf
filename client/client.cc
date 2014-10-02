@@ -878,7 +878,6 @@ client :: write(int64_t fd, const char* buf,
         e::slice data = e::slice(buf+ buf_offset, slice_len);
         op = new pending_write(this, client_id, f, data, bl, block_offset, block_capacity, file_offset, bd, status);
         bd->add_op();
-        //XXX: make this a set
         f->add_pending_op(client_id);
         bool result = op->try_op();
     }

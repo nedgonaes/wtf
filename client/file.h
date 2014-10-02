@@ -68,6 +68,7 @@ class file
         size_t current_block_offset();
         size_t current_block_start();
         void copy_current_block_locations(std::vector<block_location>& bl);
+        void copy_block_locations(uint32_t file_offset, std::vector<block_location>& bl);
         size_t advance_to_end_of_block(size_t len);
         void move_to_next_block();
         bool pending_ops_empty();
@@ -76,6 +77,9 @@ class file
         void add_pending_op(uint64_t client_id);
         void insert_block(e::intrusive_ptr<block> b);
         void apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset);
+        void set_last_op(uint32_t block_offset, e::intrusive_ptr<wtf::pending_write> op);
+        bool has_last_op(uint32_t block_offset);
+        e::intrusive_ptr<wtf::pending_write> last_op(uint32_t block_offset);
 
 
         void add_command(int64_t op);

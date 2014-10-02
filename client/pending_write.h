@@ -73,6 +73,7 @@ class pending_write : public pending_aggregation
                                     wtf_client_returncode* status,
                                     e::error* error);
         virtual bool try_op();
+        void do_op();
 
     // noncopyable
     private:
@@ -82,6 +83,7 @@ class pending_write : public pending_aggregation
 
     private:
         void send_metadata_update();
+        void apply_metadata_update_locally();
         bool send_data();
         void prepare_write_op(e::intrusive_ptr<file> f, 
                               size_t& rem, 
@@ -106,6 +108,8 @@ class pending_write : public pending_aggregation
         changeset_t m_changeset;
         bool m_done;
         int m_state;
+        e::intrusive_ptr<pending_write> m_next;
+        bool m_deferred;
 };
 
 }

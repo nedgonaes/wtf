@@ -57,6 +57,7 @@ class buffer_descriptor
         void add_op() { ++m_count; }
         void remove_op() { --m_count; assert(m_count >= 0); }
         bool done() { return m_count == 0; }
+        void print() { std::cout << "buffer descriptor is " << m_count << std::endl; }
 
     private:
         size_t m_ref;

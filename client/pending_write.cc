@@ -58,6 +58,8 @@ pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f
     , m_file(f)
     , m_done(false)
     , m_state(0)
+    , m_next(NULL)
+    , m_deferred(false)
 {
     TRACE;
     set_status(WTF_CLIENT_SUCCESS);
@@ -104,6 +106,8 @@ pending_write :: handle_wtf_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    if(m_deferred)
+    std::cout << "Handling wtf message from deferred op at " << m_file_offset << std::endl;
     bool handled = pending_aggregation::handle_wtf_message(cl, si, std::auto_ptr<e::buffer>(), up, status, err);
     assert(handled);
 
@@ -148,11 +152,17 @@ pending_write :: handle_wtf_message(client* cl,
     if (this->aggregation_done())
     {
         m_buffer_descriptor->remove_op();
-        /* This applying change set and putting file metadata
-           should be done atomically so that no other op
-           can modify the metadata after we apply our changes
-           but before we update hyperdex */ 
-          send_metadata_update(); 
+        m_buffer_descriptor->print();
+
+        apply_metadata_update_locally();
+        send_metadata_update(); 
+
+        if (m_next.get() != NULL)
+        {
+            m_next->do_op();
+            std::cout << "Running next op at offset " << m_file_offset << std::endl;
+        }
+
    }
 
     return true;
@@ -161,6 +171,7 @@ pending_write :: handle_wtf_message(client* cl,
 bool
 pending_write :: send_data()
 {
+    TRACE;
     uint32_t num_replicas = m_block_locations.size();
 
     size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
@@ -200,14 +211,48 @@ bool
 pending_write :: try_op()
 {
     TRACE;
-    /* Get the file metadata from HyperDex */
-       
-    if (!send_data())
+
+    //If there's some other op in front of this, put this in the list and wait
+    //for that other op to run us
+    if (m_file->has_last_op(m_file_offset))
     {
-        PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
+        std::cout << "Deferring op at offset " << m_file_offset << std::endl;
+        m_deferred = true;
+        e::intrusive_ptr<pending_write> last_op = m_file->last_op(m_file_offset);
+        last_op->m_next = this;
+        m_file->set_last_op(m_file_offset, this);
+        return true;
+    }
+    
+    std::cout << "Running immediately op at offset " << m_file_offset << std::endl;
+    //If there's no other op to wait for, put us as the last op and run immediately
+    m_file->set_last_op(m_file_offset, this);
+    do_op();
+    return true;
+}
+
+void
+pending_write :: do_op()
+{
+    TRACE;
+
+    //need to update block locations if we wrote new blocks
+    if (m_deferred)
+    {
+        m_file->copy_block_locations(m_file_offset, m_block_locations);
+
+        for (int i = 0; i < m_block_locations.size(); ++i)
+        {
+            std::cout << "send to " << m_block_locations[i] << std::endl;
+        }
     }
 
-    return true;
+    std::cout << "sending data" << std::endl;
+    if (!send_data())
+    {
+        std::cout << "CANT SEND DATA!!!" << std::endl;
+        PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
+    }
 }
 
 bool
@@ -238,10 +283,17 @@ typedef struct hyperdex_client_attribute* attr_t;
 
 
 void
+pending_write :: apply_metadata_update_locally()
+{
+    m_file->apply_changeset(m_changeset);
+}
+
+void
 pending_write :: send_metadata_update()
 {
     TRACE;
-    m_file->apply_changeset(m_changeset);
+    //if (m_deferred)
+        std::cout << "Sending metadata update for block at offset " << m_file_offset << std::endl;
     //XXX set attrs and attrs_sz to file metadata with new changes
     // see update_file_metadata in client.cc
 
