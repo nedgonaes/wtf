@@ -159,6 +159,7 @@ class client
         friend class message_hyperdex_get;
         friend class message_hyperdex_search;
         friend class message_hyperdex_put;
+        friend class message_hyperdex_condput;
         friend class message_hyperdex_del;
         friend class rereplicate;
         typedef std::map<uint64_t, pending_server_pair> pending_map_t;
