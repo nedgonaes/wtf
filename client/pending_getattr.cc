@@ -88,6 +88,7 @@ pending_getattr :: handle_hyperdex_message(client* cl,
 
     if (msg->status() == HYPERDEX_CLIENT_NOTFOUND)
     {
+        std::cout << "AAAAAAAAAAAAA Not found in hyperdex." << std::endl;
         PENDING_ERROR(NOTFOUND);
     }
     else{

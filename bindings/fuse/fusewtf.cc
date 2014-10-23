@@ -83,6 +83,12 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
         return -errno;
     }
 
+    if (status == WTF_CLIENT_NOTFOUND)
+    {
+        LOGENTRY;
+        return -ENOENT;
+    }
+
     //stbuf->st_mode = fa.mode;
     stbuf->st_mode = 0777;
 
@@ -251,11 +257,13 @@ static int fusewtf_mkdir(const char *pathname, mode_t mode)
 
     if (reqid < 0)
     {
+        LOGENTRY;
         return -1;
     }
 
-    if (w->loop(reqid, -1, &lstatus))
+    if (w->loop(reqid, -1, &lstatus) < 0)
     {
+        LOGENTRY;
         return -1;
     }
 
