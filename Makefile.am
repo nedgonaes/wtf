@@ -95,6 +95,7 @@ noinst_HEADERS += visibility.h
 noinst_PROGRAMS += wtf-stat
 noinst_PROGRAMS += wtf-backup
 
+bin_PROGRAMS += wtf-fuse
 bin_PROGRAMS += wtf
 
 wtfexec_PROGRAMS += wtf-coordinator
@@ -462,6 +463,45 @@ wtf_backup_SOURCES += tools/backup.cc
 wtf_backup_LDADD = $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) libwtf-client.la
 wtf_backup_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS)
 
+################################ FUSE ##########################################
+
+wtf_fuse_SOURCES =
+wtf_fuse_SOURCES += bindings/fuse/fusewtf.cc
+wtf_fuse_SOURCES += client/pending_aggregation.cc
+wtf_fuse_SOURCES += client/pending.cc
+wtf_fuse_SOURCES += client/pending_getattr.cc
+wtf_fuse_SOURCES += client/pending_truncate.cc
+wtf_fuse_SOURCES += client/pending_chdir.cc
+wtf_fuse_SOURCES += client/pending_read.cc
+wtf_fuse_SOURCES += client/pending_chmod.cc
+wtf_fuse_SOURCES += client/pending_write.cc
+wtf_fuse_SOURCES += client/pending_readdir.cc
+wtf_fuse_SOURCES += client/pending_rename.cc
+wtf_fuse_SOURCES += client/pending_mkdir.cc
+wtf_fuse_SOURCES += client/pending_del.cc
+wtf_fuse_SOURCES += client/pending_creat.cc
+wtf_fuse_SOURCES += client/pending_open.cc
+wtf_fuse_SOURCES += client/message_hyperdex_get.cc
+wtf_fuse_SOURCES += client/message_hyperdex_put.cc
+wtf_fuse_SOURCES += client/message_hyperdex_condput.cc
+wtf_fuse_SOURCES += client/message_hyperdex_del.cc
+wtf_fuse_SOURCES += client/message_hyperdex_search.cc
+wtf_fuse_SOURCES += common/server.cc
+wtf_fuse_SOURCES += common/ids.cc
+wtf_fuse_SOURCES += common/block_location.cc
+wtf_fuse_SOURCES += common/configuration.cc
+wtf_fuse_SOURCES += common/mapper.cc
+wtf_fuse_SOURCES += common/network_msgtype.cc
+wtf_fuse_SOURCES += common/packing.cc
+wtf_fuse_SOURCES += common/response_returncode.cc
+wtf_fuse_SOURCES += common/block.cc
+wtf_fuse_SOURCES += common/coordinator_link.cc
+wtf_fuse_SOURCES += client/file.cc
+wtf_fuse_SOURCES += client/buffer_descriptor.cc
+wtf_fuse_SOURCES += client/client.cc
+wtf_fuse_CXXFLAGS = $(CXXFLAGS) $(AM_CXXFLAGS) -D_FILE_OFFSET_BITS=64 -lfuse
+wtf_fuse_LDADD = $(REPLICANT_LIBS) $(HYPERCLIENT_LIBS) libwtf-client.la
+
 ################################# Java #########################################
 
 
@@ -504,4 +544,7 @@ JAVA_BUILD_PKG=${JAVA_BUILD_BASE}/org/wtf
 $(wtf_client_jarfile): $(wildcard ${JAVA_SRC_PKG}/client/*.java)
 	javac -d ${JAVA_BUILD_BASE} ${JAVA_SRC_PKG}/client/*.java
 	cd ${JAVA_BUILD_BASE} && $(JAR) cvf $(JARFLAGS) ${abs_top_builddir}/${wtf_client_jarfile} org/wtf/client/*.class
+
+#################################### Fuse #########################################
+
 

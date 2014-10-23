@@ -9,46 +9,51 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <client/client.h>
-
+#include <iostream>
 #include <semaphore.h>
+#include "client/client.h"
 
-wtf_client* w;
+#define DEFAULT_BLOCK_LENGTH 4096
+#define DEFAULT_REPLICATION 3 
+
 
 const char *ROOT = "/";
-const char *log_name = "logfusetest";
+const char *log_name = "logfusewtf";
 FILE *logfile;
 
 #define LOGENTRY std::cout << __FILE__ << "::" << __LINE__<< "::" << __func__ << std::endl
-
-sem_t lock;
 
 #ifdef __cplusplus
 extern "C"
 {
 #endif //__cplusplus
 
+using wtf::client;
 
-static int fusetest_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+client* w;
+
+static int fusewtf_create(const char *path, mode_t mode, struct fuse_file_info *fi)
 {
     LOGENTRY;
-    sem_wait(&lock);
-    int64_t fd = w->open(path, O_CREAT, mode);
+    wtf_client_returncode status;
+    int64_t reqid = w->open(path, O_CREAT, mode, DEFAULT_REPLICATION, DEFAULT_BLOCK_LENGTH, (int64_t*)&fi->fh, &status);
 
-    if (fd < 0)
+    if (reqid < 0)
     {
-        sem_post(&lock);
         return -1;
     }
-    
-    fi->fh = fd;
 
-    std::cout << "OPENED FD " << fd << std::endl;
-    sem_post(&lock);
+    int64_t ret = w->loop(reqid, -1, &status);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
+
     return 0;
 }
 
-static int fusetest_utimens(const char *path, const struct timespec tv[2])
+static int fusewtf_utimens(const char *path, const struct timespec tv[2])
 {
     LOGENTRY;
     std::cout << "\t\t\t\tutimens [" << path << "]" << std::endl;
@@ -56,18 +61,25 @@ static int fusetest_utimens(const char *path, const struct timespec tv[2])
     return 0;
 }
 
-static int fusetest_getattr(const char *path, struct stat *stbuf)
+static int fusewtf_getattr(const char *path, struct stat *stbuf)
 {
     LOGENTRY;
-    sem_wait(&lock);
     memset(stbuf, 0, sizeof(struct stat));
 
     struct wtf_file_attrs fa;
-    if (w->getattr(path, &fa) < 0)
+    wtf_client_returncode status;
+    wtf_client_returncode lstatus;
+    int64_t reqid = w->getattr(path, &fa, &status);
+
+    if (reqid < 0)
     {
         LOGENTRY;
-        std::cout << "ERRNO " << errno << std::endl;
-        sem_post(&lock);
+        return -errno;
+    }
+
+    if (w->loop(reqid, -1, &lstatus) < 0)
+    {
+        LOGENTRY;
         return -errno;
     }
 
@@ -85,302 +97,271 @@ static int fusetest_getattr(const char *path, struct stat *stbuf)
 
     stbuf->st_size = fa.size;
 
-    std::cout << "MODE: " << stbuf->st_mode << std::endl;
-    std::cout << "SIZE: " << stbuf->st_size << std::endl;
-
     LOGENTRY;
-    sem_post(&lock);
     return 0;
 }
 
-static int fusetest_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
+static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         off_t offset, struct fuse_file_info *fi)
 {
     LOGENTRY;
-    (void) offset;
-    (void) fi;
-
+    wtf_client_returncode status;
+    char *de;
     int ret = 0;
 
-    sem_wait(&lock);
+    int64_t reqid = w->readdir(path, &de, &status);
 
-    int64_t fd = w->opendir(path);
-    if (fd < 0)
+    if (reqid < 0)
     {
-        ret = -errno;
-    }
-    else
-    {
-        char de[256];
-
-        while(w->readdir(fd, de) > -1)
-        {
-            if(filler(buf, de, NULL, 0))
-                break;
-        }
-
-        w->closedir(fd);
+        return -1;
     }
 
-    sem_post(&lock);
+    while(w->loop(reqid, -1, &status) > -1)
+    {
+        if(filler(buf, de, NULL, 0))
+            break;
+    }
 
     return ret;
 }
 
-static int fusetest_open(const char *path, struct fuse_file_info *fi)
+static int fusewtf_open(const char *path, struct fuse_file_info *fi)
 {
     LOGENTRY;
     int ret = 0;
-    sem_wait(&lock);
-    int64_t fd = w->open(path, fi->flags);
-    if (fd < 0)
+    mode_t mode = 0;
+    wtf_client_returncode status;
+
+    int64_t reqid = w->open(path, fi->flags, mode, DEFAULT_REPLICATION, DEFAULT_BLOCK_LENGTH, (int64_t*)&fi->fh, &status);
+
+    if (fi->fh < 0)
     {
         LOGENTRY;
         ret = -ENOENT;
     }
-    else
-    {
-        fi->fh = fd;
-        std::cout << "OPENED FD " << fd << std::endl;
-    }
 
-
-    sem_post(&lock);
     LOGENTRY;
     return ret;
 }
 
 
-static int fusetest_flush(const char *path, struct fuse_file_info *fi)
+static int fusewtf_flush(const char *path, struct fuse_file_info *fi)
 {
     LOGENTRY;
     int ret = 0;
-    std::cout << "FD = " << fi->fh << std::endl;
-    wtf_returncode status;
-    sem_wait(&lock);
-    w->flush(fi->fh, &status);
-    sem_post(&lock);
+    std::cout << "Flush not implemented." << std::endl;
+    wtf_client_returncode status;
+    //w->flush(fi->fh, &status);
     return ret;
 }
 
-static int fusetest_release(const char *path, struct fuse_file_info *fi)
+static int fusewtf_release(const char *path, struct fuse_file_info *fi)
 {
     LOGENTRY;
     int ret = 0;
-    sem_wait(&lock);
-    wtf_returncode status;
+    wtf_client_returncode status;
     ret = w->close(fi->fh, &status);
-    sem_post(&lock);
     return ret;
 }
 
 
-static int fusetest_read(const char *path, char *buf, size_t size, off_t offset,
+static int fusewtf_read(const char *path, char *buf, size_t size, off_t offset,
         struct fuse_file_info *fi)
 {
     LOGENTRY;
-    uint32_t read_size = size;
-    wtf_returncode status, lstatus;
+    size_t read_size = size;
+    wtf_client_returncode status, lstatus;
 
-    std::cout << "reading " << size << " bytes from " << path << " at offset " << offset << std::endl;
+    int64_t reqid = w->read((int64_t)fi->fh, buf, &read_size, &status);
 
-    sem_wait(&lock);
-    if (w->read(fi->fh, buf, &read_size, &status) < 0)
+    if(reqid < 0)
     {
         LOGENTRY;
-        sem_post(&lock);
         return -1;
     }
 
-    if (w->flush(fi->fh, &lstatus) < 0)
+    if (w->loop(reqid, -1, &lstatus) < 0)
     {
         LOGENTRY;
         status = lstatus;
-        sem_post(&lock);
         return -1;
     }
 
     
-    std::cout << "READ RETURNED " << read_size << " bytes :"  << std::string(buf, read_size) << std::endl;
-    sem_post(&lock);
     return read_size;
 }
 
-static int fusetest_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+static int fusewtf_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     LOGENTRY;
-    wtf_returncode status, lstatus;
+    wtf_client_returncode status, lstatus;
 
-    sem_wait(&lock);
-    w->lseek(fi->fh, offset);
-    if (w->write(fi->fh, buf, size, 3, &status) < 0)
+    if(w->lseek(fi->fh, offset, SEEK_SET, &status) < 0)
     {
-        LOGENTRY;
-        sem_post(&lock);
         return -1;
     }
 
-    if (w->flush(fi->fh, &lstatus) < 0)
+    if (w->write((int64_t)fi->fh, buf, &size, &status) < 0)
+    {
+        LOGENTRY;
+        return -1;
+    }
+
+    if (w->loop(fi->fh, -1, &lstatus) < 0)
     {
         LOGENTRY;
         status = lstatus;
-        sem_post(&lock);
         return -1;
     }
 
     LOGENTRY;
-    sem_post(&lock);
     return size;
 }
 
-static int fusetest_rename(const char *old_path, const char *new_path)
+static int fusewtf_rename(const char *old_path, const char *new_path)
 {
     LOGENTRY;
-    printf("\t\t\t\trename [%s] [%s]\n", old_path, new_path);
     return 0;
 }
 
-static int fusetest_unlink(const char *path)
+static int fusewtf_unlink(const char *path)
 {
     LOGENTRY;
-    printf("\t\t\t\tunlink [%s]\n", path);
     return 0;
 }
 
-static int fusetest_readlink(const char *path, char *buf, size_t bufsiz)
+static int fusewtf_readlink(const char *path, char *buf, size_t bufsiz)
 {
     LOGENTRY;
-    printf("\t\t\t\treadlink [%s]\n", path);
     return 0;
 }
 
-static int fusetest_mknod(const char *pathname, mode_t mode, dev_t dev)
+static int fusewtf_mknod(const char *pathname, mode_t mode, dev_t dev)
 {
     LOGENTRY;
-    printf("\t\t\t\tmknod [%s]\n", pathname);
     return 0;
 }
 
-static int fusetest_mkdir(const char *pathname, mode_t mode)
+static int fusewtf_mkdir(const char *pathname, mode_t mode)
 {
     LOGENTRY;
-    printf("\t\t\t\tmkdir [%s]\n", pathname);
-    int ret;
-    sem_wait(&lock);
-    ret = w->mkdir(pathname, mode);
-    sem_post(&lock);
-    return ret;
-}
+    int reqid;
+    wtf_client_returncode status, lstatus;
+    reqid = w->mkdir(pathname, mode, &status);
 
-static int fusetest_symlink(const char *old_path, const char *new_path)
-{
-    LOGENTRY;
-    printf("\t\t\t\tsymlink [%s] [%s]\n", old_path, new_path);
+    if (reqid < 0)
+    {
+        return -1;
+    }
+
+    if (w->loop(reqid, -1, &lstatus))
+    {
+        return -1;
+    }
+
     return 0;
 }
 
-static int fusetest_rmdir(const char *path)
+static int fusewtf_symlink(const char *old_path, const char *new_path)
 {
     LOGENTRY;
-    printf("\t\t\t\trmdir [%s]\n", path);
     return 0;
 }
 
-static int fusetest_link(const char *old_path, const char *new_path)
+static int fusewtf_rmdir(const char *path)
 {
     LOGENTRY;
-    printf("\t\t\t\tlink [%s] [%s]\n", old_path, new_path);
     return 0;
 }
 
-static int fusetest_chmod(const char *path, mode_t mode)
+static int fusewtf_link(const char *old_path, const char *new_path)
 {
     LOGENTRY;
-    printf("\t\t\t\tchmod [%s]\n", path);
     return 0;
 }
 
-static int fusetest_chown(const char *path, uid_t owner, gid_t group)
+static int fusewtf_chmod(const char *path, mode_t mode)
 {
     LOGENTRY;
-    printf("\t\t\t\tchown [%s]\n", path);
     return 0;
 }
 
-static int fusetest_truncate(const char *path, off_t length)
+static int fusewtf_chown(const char *path, uid_t owner, gid_t group)
 {
     LOGENTRY;
-    sem_wait(&lock);
+    return 0;
+}
+
+static int fusewtf_truncate(const char *path, off_t length)
+{
+    LOGENTRY;
     int ret = 0;
-    wtf_returncode status;
+    wtf_client_returncode status;
     int64_t fd;
-    fd = w->open(path, O_WRONLY);
+    mode_t mode = 0;
+
+    int64_t reqid = w->open(path, O_WRONLY, mode, DEFAULT_REPLICATION, DEFAULT_BLOCK_LENGTH, &fd, &status);
+
     if (fd < 0)
     {
         ret = -ENOENT;
     }
 
-    w->truncate(fd, length);
+    w->truncate(fd, length, &status);
     w->close(fd, &status);
-    printf("\t\t\t\ttruncate [%s] length [%zu]\n", path, length);
-    sem_post(&lock);
+
     return 0;
 }
 
-static int fusetest_ftruncate(const char *path, off_t length, struct fuse_file_info *fi)
+static int fusewtf_ftruncate(const char *path, off_t length, struct fuse_file_info *fi)
 {
     LOGENTRY;
-    sem_wait(&lock);
-    printf("\t\t\t\tftruncate [%s] length [%zu]\n", path, length);
-    w->truncate(fi->fh, length);
-    sem_post(&lock);
+    wtf_client_returncode status;
+    w->truncate(fi->fh, length, &status);
     return 0;
 }
 
-static int fusetest_fsync(const char *path, int isdatasync, struct fuse_file_info *fi)
+static int fusewtf_fsync(const char *path, int isdatasync, struct fuse_file_info *fi)
 {
     LOGENTRY;
-    printf("\t\t\t\tfsync [%s]\n", path);
     return 0;
 }
 
-static struct fuse_operations fusetest_oper;
+static struct fuse_operations fusewtf_oper;
 
 int main(int argc, char *argv[])
 {
     int ret = 0;
 
-    w = new wtf_client("127.0.0.1", 1981, "127.0.0.1", 1982);
-    fusetest_oper.flush      = fusetest_flush;
-    fusetest_oper.getattr    = fusetest_getattr;
-    fusetest_oper.open       = fusetest_open;
-    fusetest_oper.read       = fusetest_read;
-//    fusetest_oper.rename     = fusetest_rename;
-    fusetest_oper.readdir    = fusetest_readdir;
-    fusetest_oper.release    = fusetest_release;
-//    fusetest_oper.unlink     = fusetest_unlink;
-    fusetest_oper.utimens    = fusetest_utimens;
-    fusetest_oper.write      = fusetest_write;
-//    fusetest_oper.readlink   = fusetest_readlink;
-//    fusetest_oper.mknod      = fusetest_mknod;
-    fusetest_oper.mkdir      = fusetest_mkdir; 
-//    fusetest_oper.symlink    = fusetest_symlink;
-//    fusetest_oper.rmdir      = fusetest_rmdir;
-//    fusetest_oper.link       = fusetest_link;
-//    fusetest_oper.chmod      = fusetest_chmod;
-//    fusetest_oper.chown      = fusetest_chown;
-    fusetest_oper.truncate   = fusetest_truncate;
-    fusetest_oper.ftruncate   = fusetest_ftruncate;
-//    fusetest_oper.fsync      = fusetest_fsync;
+    w = new client("127.0.0.1", 1981, "127.0.0.1", 1982);
+    fusewtf_oper.flush      = fusewtf_flush;
+    fusewtf_oper.getattr    = fusewtf_getattr;
+    fusewtf_oper.open       = fusewtf_open;
+    fusewtf_oper.read       = fusewtf_read;
+//    fusewtf_oper.rename     = fusewtf_rename;
+    fusewtf_oper.readdir    = fusewtf_readdir;
+    fusewtf_oper.release    = fusewtf_release;
+//    fusewtf_oper.unlink     = fusewtf_unlink;
+    fusewtf_oper.utimens    = fusewtf_utimens;
+    fusewtf_oper.write      = fusewtf_write;
+//    fusewtf_oper.readlink   = fusewtf_readlink;
+//    fusewtf_oper.mknod      = fusewtf_mknod;
+    fusewtf_oper.mkdir      = fusewtf_mkdir; 
+//    fusewtf_oper.symlink    = fusewtf_symlink;
+//    fusewtf_oper.rmdir      = fusewtf_rmdir;
+//    fusewtf_oper.link       = fusewtf_link;
+//    fusewtf_oper.chmod      = fusewtf_chmod;
+//    fusewtf_oper.chown      = fusewtf_chown;
+    fusewtf_oper.truncate   = fusewtf_truncate;
+    fusewtf_oper.ftruncate   = fusewtf_ftruncate;
+//    fusewtf_oper.fsync      = fusewtf_fsync;
 #if FUSE_VERSION >= 25
-    fusetest_oper.create     = fusetest_create;
+    fusewtf_oper.create     = fusewtf_create;
 #endif
 
-    sem_init(&lock, 0, 1);
 
-    ret = fuse_main(argc, argv, &fusetest_oper, NULL);
+    ret = fuse_main(argc, argv, &fusewtf_oper, NULL);
 
-    sem_destroy(&lock);
 
     delete w;
     return ret;
