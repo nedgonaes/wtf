@@ -110,6 +110,8 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
 static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         off_t offset, struct fuse_file_info *fi)
 {
+    (void) offset;
+    (void) fi;
     LOGENTRY;
     wtf_client_returncode status;
     char *de;
@@ -122,12 +124,28 @@ static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
         return -1;
     }
 
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+    filler(buf, "/", NULL, 0);
+    filler(buf, "/foo", NULL, 0);
+
+    char abspath[PATH_MAX]; 
+    w->canon_path(path, abspath, PATH_MAX); 
+
     while(w->loop(reqid, -1, &status) > -1)
     {
-        if(filler(buf, de, NULL, 0))
-            break;
-    }
+        if(strcmp(de, abspath) == 0 || strcmp(de, "") == 0) 
+        {
+            std::cout << "Skipping " << std::string(de) << std::endl;
+            continue;
+        }
 
+        std::cout << std::string(de) << std::endl;
+        //if(filler(buf, de, NULL, 0))
+            //break;
+    }
+    
+    LOGENTRY;
     return ret;
 }
 
@@ -342,16 +360,16 @@ int main(int argc, char *argv[])
     int ret = 0;
 
     w = new client("127.0.0.1", 1981, "127.0.0.1", 1982);
-    fusewtf_oper.flush      = fusewtf_flush;
+//    fusewtf_oper.flush      = fusewtf_flush;
     fusewtf_oper.getattr    = fusewtf_getattr;
     fusewtf_oper.open       = fusewtf_open;
     fusewtf_oper.read       = fusewtf_read;
 //    fusewtf_oper.rename     = fusewtf_rename;
     fusewtf_oper.readdir    = fusewtf_readdir;
-    fusewtf_oper.release    = fusewtf_release;
+//    fusewtf_oper.release    = fusewtf_release;
 //    fusewtf_oper.unlink     = fusewtf_unlink;
-    fusewtf_oper.utimens    = fusewtf_utimens;
-    fusewtf_oper.write      = fusewtf_write;
+//    fusewtf_oper.utimens    = fusewtf_utimens;
+//    fusewtf_oper.write      = fusewtf_write;
 //    fusewtf_oper.readlink   = fusewtf_readlink;
 //    fusewtf_oper.mknod      = fusewtf_mknod;
     fusewtf_oper.mkdir      = fusewtf_mkdir; 
@@ -360,8 +378,8 @@ int main(int argc, char *argv[])
 //    fusewtf_oper.link       = fusewtf_link;
 //    fusewtf_oper.chmod      = fusewtf_chmod;
 //    fusewtf_oper.chown      = fusewtf_chown;
-    fusewtf_oper.truncate   = fusewtf_truncate;
-    fusewtf_oper.ftruncate   = fusewtf_ftruncate;
+//    fusewtf_oper.truncate   = fusewtf_truncate;
+//    fusewtf_oper.ftruncate   = fusewtf_ftruncate;
 //    fusewtf_oper.fsync      = fusewtf_fsync;
 #if FUSE_VERSION >= 25
     fusewtf_oper.create     = fusewtf_create;
