@@ -126,8 +126,6 @@ static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    filler(buf, "/", NULL, 0);
-    filler(buf, "/foo", NULL, 0);
 
     char abspath[PATH_MAX]; 
     w->canon_path(path, abspath, PATH_MAX); 
@@ -136,16 +134,13 @@ static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     {
         if(strcmp(de, abspath) == 0 || strcmp(de, "") == 0) 
         {
-            std::cout << "Skipping " << std::string(de) << std::endl;
             continue;
         }
 
-        std::cout << std::string(de) << std::endl;
-        //if(filler(buf, de, NULL, 0))
-            //break;
+        if(filler(buf, de, NULL, 0))
+            break;
     }
     
-    LOGENTRY;
     return ret;
 }
 
