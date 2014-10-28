@@ -14,7 +14,7 @@
 #include "client/client.h"
 
 #define DEFAULT_BLOCK_LENGTH 4096
-#define DEFAULT_REPLICATION 3 
+#define DEFAULT_REPLICATION 1
 
 
 const char *ROOT = "/";
@@ -220,13 +220,20 @@ static int fusewtf_write(const char *path, const char *buf, size_t size, off_t o
         return -1;
     }
 
-    if (w->write((int64_t)fi->fh, buf, &size, &status) < 0)
+    std::cout << "fh = " << fi->fh << std::endl;
+    std::cout << "buf = " << std::string(buf) << std::endl;
+    std::cout << "size = " << size << std::endl;
+
+    LOGENTRY;
+    int64_t reqid = w->write((int64_t)fi->fh, buf, &size, &status);
+    if (reqid < 0)
     {
         LOGENTRY;
         return -1;
     }
 
-    if (w->loop(fi->fh, -1, &lstatus) < 0)
+    LOGENTRY;
+    if (w->loop(reqid, -1, &lstatus) < 0)
     {
         LOGENTRY;
         status = lstatus;
@@ -364,7 +371,7 @@ int main(int argc, char *argv[])
 //    fusewtf_oper.release    = fusewtf_release;
 //    fusewtf_oper.unlink     = fusewtf_unlink;
 //    fusewtf_oper.utimens    = fusewtf_utimens;
-//    fusewtf_oper.write      = fusewtf_write;
+    fusewtf_oper.write      = fusewtf_write;
 //    fusewtf_oper.readlink   = fusewtf_readlink;
 //    fusewtf_oper.mknod      = fusewtf_mknod;
     fusewtf_oper.mkdir      = fusewtf_mkdir; 
@@ -373,8 +380,8 @@ int main(int argc, char *argv[])
 //    fusewtf_oper.link       = fusewtf_link;
 //    fusewtf_oper.chmod      = fusewtf_chmod;
 //    fusewtf_oper.chown      = fusewtf_chown;
-//    fusewtf_oper.truncate   = fusewtf_truncate;
-//    fusewtf_oper.ftruncate   = fusewtf_ftruncate;
+    fusewtf_oper.truncate   = fusewtf_truncate;
+    fusewtf_oper.ftruncate  = fusewtf_ftruncate;
 //    fusewtf_oper.fsync      = fusewtf_fsync;
 #if FUSE_VERSION >= 25
     fusewtf_oper.create     = fusewtf_create;
