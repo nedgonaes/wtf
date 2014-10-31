@@ -109,7 +109,7 @@ worker_thread(const armnod::argparser& _f,
             }
             
             /* Write some stuff to the random file, in random size chunks. */
-            sz = v.size();
+            size_t sz = v.size();
             reqid = cl.write(fd, v.data(), &sz, 1, &status);
 
             if (reqid < 0)
@@ -153,7 +153,7 @@ worker_thread(const armnod::argparser& _f,
                 WTF_TEST_FAIL(0, "failed to open file");
             }
 
-            cl.lseek(fd, 11, status);
+            cl.lseek(fd, 11, SEEK_SET, &status);
             
             /* Write some stuff to the random file, in random size chunks. */
             sz = v.size();
@@ -174,7 +174,7 @@ worker_thread(const armnod::argparser& _f,
             }
 
 
-            wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
+            rc = WTF_CLIENT_GARBAGE;
 
             /* close the random file */
             reqid = cl.close(fd, &rc);
@@ -200,12 +200,10 @@ worker_thread(const armnod::argparser& _f,
                 WTF_TEST_FAIL(0, "failed to open file");
             }
 
-            cl.lseek(fd, 11, status);
-            
             /* Write some stuff to the random file, in random size chunks. */
             char buf[23];
             size_t buf_sz = 23;
-            reqid = cl.read(fd, buf, &buf_sz, 1, &status);
+            reqid = cl.read(fd, buf, &buf_sz, &status);
 
             if (reqid < 0)
             {
@@ -225,7 +223,7 @@ worker_thread(const armnod::argparser& _f,
                 WTF_TEST_FAIL(0, std::string(buf) << "!=" << v+v);;
             }
 
-            wtf_client_returncode rc = WTF_CLIENT_GARBAGE;
+            rc = WTF_CLIENT_GARBAGE;
 
             /* close the random file */
             reqid = cl.close(fd, &rc);

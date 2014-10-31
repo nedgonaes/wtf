@@ -325,7 +325,8 @@ shell_wrappers =
 #shell_wrappers += test/sh/getattr_test.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.2GB.sh
-shell_wrappers += test/sh/closetest.sh
+#shell_wrappers += test/sh/closetest.sh
+shell_wrappers += test/sh/lseektest.sh
 
 #wtf-test_readwrite
 check_PROGRAMS += test/readwrite-sync-stress-test
@@ -343,6 +344,10 @@ test_readdir_test_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 check_PROGRAMS += test/closetest
 test_closetest_SOURCES = test/closetest.cc 
 test_closetest_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
+
+check_PROGRAMS += test/lseektest
+test_lseektest_SOURCES = test/lseektest.cc 
+test_lseektest_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 check_PROGRAMS += test/getattr-test
 test_getattr_test_SOURCES = test/getattr_test.cc 
