@@ -96,7 +96,7 @@ worker_thread(const armnod::argparser& _f,
             //CREATE AND WRITE
 
             /* create a random file */
-            reqid = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 3, _block_size, &fd, &status);
+            reqid = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 1, _block_size, &fd, &status);
             if (reqid < 0)
             {
                 WTF_TEST_FAIL(0, "failed to open file");
@@ -141,7 +141,7 @@ worker_thread(const armnod::argparser& _f,
             //LSEEK
 
             /* create a random file */
-            reqid = cl.open(f.data(), O_RDWR, mode_t(0777), 3, _block_size, &fd, &status);
+            reqid = cl.open(f.data(), O_RDWR, mode_t(0777), 1, _block_size, &fd, &status);
             if (reqid < 0)
             {
                 WTF_TEST_FAIL(0, "failed to open file");
@@ -188,7 +188,7 @@ worker_thread(const armnod::argparser& _f,
 
             //READ BACK
 
-            reqid = cl.open(f.data(), O_RDWR, mode_t(0777), 3, _block_size, &fd, &status);
+            reqid = cl.open(f.data(), O_RDWR, mode_t(0777), 1, _block_size, &fd, &status);
             if (reqid < 0)
             {
                 WTF_TEST_FAIL(0, "failed to open file");
