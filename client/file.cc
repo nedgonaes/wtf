@@ -209,6 +209,27 @@ file :: move_to_next_block()
 
 }
 
+void
+file :: reset_offset()
+{
+    m_offset = 0;
+
+    block_map::iterator it = m_block_map.find(m_offset);
+
+    if (it == m_block_map.end())
+    {
+        m_current_block = new block(m_block_size, m_offset, m_replicas);
+        m_block_map[m_offset] = m_current_block;
+    }
+    else
+    {
+        m_current_block = it->second;
+    }
+
+    m_bytes_left_in_block = m_current_block->capacity();
+    m_current_block_length = m_bytes_left_in_block;
+}
+
 bool 
 file :: pending_ops_empty()
 {

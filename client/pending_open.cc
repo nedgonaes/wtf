@@ -93,6 +93,13 @@ pending_open :: handle_hyperdex_message(client* cl,
     {
         if (strcmp(attrs[i].attr, "blockmap") == 0)
         {
+            bool append = false;
+
+            if (m_file->flags & O_APPEND)
+            {
+                append = true;
+            }
+
             e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
             if (attrs[i].value_sz == 0)
@@ -101,6 +108,13 @@ pending_open :: handle_hyperdex_message(client* cl,
             }
 
             up = up >> m_file;
+
+            if (append)
+            {
+                std::cout << "Setting offset to " << m_file->length()-1 << std::endl;
+                m_file->set_offset(m_file->length()-1);
+            }
+
         }
         else if (strcmp(attrs[i].attr, "directory") == 0)
         {

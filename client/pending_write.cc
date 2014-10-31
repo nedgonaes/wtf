@@ -163,7 +163,7 @@ pending_write :: handle_wtf_message(client* cl,
             std::cout << "Running next op at offset " << m_file_offset << std::endl;
         }
 
-   }
+    }
 
     return true;
 }

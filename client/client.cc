@@ -705,6 +705,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         return -1;
     }
 
+
     if (flags & O_CREAT)
     {
         //std::cout << path << std::endl;
@@ -725,6 +726,7 @@ client :: open(const char* path, int flags, mode_t mode, size_t num_replicas, si
         e::intrusive_ptr<file> f = new file(abspath, num_replicas, block_size);
         m_fds[*fd] = f; 
         f->flags = flags;
+
         e::intrusive_ptr<pending_open> op = new pending_open(this, client_id, status, f, fd);
         op->try_op();
         return client_id;
@@ -829,7 +831,7 @@ client :: lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* 
             f->set_offset(f->offset() + offset);
             return f->offset();
         case SEEK_END:
-            f->set_offset(f->length() + offset);
+            f->set_offset(f->length()-1 + offset);
             return f->offset();
     }
 }

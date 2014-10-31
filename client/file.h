@@ -71,6 +71,7 @@ class file
         void copy_block_locations(uint32_t file_offset, std::vector<block_location>& bl);
         size_t advance_to_end_of_block(size_t len);
         void move_to_next_block();
+        void reset_offset();
         bool pending_ops_empty();
         int64_t pending_ops_pop_front();
         size_t get_block_length(size_t offset);
@@ -83,7 +84,19 @@ class file
 
 
         void add_command(int64_t op);
-        void set_offset(uint64_t offset) { m_offset = offset; }
+        void set_offset(uint64_t offset) { 
+
+            size_t rem = offset;
+            reset_offset();
+
+            while (rem > 0)
+            {
+                std::cout << "OFFSET " << m_offset << std::endl;
+                rem -= advance_to_end_of_block(rem);
+            }
+
+            std::cout << "OFFSET " << m_offset << std::endl;
+        }
         uint64_t offset() { return m_offset; }
         uint64_t pack_size();
         uint64_t length();
