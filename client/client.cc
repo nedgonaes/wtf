@@ -831,7 +831,7 @@ client :: lseek(int64_t fd, uint64_t offset, int whence, wtf_client_returncode* 
             f->set_offset(f->offset() + offset);
             return f->offset();
         case SEEK_END:
-            f->set_offset(f->length()-1 + offset);
+            f->set_offset(f->length() + offset);
             return f->offset();
     }
 }

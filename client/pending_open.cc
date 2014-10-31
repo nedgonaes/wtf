@@ -111,8 +111,8 @@ pending_open :: handle_hyperdex_message(client* cl,
 
             if (append)
             {
-                std::cout << "Setting offset to " << m_file->length()-1 << std::endl;
-                m_file->set_offset(m_file->length()-1);
+                std::cout << "Setting offset to " << m_file->length() << std::endl;
+                m_file->set_offset(m_file->length());
             }
 
         }
