@@ -332,9 +332,8 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
             TRACE;
             //smaller than existing slice, so we need to split the slice..
             e::intrusive_ptr<vblock::slice> end_slice(new vblock::slice(new_end + 1, old_end - new_end, old_slice->m_disk_offset));
-            end_slice->m_disk_offset += 
             old_slice->m_length -= (old_end - new_start + 1);
-            end_slice->m_disk_offset += old_slice->m_length + new_slice->m_length + 1;
+            end_slice->m_disk_offset += old_slice->m_length + new_slice->m_length;
             m_slice_map[new_end + 1] = end_slice;
             m_slice_map[new_start] = new_slice;
             return;

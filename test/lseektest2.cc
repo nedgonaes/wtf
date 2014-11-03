@@ -201,8 +201,8 @@ worker_thread(const armnod::argparser& _f,
             }
 
             /* Write some stuff to the random file, in random size chunks. */
-            char buf[23];
-            size_t buf_sz = 23;
+            char buf[11];
+            size_t buf_sz = 11;
             reqid = cl.read(fd, buf, &buf_sz, &status);
 
             if (reqid < 0)
@@ -218,7 +218,7 @@ worker_thread(const armnod::argparser& _f,
 
             }
 
-            if(std::string(buf) != std::string("HEXLO WORLD"))
+            if(std::string(buf, buf_sz) != std::string("HEXLO WORLD"))
             {
                 WTF_TEST_FAIL(0, std::string(buf) << "!=" << std::string("HEXLO WORLD"));
             }
