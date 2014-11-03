@@ -86,6 +86,8 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
     size_t new_start = off;
     size_t new_end = off+ len - 1;
 
+    std::cout << "new_start = " << new_start << std::endl;
+    std::cout << "new_end = " << new_end << std::endl;
 
     vblock::slice_map::iterator after = m_slice_map.lower_bound(new_start);
     e::intrusive_ptr<vblock::slice> new_slice(new vblock::slice(new_start, len, disk_off));
@@ -252,6 +254,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
             {
                 TRACE;
                 //smaller than existing slice, so we need to split the slice..
+                //XXX change disk offset
                 old_slice->m_offset = new_end + 1;
                 old_slice->m_length = old_end - new_end;
                 m_slice_map[new_end + 1] = old_slice;
@@ -323,6 +326,19 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
         size_t old_length = old_slice->m_length;
         size_t old_start = old_slice->m_offset;
         size_t old_end = old_start + old_length - 1;
+
+        if (old_end > new_end)
+        {
+            TRACE;
+            //smaller than existing slice, so we need to split the slice..
+            e::intrusive_ptr<vblock::slice> end_slice(new vblock::slice(new_end + 1, old_end - new_end, old_slice->m_disk_offset));
+            end_slice->m_disk_offset += 
+            old_slice->m_length -= (old_end - new_start + 1);
+            end_slice->m_disk_offset += old_slice->m_length + new_slice->m_length + 1;
+            m_slice_map[new_end + 1] = end_slice;
+            m_slice_map[new_start] = new_slice;
+            return;
+        }
 
         //cut the end off the overlapping slice to the left
         if (old_end >= new_start)
