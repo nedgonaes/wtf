@@ -27,6 +27,7 @@
 
 // WTF
 #include "vblock.h"
+#define TRACECALLS
 #include "common/macros.h"
 
 using wtf::vblock;
@@ -64,6 +65,7 @@ vblock :: slice :: ~slice() throw()
 uint64_t
 vblock :: length()
 {
+    TRACE;
     if (m_slice_map.empty())
     {
         return 0;
@@ -80,6 +82,7 @@ vblock :: length()
 void
 vblock :: update(size_t off, size_t len, size_t disk_off)
 {
+    TRACE;
     size_t new_start = off;
     size_t new_end = off+ len - 1;
 
@@ -92,6 +95,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
     //new block
     if (m_slice_map.size() == 0)
     {
+        TRACE;
         m_slice_map[new_start] = new_slice;
         return;
     }

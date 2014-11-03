@@ -313,27 +313,32 @@ blockmap :: update(const e::slice& data,
     status = m_disk->write(data, disk_offset);
     if (status < 0)
     {
+        TRACE;
         return status;
     }
 
     vblock vb;
     if (read_offset_map(bid, vb) < 0)
     {
+        TRACE;
         return -1;
     }
 
     bid = m_block_id++;
 
+    TRACE;
     vb.update(offset, data.size(), disk_offset);
     block_len = vb.length();
 
 
     if (write_offset_map(bid, vb) < 0)
     {
+        TRACE;
         return -1;
     }
     else
     {
+        TRACE;
         return status;
     }
 }
