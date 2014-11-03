@@ -74,3 +74,4 @@ test/appendtest
 test/lseektest
 test/lseektest2
 wtf-fuse
+test/truncatetest
