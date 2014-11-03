@@ -304,6 +304,8 @@ client :: send(wtf_network_msgtype mt,
     {
         case BUSYBEE_SUCCESS:
             op->handle_sent_to_wtf(to);
+
+            TRACE;
             m_pending_ops.insert(std::make_pair(nonce, pending_server_pair(to, op)));
             return true;
         case BUSYBEE_DISRUPTED:
@@ -370,7 +372,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
            !m_pending_hyperdex_ops.empty() ||
            !m_yieldable.empty())
     {
-        if (0)
+        if (1)
         {
             std::cerr << "WAIT FOR = " << wait_for << std::endl;
 
@@ -1034,6 +1036,7 @@ client :: truncate(int fd, off_t length, wtf_client_returncode* status)
 
     if (op->try_op())
     {
+        TRACE;
         return client_id;
     }
     else
@@ -1505,6 +1508,7 @@ client :: read_sync(int64_t fd, char* buf,
 void
 client :: add_hyperdex_op(int64_t reqid, pending_aggregation* pending_op)
 {
+    TRACE;
     server_id HYPERDEX = server_id(m_hyperdex_client.poll_fd());
     e::intrusive_ptr<pending_aggregation> op = pending_op;
     pending_server_pair psp(HYPERDEX, op);

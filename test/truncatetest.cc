@@ -153,13 +153,18 @@ worker_thread(const armnod::argparser& _f,
                 WTF_TEST_FAIL(0, "failed to open file");
             }
 
-            cl.truncate(fd, 0, &status);
- 
-            reqid = cl.loop(reqid, -1, &status);
-
+            reqid = cl.truncate(fd, 0, &status);
+            std::cout << "truncate reqid = " << reqid << std::cout;
             if (reqid < 0)
             {
                 WTF_TEST_FAIL(0,status); 
+
+            }
+
+            reqid = cl.loop(reqid, -1, &lstatus);
+            if (reqid < 0)
+            {
+                WTF_TEST_FAIL(0,lstatus); 
 
             }
            

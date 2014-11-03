@@ -98,6 +98,7 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_truncate :: try_op()
 {
+    //XXX add length parameter to blockmap and modify other code to respect it.
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
     attr_t attrs = hyperdex_ds_allocate_attribute(arena, 1);
