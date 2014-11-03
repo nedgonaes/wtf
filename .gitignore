@@ -70,3 +70,7 @@ wtf-wtfio
 wtf-wtfio-checker
 test/test
 test/closetest
+test/appendtest
+test/lseektest
+test/lseektest2
+wtf-fuse

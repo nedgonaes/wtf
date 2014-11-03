@@ -195,6 +195,10 @@ pending_write :: send_data()
         servers.push_back(server_id(m_block_locations[i].si));
     }
 
+    std::cout << "BLOCK CAPACITY: " << m_block_capacity << std::endl;
+    std::cout << "FILE OFFSET: " << m_block_capacity << std::endl;
+    std::cout << "BLOCK OFFSET: " << m_block_offset << std::endl;
+
     pa = pa << m_block_offset << m_block_capacity << m_file_offset;
     pa.copy(m_data);
 
