@@ -29,6 +29,8 @@
 #include "vblock.h"
 #define TRACECALLS
 #include "common/macros.h"
+#include <glog/logging.h>
+#include <glog/raw_logging.h>
 
 using wtf::vblock;
 
@@ -76,6 +78,8 @@ vblock :: length()
 
     uint64_t offset = end->first;
     uint64_t len = end->second->length();
+    LOG(INFO) << "offset " << offset;
+    LOG(INFO) << "len " << len;
     return offset + len;
 }
 

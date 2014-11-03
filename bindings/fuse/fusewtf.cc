@@ -150,6 +150,7 @@ static int fusewtf_open(const char *path, struct fuse_file_info *fi)
     int ret = 0;
     mode_t mode = 0;
     wtf_client_returncode status;
+    wtf_client_returncode lstatus;
 
     int64_t reqid = w->open(path, fi->flags, mode, DEFAULT_REPLICATION, DEFAULT_BLOCK_LENGTH, (int64_t*)&fi->fh, &status);
 
@@ -157,6 +158,12 @@ static int fusewtf_open(const char *path, struct fuse_file_info *fi)
     {
         LOGENTRY;
         ret = -ENOENT;
+    }
+
+    if (w->loop(reqid, -1, &lstatus) < 0)
+    {
+        LOGENTRY;
+        return -ENOENT;
     }
 
     LOGENTRY;
@@ -215,10 +222,10 @@ static int fusewtf_write(const char *path, const char *buf, size_t size, off_t o
     LOGENTRY;
     wtf_client_returncode status, lstatus;
 
-    if(w->lseek(fi->fh, offset, SEEK_SET, &status) < 0)
-    {
-        return -1;
-    }
+    //if(w->lseek(fi->fh, offset, SEEK_SET, &status) < 0)
+    //{
+    //    return -1;
+    //}
 
     std::cout << "fh = " << fi->fh << std::endl;
     std::cout << "buf = " << std::string(buf) << std::endl;

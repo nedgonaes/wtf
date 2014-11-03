@@ -85,7 +85,7 @@ class file
 
         void add_command(int64_t op);
         void set_offset(uint64_t offset) { 
-
+            std::cout << *m_current_block.get() << std::endl;
             size_t rem = offset;
             reset_offset();
 
@@ -96,6 +96,7 @@ class file
             }
 
             std::cout << "OFFSET " << m_offset << std::endl;
+            std::cout << *m_current_block.get() << std::endl;
         }
         uint64_t offset() { return m_offset; }
         uint64_t pack_size();
