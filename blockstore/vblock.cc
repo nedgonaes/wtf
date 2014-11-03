@@ -27,6 +27,7 @@
 
 // WTF
 #include "vblock.h"
+#include "common/macros.h"
 
 using wtf::vblock;
 
@@ -98,6 +99,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
     //beginning of the block
     if (after == m_slice_map.begin())
     {
+        TRACE;
         e::intrusive_ptr<slice> old_slice = after->second;
         size_t old_length = old_slice->m_length;
         size_t old_start = old_slice->m_offset;
@@ -105,10 +107,12 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
 
         if (old_start != new_start)
         {
+            TRACE;
             m_slice_map[new_start] = new_slice;
         }
         else if (old_end <= new_end)
         {
+            TRACE;
             after++;
             m_slice_map[new_start] = new_slice;
 
@@ -124,6 +128,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
         }
         else
         {
+            TRACE;
             old_slice->m_length = old_end - new_end;
             old_slice->m_offset = new_end + 1;
             old_slice->m_disk_offset += (new_end + 1 - old_start);
@@ -136,6 +141,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
         //remove completely overwritten slices
         while (old_end <= new_end)
         {
+            TRACE;
             vblock::slice_map::iterator old_iter = after;
             old_slice = old_iter->second;
             after++;
@@ -144,6 +150,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
 
             if (after == m_slice_map.end())
             {
+                TRACE;
                 break;
             }
 
@@ -156,17 +163,20 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
         //cut the beginning off the overlapping slice on the right
         if (after != m_slice_map.end())
         {
+            TRACE;
             old_slice->m_length = old_end - new_end;
             old_slice->m_offset = new_end + 1;
             old_slice->m_disk_offset += (new_end + 1 - old_start);
         }
 
         //XXX: Check this later.  dinner time.
+        TRACE;
         return;
     }
     //somewhere in the middle of the block 
     else if (after != m_slice_map.end())
     {
+        TRACE;
         e::intrusive_ptr<slice> old_slice = after->second;
         size_t old_length = old_slice->m_length;
         size_t old_start = old_slice->m_offset;
@@ -174,6 +184,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
 
         if (old_start != new_start)
         {
+            TRACE;
             //store a pointer to the slice before this one
             //we can do before-- because we know this isn't the first one.
             vblock::slice_map::iterator before = after;
@@ -184,6 +195,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
             //remove completely overwritten slices
             while (old_end <= new_end)
             {
+                TRACE;
                 vblock::slice_map::iterator old_iter = after;
                 old_slice = old_iter->second;
                 after++;
@@ -192,6 +204,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
 
                 if (after == m_slice_map.end())
                 {
+                    TRACE;
                     break;
                 }
 
@@ -204,6 +217,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
             //cut the beginning off the overlapping slice on the right
             if (after != m_slice_map.end())
             {
+                TRACE;
                 old_slice->m_length = old_end - new_end;
                 old_slice->m_offset = new_end + 1;
                 old_slice->m_disk_offset += (new_end + 1 - old_start);
@@ -217,9 +231,11 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
             //cut the end off the overlapping slice to the left
             if (old_end >= new_start)
             {
+                TRACE;
                 old_slice->m_length -= (old_end - new_start + 1);  
             }
 
+            TRACE;
             //mic drop.
             return;
         }
@@ -227,26 +243,30 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
         //starts at the same offset
         else
         {
-           if (old_end > new_end)
-           {
-               //smaller than existing slice, so we need to split the slice..
-               old_slice->m_offset = new_end + 1;
-               old_slice->m_length = old_end - new_end;
-               m_slice_map[new_end + 1] = old_slice;
-               m_slice_map[new_start] = new_slice;
-               return;
-           }
-           else if (old_end < new_end)
-           {
-               //larger than existing slice, so we get rid of this slice
-               //and check the next one.  Note that after is == to current
-               //slice, so we have to increment before replacing.
+            TRACE;
+            if (old_end > new_end)
+            {
+                TRACE;
+                //smaller than existing slice, so we need to split the slice..
+                old_slice->m_offset = new_end + 1;
+                old_slice->m_length = old_end - new_end;
+                m_slice_map[new_end + 1] = old_slice;
+                m_slice_map[new_start] = new_slice;
+                return;
+            }
+            else if (old_end < new_end)
+            {
+                TRACE;
+                //larger than existing slice, so we get rid of this slice
+                //and check the next one.  Note that after is == to current
+                //slice, so we have to increment before replacing.
                 after++;
                 m_slice_map[new_start] = new_slice;
 
                 //remove completely overwritten slices
                 while (old_end <= new_end)
                 {
+                    TRACE;
                     vblock::slice_map::iterator old_iter = after;
                     old_slice = old_iter->second;
                     after++;
@@ -255,6 +275,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
 
                     if (after == m_slice_map.end())
                     {
+                        TRACE;
                         break;
                     }
 
@@ -267,16 +288,19 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
                 //cut the beginning off the overlapping slice on the right
                 if (after != m_slice_map.end())
                 {
+                    TRACE;
                     old_slice->m_length = old_end - new_end;
                     old_slice->m_offset = new_end + 1;
                     old_slice->m_disk_offset += (new_end + 1 - old_start);
                 }
 
+                TRACE;
                 //fuck yeah.
                 return;
            }
            else
            {
+               TRACE;
                //exact same offset and size as existing block, just replace it
                 m_slice_map[new_start] = new_slice;
                 return;
@@ -285,6 +309,7 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
     }
     else
     {
+        TRACE;
         after--;
 
         //just put it at the end.
@@ -298,11 +323,15 @@ vblock :: update(size_t off, size_t len, size_t disk_off)
         //cut the end off the overlapping slice to the left
         if (old_end >= new_start)
         {
+            TRACE;
             old_slice->m_length -= (old_end - new_start + 1);  
         }
 
+        TRACE;
         return;
     }
+
+    TRACE;
 }
 
 size_t
