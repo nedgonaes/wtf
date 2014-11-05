@@ -66,6 +66,13 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
     LOGENTRY;
     memset(stbuf, 0, sizeof(struct stat));
 
+    if (strcmp(path,"/") == 0) 
+    {
+        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_nlink = 2;
+        return 0;
+    }
+
     struct wtf_file_attrs fa;
     wtf_client_returncode status;
     wtf_client_returncode lstatus;
@@ -90,7 +97,7 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
     }
 
     //stbuf->st_mode = fa.mode;
-    stbuf->st_mode = 0777;
+    stbuf->st_mode = 0444;
 
     if (fa.is_dir)
     {
