@@ -153,16 +153,24 @@ static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             continue;
         }
 
+        std::string e; 
+
         if (*de == '/')
         {
-            if (filler(buf, de + 1, NULL, 0))
-                break;;
+            e = std::string(de+1);
         }
         else
         {
-            if(filler(buf, de, NULL, 0))
-                break;
+            e = std::string(de);
         }
+
+        if (e.find("/") != std::string::npos)
+        {
+            continue;
+        }
+
+        if(filler(buf, e.c_str(), NULL, 0))
+            break;
     }
     
     return ret;
