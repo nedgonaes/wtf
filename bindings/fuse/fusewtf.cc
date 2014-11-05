@@ -102,6 +102,11 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
     }
 
     stbuf->st_size = fa.size;
+    stbuf->st_nlink = 1; //XXX
+
+    std::cout << "stbuf->st_size = " << stbuf->st_size << std::endl;
+    std::cout << "stbuf->st_mode = " << stbuf->st_mode << std::endl;
+    std::cout << "stbuf->st_nlink = " << stbuf->st_nlink << std::endl;
 
     LOGENTRY;
     return 0;
