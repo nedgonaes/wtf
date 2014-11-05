@@ -33,6 +33,7 @@
 #include "client/pending_mkdir.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_put.h"
+#include <time.h>
 
 using wtf::pending_mkdir;
 
@@ -101,7 +102,7 @@ pending_mkdir :: try_op()
     TRACE;
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 5);
     size_t sz;
 
     attrs[0].datatype = HYPERDATATYPE_INT64;
@@ -115,6 +116,29 @@ pending_mkdir :: try_op()
                             &status, &attrs[1].attr, &sz);
     hyperdex_ds_copy_int(arena, 1, 
                             &status, &attrs[1].value, &attrs[1].value_sz);
+
+    attrs[2].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "time", 5,
+                            &status, &attrs[2].attr, &sz);
+    hyperdex_ds_copy_int(arena, time(NULL), 
+                            &status, &attrs[2].value, &attrs[2].value_sz);
+
+    attrs[3].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "owner", 6,
+                            &status, &attrs[3].attr, &sz);
+    hyperdex_ds_copy_string(arena,
+                            "sean", //XXX
+                            5,
+                            &status, &attrs[3].value, &attrs[3].value_sz);
+    
+    attrs[4].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "group", 6,
+                            &status, &attrs[4].attr, &sz);
+    hyperdex_ds_copy_string(arena,
+                            "sean", //XXX
+                            5,
+                            &status, &attrs[4].value, &attrs[4].value_sz);
+
 
    e::intrusive_ptr<message_hyperdex_put> msg = 
         new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 2);

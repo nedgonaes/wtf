@@ -67,7 +67,7 @@ reset_cluster()
     ${HYPERDEX} daemon -D ${HYPERDEX_DAEMON_DATA_DIR} -c ${HC} -P ${HYPERDEX_PORT} -t 1
     sleep 1
     echo "ADDING WTF SPACE...\n"
-    echo 'space wtf key path attributes string blockmap, int directory, int mode, string owner, string group' | ${HYPERDEX} add-space -h ${HC} -p ${HYPERDEX_PORT}
+    echo 'space wtf key path attributes string blockmap, int directory, int mode, string owner, string group, int time' | ${HYPERDEX} add-space -h ${HC} -p ${HYPERDEX_PORT}
     sleep 1
     ./wtf-mkfs -H ${HC} -P ${HYPERDEX_PORT}
     echo "STARTING WTF COORDINATOR...\n"

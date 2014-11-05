@@ -36,6 +36,7 @@
 #include "client/message_hyperdex_search.h"
 #include "client/message_hyperdex_put.h"
 #include "client/message_hyperdex_del.h"
+#include <time.h>
 
 using wtf::pending_creat;
 using wtf::message_hyperdex_put;
@@ -129,7 +130,7 @@ pending_creat :: try_op()
 
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 5);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 6);
 
     attrs[0].datatype = HYPERDATATYPE_INT64;
     hyperdex_ds_copy_string(arena, "mode", 5,
@@ -164,6 +165,12 @@ pending_creat :: try_op()
                             m_file->group.c_str(),
                             m_file->group.length() + 1,
                             &status, &attrs[4].value, &attrs[4].value_sz);
+
+    attrs[5].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "time", 5,
+                            &status, &attrs[5].attr, &sz);
+    hyperdex_ds_copy_int(arena, time(NULL), 
+                            &status, &attrs[5].value, &attrs[5].value_sz);
 
     std::string path(m_file->path().get()); 
 
