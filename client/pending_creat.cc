@@ -37,6 +37,7 @@
 #include "client/message_hyperdex_put.h"
 #include "client/message_hyperdex_del.h"
 #include <time.h>
+#include <pwd.h>
 
 using wtf::pending_creat;
 using wtf::message_hyperdex_put;
@@ -151,19 +152,21 @@ pending_creat :: try_op()
                             reinterpret_cast<const char*>(blockmap_update->data()), 
                             blockmap_update->size(),
                             &status, &attrs[2].value, &attrs[2].value_sz);
+
+    struct passwd* p = getpwuid(geteuid());
     attrs[3].datatype = HYPERDATATYPE_STRING;
     hyperdex_ds_copy_string(arena, "owner", 6,
                             &status, &attrs[3].attr, &sz);
     hyperdex_ds_copy_string(arena,
-                            m_file->owner.c_str(),
-                            m_file->owner.length() + 1,
+                            p->pw_name,
+                            strlen(p->pw_name),
                             &status, &attrs[3].value, &attrs[3].value_sz);
     attrs[4].datatype = HYPERDATATYPE_STRING;
     hyperdex_ds_copy_string(arena, "group", 6,
                             &status, &attrs[4].attr, &sz);
     hyperdex_ds_copy_string(arena,
-                            m_file->group.c_str(),
-                            m_file->group.length() + 1,
+                            p->pw_name,
+                            strlen(p->pw_name),
                             &status, &attrs[4].value, &attrs[4].value_sz);
 
     attrs[5].datatype = HYPERDATATYPE_INT64;
