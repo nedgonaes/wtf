@@ -86,6 +86,7 @@ extern "C"
         int is_dir;
         char* owner;
         char* group;
+        uint64_t time;
     };
 
     struct wtf_client* wtf_client_create(const char* host,

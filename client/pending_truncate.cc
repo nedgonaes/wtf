@@ -101,7 +101,7 @@ pending_truncate :: try_op()
     //XXX add length parameter to blockmap and modify other code to respect it.
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 1);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
 
     size_t sz;
     attrs[0].datatype = HYPERDATATYPE_INT64;
@@ -110,8 +110,15 @@ pending_truncate :: try_op()
     hyperdex_ds_copy_int(arena, m_length, 
                             &status, &attrs[0].value, &attrs[0].value_sz);
 
+    attrs[1].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "time", 5,
+                            &status, &attrs[1].attr, &sz);
+    hyperdex_ds_copy_int(arena, time(NULL), 
+                            &status, &attrs[1].value, &attrs[1].value_sz);
+
+
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 1);
+        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 2);
 
     if (msg->send() < 0)
     {

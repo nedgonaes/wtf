@@ -147,6 +147,7 @@ class file
         bool is_directory;
         int flags;
         uint64_t mode;
+        uint64_t time;
         std::string owner;
         std::string group;
 
@@ -163,6 +164,7 @@ operator << (std::ostream& lhs, const file& rhs)
     lhs << "\tlength: " << rhs.m_file_length << std::endl;
     lhs << "\tflags: " << rhs.flags << std::endl;
     lhs << "\tmode: " << rhs.mode << std::endl;
+    lhs << "\ttime: " << rhs.time<< std::endl;
     lhs << "\toffset: " << rhs.m_offset<< std::endl;
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
     lhs << "\tblock_size: " << rhs.m_block_size << std::endl;

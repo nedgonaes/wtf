@@ -130,11 +130,13 @@ pending_getattr :: handle_hyperdex_message(client* cl,
             }
             else if (strcmp(attrs[i].attr, "mode") == 0)
             {
-                uint64_t mode;
+                uint64_t mode = 0;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
                 up = up >> mode;
+                std::cout << "BBBBBBBB mode is " << mode << std::endl;
                 e::unpack64be((uint8_t*)&mode, &mode);
+                std::cout << "CCCCCCCC mode is " << mode << std::endl;
                 f->mode = mode;
             }
             else if (strcmp(attrs[i].attr, "owner") == 0)
@@ -147,6 +149,18 @@ pending_getattr :: handle_hyperdex_message(client* cl,
                 std::string group(attrs[i].value, attrs[i].value_sz);
                 f->group = group;
             }
+            else if (strcmp(attrs[i].attr, "time") == 0)
+            {
+                uint64_t t = 0;
+
+                e::unpacker up(attrs[i].value, attrs[i].value_sz);
+                up = up >> t;
+                std::cout << "BBBBBBBB time is " << t << std::endl;
+                e::unpack64be((uint8_t*)&t, &t);
+                std::cout << "CCCCCCCC time is " << t << std::endl;
+                f->time = t;
+
+            }
         }
 
         /*fill out file_attrs*/
@@ -154,6 +168,7 @@ pending_getattr :: handle_hyperdex_message(client* cl,
         m_file_attrs->mode = f->mode;
         m_file_attrs->flags = f->flags;
         m_file_attrs->is_dir = f->is_directory;
+        m_file_attrs->time = f->time;
         m_file_attrs->owner = new char[f->owner.length() + 1];
         m_file_attrs->group = new char[f->group.length() + 1];
         std::strcpy (m_file_attrs->owner, f->owner.c_str());

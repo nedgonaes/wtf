@@ -120,7 +120,16 @@ pending_readdir :: handle_hyperdex_message(client* cl,
         {
             if (strcmp(attrs[i].attr, "path") == 0)
             {
-                m_results.push(std::string(attrs[i].value, attrs[i].value_sz));
+                std::string target = std::string(attrs[i].value, attrs[i].value_sz);
+
+                if (target == cl->m_cwd)
+                {
+                    continue;
+                }
+
+                std::string rel_target = target.substr(m_path.size());
+
+                m_results.push(rel_target);
                 break;
             }
         }

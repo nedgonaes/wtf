@@ -34,6 +34,7 @@
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_put.h"
 #include <time.h>
+#include <pwd.h>
 
 using wtf::pending_mkdir;
 
@@ -105,6 +106,7 @@ pending_mkdir :: try_op()
     attr_t attrs = hyperdex_ds_allocate_attribute(arena, 5);
     size_t sz;
 
+    std::cout << "AAAAAAAAAAA mode is " << m_mode << std::endl;
     attrs[0].datatype = HYPERDATATYPE_INT64;
     hyperdex_ds_copy_string(arena, "mode", 5,
                             &status, &attrs[0].attr, &sz);
@@ -117,31 +119,34 @@ pending_mkdir :: try_op()
     hyperdex_ds_copy_int(arena, 1, 
                             &status, &attrs[1].value, &attrs[1].value_sz);
 
+    unsigned int t = time(NULL);
+    std::cout << "AAAAAAAAAAA time is " << t << std::endl;
     attrs[2].datatype = HYPERDATATYPE_INT64;
     hyperdex_ds_copy_string(arena, "time", 5,
                             &status, &attrs[2].attr, &sz);
-    hyperdex_ds_copy_int(arena, time(NULL), 
+    hyperdex_ds_copy_int(arena, t, 
                             &status, &attrs[2].value, &attrs[2].value_sz);
 
+    struct passwd* p = getpwuid(geteuid());
     attrs[3].datatype = HYPERDATATYPE_STRING;
     hyperdex_ds_copy_string(arena, "owner", 6,
                             &status, &attrs[3].attr, &sz);
     hyperdex_ds_copy_string(arena,
-                            "sean", //XXX
-                            5,
+                            p->pw_name, //XXX
+                            strlen(p->pw_name),
                             &status, &attrs[3].value, &attrs[3].value_sz);
     
     attrs[4].datatype = HYPERDATATYPE_STRING;
     hyperdex_ds_copy_string(arena, "group", 6,
                             &status, &attrs[4].attr, &sz);
     hyperdex_ds_copy_string(arena,
-                            "sean", //XXX
-                            5,
+                            p->pw_name, //XXX
+                            strlen(p->pw_name),
                             &status, &attrs[4].value, &attrs[4].value_sz);
 
 
    e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 2);
+        new message_hyperdex_put(m_cl, "wtf", m_path.c_str(), arena, attrs, 5);
 
     if (msg->send() < 0)
     {

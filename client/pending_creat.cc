@@ -174,5 +174,5 @@ pending_creat :: try_op()
 
     std::string path(m_file->path().get()); 
 
-    return send_put(path, arena, attrs, 5);
+    return send_put(path, arena, attrs, 6);
 }

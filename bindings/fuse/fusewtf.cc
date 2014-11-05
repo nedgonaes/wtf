@@ -4,6 +4,8 @@
 
 #define FUSE_USE_VERSION 26
 
+#include <time.h>
+#include <pwd.h>
 #include <fuse.h>
 #include <stdio.h>
 #include <string.h>
@@ -66,13 +68,6 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
     LOGENTRY;
     memset(stbuf, 0, sizeof(struct stat));
 
-    if (strcmp(path,"/") == 0) 
-    {
-        stbuf->st_mode = S_IFDIR | 0755;
-        stbuf->st_nlink = 2;
-        return 0;
-    }
-
     struct wtf_file_attrs fa;
     wtf_client_returncode status;
     wtf_client_returncode lstatus;
@@ -97,19 +92,28 @@ static int fusewtf_getattr(const char *path, struct stat *stbuf)
     }
 
     //stbuf->st_mode = fa.mode;
-    stbuf->st_mode = 0444;
+    stbuf->st_mode = fa.mode;
+    stbuf->st_mtime = fa.time;
+    //stbuf->st_mtime = time(NULL);
 
     if (fa.is_dir)
     {
         stbuf->st_mode |= S_IFDIR;
+        stbuf->st_nlink = 1; //XXX
     }
     else
     {
         stbuf->st_mode |= S_IFREG;
+        stbuf->st_nlink = 1;
     }
 
     stbuf->st_size = fa.size;
-    stbuf->st_nlink = 1; //XXX
+    
+    struct passwd* p = getpwnam(fa.owner);
+    stbuf->st_uid = p->pw_uid;
+    stbuf->st_gid = p->pw_gid;
+    //stbuf->st_uid = 1001;
+    //stbuf->st_gid = 1001;
 
     std::cout << "stbuf->st_size = " << stbuf->st_size << std::endl;
     std::cout << "stbuf->st_mode = " << stbuf->st_mode << std::endl;
@@ -149,8 +153,16 @@ static int fusewtf_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
             continue;
         }
 
-        if(filler(buf, de, NULL, 0))
-            break;
+        if (*de == '/')
+        {
+            if (filler(buf, de + 1, NULL, 0))
+                break;;
+        }
+        else
+        {
+            if(filler(buf, de, NULL, 0))
+                break;
+        }
     }
     
     return ret;

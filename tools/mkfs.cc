@@ -26,6 +26,7 @@
 
 // POSIX
 #include <errno.h>
+#include <pwd.h>
 
 // E
 #include <e/popt.h>
@@ -83,9 +84,10 @@ main(int argc, const char* argv[])
     hyperdex_client_returncode status;
     int64_t ret = -1;
 
-    struct hyperdex_client_attribute attr[2];
+    struct hyperdex_client_attribute attr[5];
 
     uint64_t mode = 0777;
+    uint64_t t = time(NULL);
     uint64_t dir = 1;
 
     attr[0].attr = "mode";
@@ -98,7 +100,23 @@ main(int argc, const char* argv[])
     attr[1].value_sz = sizeof(dir);
     attr[1].datatype = HYPERDATATYPE_INT64;
 
-    ret = h.put("wtf", "/", strlen("/"), attr, 2, &status);
+    attr[2].attr = "time";
+    attr[2].value = (const char*)&t;
+    attr[2].value_sz = sizeof(t);
+    attr[2].datatype = HYPERDATATYPE_INT64;
+    
+    struct passwd* p = getpwuid(geteuid());
+    attr[3].attr = "owner";
+    attr[3].value = p->pw_name,
+    attr[3].value_sz = 5;
+    attr[3].datatype = HYPERDATATYPE_STRING;
+     
+    attr[4].attr = "group";
+    attr[4].value = p->pw_name;
+    attr[4].value_sz = 6;
+    attr[4].datatype = HYPERDATATYPE_STRING;
+    
+    ret = h.put("wtf", "/", strlen("/"), attr, 5, &status);
     if (ret < 0)
     {
         std::cerr << "mkfs failed with " << status << std::endl;

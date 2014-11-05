@@ -309,7 +309,7 @@ pending_write :: send_metadata_update()
 
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 3);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 4);
 
     attrs[0].datatype = HYPERDATATYPE_INT64;
     hyperdex_ds_copy_string(arena, "mode", 5,
@@ -331,8 +331,14 @@ pending_write :: send_metadata_update()
                             blockmap_update->size(),
                             &status, &attrs[2].value, &attrs[2].value_sz);
 
+    attrs[3].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "time", 5,
+                            &status, &attrs[3].attr, &sz);
+    hyperdex_ds_copy_int(arena, time(NULL), 
+                            &status, &attrs[3].value, &attrs[3].value_sz);
+
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 3);
+        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 4);
 
     if (msg->send() < 0)
     {
