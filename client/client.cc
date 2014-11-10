@@ -1014,8 +1014,8 @@ client :: close(int64_t fd, wtf_client_returncode* status)
 int64_t
 client :: truncate(int fd, off_t length, wtf_client_returncode* status)
 {
-    //XXX: implement truncate.
     TRACE;
+    std::cout << "DDDDDDDD truncate(" << length << ")" << std::endl;
 
     if (!maintain_coord_connection(status))
     {

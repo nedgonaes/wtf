@@ -362,7 +362,7 @@ static int fusewtf_chown(const char *path, uid_t owner, gid_t group)
 static int fusewtf_truncate(const char *path, off_t length)
 {
     LOGENTRY;
-    int ret = 0;
+    int64_t  ret = 0;
     wtf_client_returncode status;
     int64_t fd;
     mode_t mode = 0;
@@ -374,7 +374,22 @@ static int fusewtf_truncate(const char *path, off_t length)
         ret = -ENOENT;
     }
 
-    w->truncate(fd, length, &status);
+    ret = w->loop(reqid, -1, &status);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
+
+    reqid = w->truncate(fd, length, &status);
+
+    ret = w->loop(reqid, -1, &status);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
+
     w->close(fd, &status);
 
     return 0;

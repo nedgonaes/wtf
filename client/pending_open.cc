@@ -144,6 +144,7 @@ pending_open :: handle_hyperdex_message(client* cl,
         }
     }
 
+    std::cout << *m_file << std::endl;
     pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     return true;
 }

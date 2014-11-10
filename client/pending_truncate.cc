@@ -98,39 +98,37 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_truncate :: try_op()
 {
+    //XXX need to also write changes to block server first
+    
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 3);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
 
     m_file->truncate(m_length);
+    std::cout << *m_file << std::endl;
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
 
     size_t sz;
     attrs[0].datatype = HYPERDATATYPE_INT64;
-    hyperdex_ds_copy_string(arena, "length", 7,
+    hyperdex_ds_copy_string(arena, "time", 5,
                             &status, &attrs[0].attr, &sz);
-    hyperdex_ds_copy_int(arena, m_length, 
+    hyperdex_ds_copy_int(arena, time(NULL), 
                             &status, &attrs[0].value, &attrs[0].value_sz);
 
-    attrs[1].datatype = HYPERDATATYPE_INT64;
-    hyperdex_ds_copy_string(arena, "time", 5,
-                            &status, &attrs[1].attr, &sz);
-    hyperdex_ds_copy_int(arena, time(NULL), 
-                            &status, &attrs[1].value, &attrs[1].value_sz);
-
-    attrs[2].datatype = HYPERDATATYPE_STRING;
+    attrs[1].datatype = HYPERDATATYPE_STRING;
     hyperdex_ds_copy_string(arena, "blockmap", 9,
-                            &status, &attrs[2].attr, &sz);
+                            &status, &attrs[1].attr, &sz);
     hyperdex_ds_copy_string(arena, 
                             reinterpret_cast<const char*>(blockmap_update->data()), 
                             blockmap_update->size(),
-                            &status, &attrs[2].value, &attrs[2].value_sz);
+                            &status, &attrs[1].value, &attrs[1].value_sz);
 
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 3);
+        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 2);
 
     if (msg->send() < 0)
     {
+        std::cout << msg->status() << std::endl;
         PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
     }
     else
