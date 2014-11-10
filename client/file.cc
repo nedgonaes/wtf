@@ -304,7 +304,7 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 }
 
 void
-file :: truncate(size_t length)
+file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len)
 {
     block_map::iterator lbound = m_block_map.lower_bound(length);
     if (lbound == m_block_map.end())
@@ -322,7 +322,9 @@ file :: truncate(size_t length)
         {
             m_block_map.erase(lbound);
         }
-
+        
+        len = lbound->second->length();
+        bl = lbound->second->block_locations();
     }
 }
 

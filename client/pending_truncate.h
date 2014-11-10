@@ -59,6 +59,10 @@ class pending_truncate : public pending_aggregation
                                     wtf_client_returncode* status,
                                     e::error* error);
         bool try_op();
+        void do_op();
+        bool send_data(std::vector<block_location> bl, uint32_t len);
+        void apply_metadata_update_locally();
+        void send_metadata_update();
 
    friend class e::intrusive_ptr<pending_aggregation>;
 

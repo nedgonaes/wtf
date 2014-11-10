@@ -69,6 +69,9 @@ namespace wtf __attribute__ ((visibility("hidden")))
             ssize_t read_block(uint64_t sid,
                                uint64_t bid,
                                uint8_t* data, size_t len);
+            ssize_t truncate_block(uint64_t sid,
+                                uint64_t bid,
+                                size_t len);
             void stat();
         private:
             ssize_t splice(int fd_in, size_t offset_in, 

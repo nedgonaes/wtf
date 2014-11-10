@@ -108,6 +108,14 @@ block_storage_manager::read_block(uint64_t sid,
     return m_blockmap.read(bid, data, 0, data_sz);
 }
 
+ssize_t
+block_storage_manager::truncate_block(uint64_t sid,
+        uint64_t bid,
+        size_t len)
+{
+    return m_blockmap.truncate(bid, len);
+}
+
 void
 block_storage_manager::stat()
 {

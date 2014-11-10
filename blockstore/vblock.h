@@ -50,6 +50,7 @@ class vblock
         uint64_t size() { return m_slice_map.size(); }
         uint64_t length();
         size_t pack_size(); 
+        void set_len(size_t len);
 
     public:
         class slice;

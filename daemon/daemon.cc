@@ -657,6 +657,101 @@ daemon :: process_get(const wtf::connection& conn,
 
 
 void
+daemon :: process_truncate(const wtf::connection& conn,
+                            uint64_t nonce,
+                            std::auto_ptr<e::buffer> msg,
+                            e::unpacker up)
+{
+    TRACE;
+    wtf::response_returncode rc;
+    uint64_t sid;
+    uint64_t bid;
+    uint32_t block_len;
+    uint64_t sender;
+    uint32_t num_replicas;
+    ssize_t ret = 0;
+
+    up = up >> sender >>  num_replicas;
+
+    LOG(INFO) << "NUM REPLICAS: " << num_replicas; 
+
+    std::vector<block_location> block_locations;
+
+    bid = UINT64_MAX;
+
+    for (int i = 0; i < num_replicas; ++i)
+    {
+        block_location bl;
+        up = up >> bl;
+
+        if (bl.si == m_us.get())
+        {
+            bid = bl.bi;
+        }
+
+        LOG(INFO) << "block location: " << bl;
+        block_locations.push_back(bl);
+    }
+
+    up = up >> block_len;
+    sid = m_us.get();
+    ret = m_blockman.truncate_block(sid, bid, block_len); 
+
+    LOG(INFO) << "block_len = " << block_len << " (" << e::slice(&block_len, sizeof(block_len)).hex() << ")";
+    LOG(INFO) << "TRUNCATE(" << bid << ") len " << block_len;
+
+    rc = wtf::RESPONSE_SUCCESS;
+
+    LOG(INFO) << "Returning " << rc << " to client.";
+
+    //first server is responsible for forwarding message.
+    if (server_id(block_locations[0].si) == m_us)
+    {
+        LOG(INFO) << "WERE MASTER";
+        std::vector<block_location> forward_locations;
+        for (int i = 1; i < block_locations.size(); ++i)
+        {
+            forward_locations.push_back(block_locations[i]);
+        }
+
+        forward_message(forward_locations, msg);
+    }
+
+    //LOG(INFO) << "SENT TO FORWARD LOCATIONS";
+
+    //Nonce offset for reply
+    for (int i = 0; i < block_locations.size(); ++i)
+    {
+        if (block_locations[i].si == m_us.get())
+        {
+            nonce += i;
+            break;
+        }
+    }
+
+
+    LOG(INFO) << "NONCE IS " << nonce;
+    
+    size_t sz = COMMAND_HEADER_SIZE + 
+                sizeof(uint64_t) + /* block id */
+                sizeof(uint64_t);  /* block_len */
+    std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
+    e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
+    pa = pa << RESP_TRUNCATE << nonce << rc 
+            << bid << block_len;
+
+    //Send an ack back to the client that originated the first transfer.
+    wtf::connection c;
+    c.token = sender;
+    c.is_client = true;
+    if (!send(c, resp))
+    {
+        LOG(WARNING) << "Failed to send to client.";
+    }
+
+}
+
+void
 daemon :: process_update(const wtf::connection& conn,
                             uint64_t nonce,
                             std::auto_ptr<e::buffer> msg,

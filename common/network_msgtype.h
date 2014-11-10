@@ -38,6 +38,8 @@ enum wtf_network_msgtype
 {
     REQ_GET = 8,
     RESP_GET = 9,
+    REQ_TRUNCATE = 10,
+    RESP_TRUNCATE = 11,
 
     REQ_PUT = 16,
     RESP_PUT = 17,

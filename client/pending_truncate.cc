@@ -29,6 +29,8 @@
 #include <hyperdex/client.hpp>
 
 // WTF
+#include "client/constants.h"
+#include "common/macros.h"
 #include "client/pending_truncate.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_put.h"
@@ -98,13 +100,80 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_truncate :: try_op()
 {
+    //If there's some other op in front of this, put this in the list and wait
+    //for that other op to run us
+   
+    do_op();
+    return true;
+}
+
+void
+pending_truncate :: do_op()
+{
+    std::vector<block_location> bl;
+    uint32_t len;
+
+    m_file->truncate(m_length, bl, len);
+
+    if (bl[0] != block_location())
+    {
+        std::cout << "sending data" << std::endl;
+
+        if (!send_data(bl, len))
+        {
+            std::cout << "CANT SEND DATA!!!" << std::endl;
+            PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
+        }
+    }
+    else
+    {
+        //XXX send hyperdex op right away. (there are no half blocks to clip)
+    }
+}
+
+bool
+pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len)
+{
+    uint32_t num_replicas = bl.size();
+
+    size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
+        + sizeof(uint64_t) // m_token
+        + sizeof(uint32_t) // number of block locations
+        + num_replicas*block_location::pack_size()
+        + sizeof(uint32_t); // len 
+    std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
+    e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
+    pa = pa << m_cl->m_token << num_replicas;
+
+    std::vector<server_id> servers;
+
+    for (int i = 0; i < num_replicas; ++i)
+    {
+        pa = pa << bl[i];
+        servers.push_back(server_id(bl[i].si));
+    }
+
+    pa = pa << len;
+
+
+    //SEND
+    wtf_client_returncode status;
+    m_cl->perform_aggregation(servers, this, REQ_TRUNCATE, msg, &status);
+
+    return true;
+}
+
+
+
+void
+pending_truncate :: send_metadata_update()
+{
     //XXX need to also write changes to block server first
     
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
     attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
 
-    m_file->truncate(m_length);
     std::cout << *m_file << std::endl;
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
 
@@ -137,5 +206,4 @@ pending_truncate :: try_op()
         e::intrusive_ptr<message> m = msg.get();
         pending_aggregation::handle_sent_to_hyperdex(m);
     }
-    return true;
 }

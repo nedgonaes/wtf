@@ -424,3 +424,30 @@ blockmap :: read(uint64_t bid,
 
 }
 
+ssize_t
+blockmap :: truncate(uint64_t bid,
+                     size_t len)
+{
+    vblock vb;
+    if (read_offset_map(bid, vb) < 0)
+    {
+        TRACE;
+        return -1;
+    }
+
+    bid = m_block_id++;
+
+    TRACE;
+    vb.set_len(len);
+
+    if (write_offset_map(bid, vb) < 0)
+    {
+        TRACE;
+        return -1;
+    }
+    else
+    {
+        TRACE;
+        return status;
+    }
+}
