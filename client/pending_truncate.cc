@@ -98,10 +98,12 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_truncate :: try_op()
 {
-    //XXX add length parameter to blockmap and modify other code to respect it.
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 3);
+
+    m_file->truncate(m_length);
+    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
 
     size_t sz;
     attrs[0].datatype = HYPERDATATYPE_INT64;
@@ -116,9 +118,16 @@ pending_truncate :: try_op()
     hyperdex_ds_copy_int(arena, time(NULL), 
                             &status, &attrs[1].value, &attrs[1].value_sz);
 
+    attrs[2].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "blockmap", 9,
+                            &status, &attrs[2].attr, &sz);
+    hyperdex_ds_copy_string(arena, 
+                            reinterpret_cast<const char*>(blockmap_update->data()), 
+                            blockmap_update->size(),
+                            &status, &attrs[2].value, &attrs[2].value_sz);
 
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 2);
+        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 3);
 
     if (msg->send() < 0)
     {

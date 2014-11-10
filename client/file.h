@@ -103,7 +103,7 @@ class file
         uint64_t length();
         std::auto_ptr<e::buffer> serialize_blockmap();
         void truncate();
-        void truncate(off_t length);
+        void truncate(size_t length);
 
     private:
         friend class e::intrusive_ptr<file>;

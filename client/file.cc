@@ -303,6 +303,29 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
     m_current_block = b;
 }
 
+void
+file :: truncate(size_t length)
+{
+    block_map::iterator lbound = m_block_map.lower_bound(length);
+    if (lbound == m_block_map.end())
+    {
+        //XXX Fill in blank blocks.
+    }
+    else
+    {
+        //Cut off last block
+        size_t len = length - lbound->first + 1;
+        lbound->second->set_length(length);
+
+        //remove remaining whole blocks from the block map.
+        while (++lbound != m_block_map.end())
+        {
+            m_block_map.erase(lbound);
+        }
+
+    }
+}
+
 size_t
 file :: get_block_length(size_t offset)
 {
@@ -360,14 +383,3 @@ file :: pack_size()
     return ret;
 }
 
-void
-file :: truncate(off_t length)
-{
-    //XXX: implement truncate 
-}
-
-void
-file :: truncate()
-{
-    //XXX: implement truncate
-}
