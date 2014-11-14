@@ -67,7 +67,6 @@ noinst_HEADERS += client/constants.h
 noinst_HEADERS += common/configuration_flags.h
 noinst_HEADERS += client/client.h
 noinst_HEADERS += common/block.h
-noinst_HEADERS += blockstore/vblock.h
 noinst_HEADERS += common/coordinator_link.h
 noinst_HEADERS += common/block_location.h
 noinst_HEADERS += common/server.h
@@ -90,6 +89,7 @@ noinst_HEADERS += daemon/coordinator_link_wrapper.h
 noinst_HEADERS += daemon/daemon.h
 noinst_HEADERS += blockstore/blockmap.h
 noinst_HEADERS += blockstore/disk.h
+noinst_HEADERS += blockstore/vblock.h
 noinst_HEADERS += visibility.h
 
 noinst_PROGRAMS += wtf-stat

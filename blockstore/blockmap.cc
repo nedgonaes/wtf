@@ -1,4 +1,5 @@
 #include "common/macros.h"
+#include "blockstore/vblock.h"
 #include "blockstore/blockmap.h"
 
 #define BACKING_SIZE 100000000000 
@@ -447,7 +448,6 @@ blockmap :: truncate(uint64_t bid,
     }
     else
     {
-        TRACE;
-        return status;
+        return len;
     }
 }

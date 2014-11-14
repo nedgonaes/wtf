@@ -400,3 +400,8 @@ vblock :: get_slices(size_t offset, size_t len, vblock::slice_map::const_iterato
     return -1;
 }
 
+void
+vblock :: set_len(size_t len)
+{
+// XXX
+}
