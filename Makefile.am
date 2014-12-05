@@ -399,11 +399,9 @@ EXTRA_DIST += tools/stopcluster.sh
 ################################################################################
 
 wtf_wtfio_SOURCES = benchmarks/wtfio.cc
-wtf_wtfio_CPPFLAGS = $(CPPFLAGS)
 wtf_wtfio_LDADD = libwtf-client.la $(E_LIBS) -lpopt
 
 wtf_wtfio_checker_SOURCES = benchmarks/wtfio-checker.cc
-wtf_wtfio_checker_CPPFLAGS = $(CPPFLAGS)
 wtf_wtfio_checker_LDADD = libwtf-client.la $(E_LIBS) -lpopt
 
 

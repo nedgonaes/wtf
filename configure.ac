@@ -75,11 +75,6 @@ Set JAVAC to point to your Java compiler.
 fi
 AC_SUBST([JNI_CPPFLAGS], [${JNI_CPPFLAGS}])
 
-if test x"${need_swig}" = xyes; then
-    AX_PKG_SWIG(1.3)
-    SWIG_ENABLE_CXX
-fi
-
 # Checks for libraries.
 AC_CHECK_LIB([popt], [poptGetContext], [], [AC_MSG_ERROR([
 ---------------------------------------

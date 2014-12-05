@@ -1,4 +1,8 @@
-WTF_DIR=/home/sean/src/wtf
+#!/usr/bin/zsh 
+
+WTF_DIR=${HOME}/checkouts/wtf
+
+export WTF_COORD_LIB=${WTF_DIR}/.libs/libwtf-coordinator.so
 WTF_COORDINATOR=${WTF_DIR}/.wtf_coordinator_host
 WTF_PORT=1981
 HYPERDEX_COORDINATOR=${WTF_DIR}/.hyperdex_coordinator_host
@@ -14,6 +18,8 @@ HYPERDEX_COORDINATOR_DATA_DIR=${DATA_DIR}/hyperdex-coordinator
 HYPERDEX=hyperdex
 WTF=${WTF_DIR}/wtf
 
+if test '!' -d ${DATA_DIR}; then echo creating data directory && mkdir -p ${DATA_DIR}; fi
+
 ALL_HOSTS=`mktemp`
 sort .wtf_client_hosts .wtf_daemon_hosts .hyperdex_daemon_hosts .wtf_coordinator_host .hyperdex_coordinator_host | sort -u > ${ALL_HOSTS}
 
@@ -28,8 +34,6 @@ sort .wtf_daemon_hosts .hyperdex_daemon_hosts .wtf_coordinator_host .hyperdex_co
 
 HC=`cat ${HYPERDEX_COORDINATOR}`
 WC=`cat ${WTF_COORDINATOR}`
-
-
 
 kill_cluster()
 {
