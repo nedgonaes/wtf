@@ -426,7 +426,7 @@ blockmap :: read(uint64_t bid,
 }
 
 ssize_t
-blockmap :: truncate(uint64_t bid,
+blockmap :: truncate(uint64_t& bid,
                      size_t len)
 {
     vblock vb;

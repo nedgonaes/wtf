@@ -316,6 +316,8 @@ file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len)
         //Cut off last block
         size_t len = length - lbound->first + 1;
         lbound->second->set_length(length);
+        len = lbound->second->length();
+        bl = lbound->second->block_locations();
 
         //remove remaining whole blocks from the block map.
         while (++lbound != m_block_map.end())
@@ -323,8 +325,6 @@ file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len)
             m_block_map.erase(lbound);
         }
         
-        len = lbound->second->length();
-        bl = lbound->second->block_locations();
     }
 }
 

@@ -499,6 +499,10 @@ daemon :: loop(size_t thread)
                 LOG(INFO) << "RECVD UPDATE";
                 process_update(conn, nonce, msg, up);
                 break;
+            case REQ_TRUNCATE:
+                LOG(INFO) << "RECVD TRUNCATE";
+                process_truncate(conn, nonce, msg, up);
+                break;
             default:
                 LOG(WARNING) << "unknown message type; here's some hex:  " << msg->hex();
                 break;

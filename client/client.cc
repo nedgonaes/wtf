@@ -343,6 +343,8 @@ client :: loop(int timeout, wtf_client_returncode* status)
 int64_t
 client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_for)
 {
+    std::cout << "HEELOOOO" << std::endl;
+    std::cout << "WAIT FOR = " << wait_for << std::endl;
 	TRACE;
     /*
      * This is for internal use only.  We loop for any operation to
@@ -374,30 +376,29 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
     {
         if (1)
         {
-            std::cerr << "WAIT FOR = " << wait_for << std::endl;
 
             for (std::map<uint64_t, e::intrusive_ptr<pending_aggregation> >::iterator it = m_yieldable.begin(); 
                     it != m_yieldable.end(); ++it)
             {
-                std::cerr << "YIELDABLE " << it->first << std::endl; 
+                std::cout << "YIELDABLE " << it->first << std::endl; 
             }
 
             for (std::map<uint64_t, pending_server_pair>::iterator it = m_pending_hyperdex_ops.begin(); 
                     it != m_pending_hyperdex_ops.end(); ++it)
             {
-                std::cerr << "PENDINGHYPERDEX " << it->first << std::endl; 
+                std::cout << "PENDINGHYPERDEX " << it->first << std::endl; 
             }
 
             for (std::map<uint64_t, pending_server_pair>::iterator it = m_pending_ops.begin(); 
                     it != m_pending_ops.end(); ++it)
             {
-                std::cerr << "PENDINGWTF " << it->first << std::endl; 
+                std::cout << "PENDINGWTF " << it->first << std::endl; 
             }
 
             for (std::list<pending_server_pair>::iterator it = m_failed.begin(); 
                     it != m_failed.end(); ++it)
             {
-                std::cerr << "FAILED " << it->si << std::endl; 
+                std::cout << "FAILED " << it->si << std::endl; 
             }
         }
 

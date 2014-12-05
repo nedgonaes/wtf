@@ -94,6 +94,17 @@ pending_truncate :: handle_hyperdex_message(client* cl,
     return true;
 }
 
+bool
+pending_truncate :: handle_wtf_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer>,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
+{
+    //XXX: rewrite this!
+}
+
 typedef struct hyperdex_ds_arena* arena_t;
 typedef struct hyperdex_client_attribute* attr_t;
 

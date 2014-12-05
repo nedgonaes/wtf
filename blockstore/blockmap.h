@@ -54,7 +54,7 @@ namespace wtf __attribute__ ((visibility("default")))
                         uint8_t* data, 
                         size_t data_offset,
                         size_t data_sz);
-            ssize_t truncate(uint64_t bid,
+            ssize_t truncate(uint64_t& bid,
                              size_t len);
         private:
             ssize_t read_offset_map(uint64_t bid, vblock& vb);

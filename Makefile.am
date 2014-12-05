@@ -325,11 +325,11 @@ shell_wrappers =
 #shell_wrappers += test/sh/getattr_test.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.basic.sh
 #shell_wrappers += test/sh/readwrite_sync_stress_test.2GB.sh
-#shell_wrappers += test/sh/closetest.sh
+shell_wrappers += test/sh/closetest.sh
 #shell_wrappers += test/sh/lseektest.sh
 #shell_wrappers += test/sh/lseektest2.sh
 #shell_wrappers += test/sh/appendtest.sh
-shell_wrappers += test/sh/truncatetest.sh
+#shell_wrappers += test/sh/truncatetest.sh
 
 #wtf-test_readwrite
 check_PROGRAMS += test/readwrite-sync-stress-test
