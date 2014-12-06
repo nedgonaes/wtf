@@ -99,6 +99,7 @@ class vblock::slice
         static size_t pack_size();
         size_t offset() { return m_offset; }
         size_t length() { return m_length; }
+        void set_length(size_t length) { m_length = length; }
         size_t disk_offset() { return m_disk_offset; }
 
     private:

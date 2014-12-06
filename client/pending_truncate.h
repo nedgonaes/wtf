@@ -60,14 +60,22 @@ class pending_truncate : public pending_aggregation
                                     e::error* error);
         bool try_op();
         void do_op();
-        bool send_data(std::vector<block_location> bl, uint32_t len);
+        bool send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset, uint32_t block_capacity);
         void apply_metadata_update_locally();
         void send_metadata_update();
+
+        bool handle_wtf_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer>,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* err);
 
    friend class e::intrusive_ptr<pending_aggregation>;
 
     // noncopyable
     private:
+        typedef std::map<uint64_t, e::intrusive_ptr<block> > changeset_t;
         pending_truncate(const pending_truncate& other);
         pending_truncate& operator = (const pending_truncate& rhs);
 
@@ -76,6 +84,7 @@ class pending_truncate : public pending_aggregation
         e::intrusive_ptr<file> m_file;
         off_t m_length;
         bool m_done;
+        changeset_t m_changeset;
 };
 
 }

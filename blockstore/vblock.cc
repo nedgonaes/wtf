@@ -403,5 +403,20 @@ vblock :: get_slices(size_t offset, size_t len, vblock::slice_map::const_iterato
 void
 vblock :: set_len(size_t len)
 {
-// XXX
+    slice_map::iterator it = m_slice_map.begin();
+    for (; it != m_slice_map.end(); it++)
+    {
+        if (it->first + it->second->length() >= len)
+        {
+            it->second->set_length(len - it->first);
+            break;
+        }
+    }
+
+    it++;
+
+    for (; it != m_slice_map.end(); it++)
+    {
+        m_slice_map.erase(it);
+    }
 }

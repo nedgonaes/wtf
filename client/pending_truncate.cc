@@ -45,6 +45,7 @@ pending_truncate :: pending_truncate(client* cl, int64_t client_visible_id,
     , m_file(f)
     , m_length(length)
     , m_done(false)
+    , m_changeset()
 {
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
@@ -94,6 +95,64 @@ pending_truncate :: handle_hyperdex_message(client* cl,
     return true;
 }
 
+bool
+pending_truncate :: handle_wtf_message(client* cl,
+                                    const server_id& si,
+                                    std::auto_ptr<e::buffer> msg,
+                                    e::unpacker up,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
+{
+    uint64_t bi;
+    uint64_t file_offset;
+    uint32_t block_capacity;
+    uint32_t block_length;
+    e::intrusive_ptr<block> bl;
+    response_returncode rc;
+
+    pending_aggregation::handle_wtf_message(cl, si, msg, up, status, err);
+    up = up >> rc >> bi >> block_capacity >> file_offset >> block_length;
+
+    std::cout << "RECEIVED " << rc << std::endl;
+    std::cout << "bi = " << bi << std::endl;
+    std::cout << "file_offset = " << file_offset << std::endl;
+    std::cout << "block_capacity = " << block_capacity << std::endl;
+    std::cout << "block_length = " << block_length << std::endl;
+
+    *status = WTF_CLIENT_SUCCESS;
+    *err = e::error();
+
+    changeset_t::iterator it = m_changeset.find(file_offset);
+
+    if (it == m_changeset.end())
+    {
+        bl = new block(block_capacity, file_offset, 0);
+        bl->set_length(block_length);
+        bl->set_offset(file_offset);
+        m_changeset[file_offset] = bl;
+    }
+    else
+    {
+        bl = it->second;
+    }
+
+    bl->add_replica(block_location(si.get(), bi));
+
+    if (this->aggregation_done())
+    {
+        apply_metadata_update_locally();
+        send_metadata_update(); 
+    }
+    else
+    {
+        std::cout << "AGGREGATION NOT DONE!!!!!1!!!ONE!" << std::endl;
+    }
+
+    return true;
+
+
+}
+
 typedef struct hyperdex_ds_arena* arena_t;
 typedef struct hyperdex_client_attribute* attr_t;
 
@@ -112,14 +171,16 @@ pending_truncate :: do_op()
 {
     std::vector<block_location> bl;
     uint32_t len;
+    uint32_t block_capacity;
+    uint64_t file_offset; 
 
-    m_file->truncate(m_length, bl, len);
+    m_file->truncate(m_length, bl, len, file_offset, block_capacity);
 
     if (bl[0] != block_location())
     {
         std::cout << "sending data" << std::endl;
 
-        if (!send_data(bl, len))
+        if (!send_data(bl, len, file_offset, block_capacity))
         {
             std::cout << "CANT SEND DATA!!!" << std::endl;
             PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
@@ -132,7 +193,7 @@ pending_truncate :: do_op()
 }
 
 bool
-pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len)
+pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset, uint32_t block_capacity)
 {
     uint32_t num_replicas = bl.size();
 
@@ -140,6 +201,8 @@ pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len)
         + sizeof(uint64_t) // m_token
         + sizeof(uint32_t) // number of block locations
         + num_replicas*block_location::pack_size()
+        + sizeof(uint32_t) //block_capacity
+        + sizeof(uint64_t) //file_offset
         + sizeof(uint32_t); // len 
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
     e::buffer::packer pa = msg->pack_at(WTF_CLIENT_HEADER_SIZE_REQ);
@@ -153,7 +216,7 @@ pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len)
         servers.push_back(server_id(bl[i].si));
     }
 
-    pa = pa << len;
+    pa = pa << block_capacity << file_offset << len;
 
 
     //SEND
@@ -164,44 +227,66 @@ pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len)
 }
 
 
+void
+pending_truncate :: apply_metadata_update_locally()
+{
+    TRACE;
+    m_file->apply_changeset(m_changeset);
+}
 
 void
 pending_truncate :: send_metadata_update()
 {
-    //XXX need to also write changes to block server first
-    
-    hyperdex_ds_returncode status;
-    arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 2);
-
-    std::cout << *m_file << std::endl;
-    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
+    TRACE;
 
     size_t sz;
+
+    std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
+    uint64_t mode = m_file->mode;
+    uint64_t directory = m_file->is_directory;
+
+    hyperdex_ds_returncode status;
+    arena_t arena = hyperdex_ds_arena_create();
+    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 4);
+
     attrs[0].datatype = HYPERDATATYPE_INT64;
-    hyperdex_ds_copy_string(arena, "time", 5,
+    hyperdex_ds_copy_string(arena, "mode", 5,
                             &status, &attrs[0].attr, &sz);
-    hyperdex_ds_copy_int(arena, time(NULL), 
+    hyperdex_ds_copy_int(arena, mode, 
                             &status, &attrs[0].value, &attrs[0].value_sz);
 
-    attrs[1].datatype = HYPERDATATYPE_STRING;
-    hyperdex_ds_copy_string(arena, "blockmap", 9,
+    attrs[1].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "directory", 10,
                             &status, &attrs[1].attr, &sz);
+    hyperdex_ds_copy_int(arena, directory, 
+                            &status, &attrs[1].value, &attrs[1].value_sz);
+
+    attrs[2].datatype = HYPERDATATYPE_STRING;
+    hyperdex_ds_copy_string(arena, "blockmap", 9,
+                            &status, &attrs[2].attr, &sz);
     hyperdex_ds_copy_string(arena, 
                             reinterpret_cast<const char*>(blockmap_update->data()), 
                             blockmap_update->size(),
-                            &status, &attrs[1].value, &attrs[1].value_sz);
+                            &status, &attrs[2].value, &attrs[2].value_sz);
 
+    attrs[3].datatype = HYPERDATATYPE_INT64;
+    hyperdex_ds_copy_string(arena, "time", 5,
+                            &status, &attrs[3].attr, &sz);
+    hyperdex_ds_copy_int(arena, time(NULL), 
+                            &status, &attrs[3].value, &attrs[3].value_sz);
+
+    TRACE;
     e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 2);
+        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 4);
 
     if (msg->send() < 0)
     {
-        std::cout << msg->status() << std::endl;
+        TRACE;
         PENDING_ERROR(IO) << "Couldn't put to HyperDex: " << msg->status();
     }
     else
     {
+        TRACE;
         m_cl->add_hyperdex_op(msg->reqid(), this);
         e::intrusive_ptr<message> m = msg.get();
         pending_aggregation::handle_sent_to_hyperdex(m);

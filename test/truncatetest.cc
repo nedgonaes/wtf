@@ -85,6 +85,7 @@ worker_thread(const armnod::argparser& _f,
     try
     {
 
+
         wtf::Client cl(_connect_host, _connect_port, _hyper_host, _hyper_port);
             std::string v = "HELLO WORLD";
             wtf_client_returncode status = WTF_CLIENT_GARBAGE;
@@ -99,13 +100,13 @@ worker_thread(const armnod::argparser& _f,
             reqid = cl.open(f.data(), O_CREAT | O_RDWR, mode_t(0777), 1, _block_size, &fd, &status);
             if (reqid < 0)
             {
-                WTF_TEST_FAIL(0, "failed to open file");
+                WTF_TEST_FAIL(0, status);
             }
 
             reqid = cl.loop(reqid, -1, &lstatus);
             if (reqid < 0)
             {
-                WTF_TEST_FAIL(0, "failed to open file");
+                WTF_TEST_FAIL(0, lstatus);
             }
             
             /* Write some stuff to the random file, in random size chunks. */
@@ -231,9 +232,9 @@ worker_thread(const armnod::argparser& _f,
 
             }
 
-            if(std::string(buf) != v)
+            if(std::string(buf, buf_sz) != v)
             {
-                WTF_TEST_FAIL(0, std::string(buf) << "!=" << v);;
+                WTF_TEST_FAIL(0, std::string(buf, buf_sz) << "!=" << v);;
             }
 
             rc = WTF_CLIENT_GARBAGE;
@@ -259,6 +260,7 @@ worker_thread(const armnod::argparser& _f,
     {
         WTF_TEST_FAIL(0, "error: " << e.what());
     }
+
 }
 
 int
