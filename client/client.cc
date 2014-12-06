@@ -1034,7 +1034,7 @@ client :: truncate(int fd, off_t length, wtf_client_returncode* status)
     int64_t client_id = m_next_client_id++;
     e::intrusive_ptr<pending_aggregation> op;
     op = new pending_truncate(this, client_id, f, length, status);
-
+    f->add_pending_op(client_id);
     if (op->try_op())
     {
         TRACE;

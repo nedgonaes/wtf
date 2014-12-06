@@ -670,6 +670,8 @@ daemon :: process_truncate(const wtf::connection& conn,
     wtf::response_returncode rc;
     uint64_t sid;
     uint64_t bid;
+    uint32_t block_capacity;
+    uint64_t file_offset;
     uint32_t block_len;
     uint64_t sender;
     uint32_t num_replicas;
@@ -697,7 +699,11 @@ daemon :: process_truncate(const wtf::connection& conn,
         block_locations.push_back(bl);
     }
 
-    up = up >> block_len;
+    up = up >> block_capacity >> file_offset >> block_len;
+    LOG(INFO) << "block_capacity = " << block_capacity;
+    LOG(INFO) << "file_offset= " << file_offset;
+    LOG(INFO) << "block_len = " << block_len;
+
     sid = m_us.get();
     ret = m_blockman.truncate_block(sid, bid, block_len); 
 
@@ -738,11 +744,13 @@ daemon :: process_truncate(const wtf::connection& conn,
     
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */
-                sizeof(uint64_t);  /* block_len */
+                sizeof(uint32_t) + /* block_capacity */
+                sizeof(uint64_t) + /* file_offset */
+                sizeof(uint32_t);  /* block_len */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << RESP_TRUNCATE << nonce << rc 
-            << bid << block_len;
+            << bid << block_capacity << file_offset << block_len;
 
     //Send an ack back to the client that originated the first transfer.
     wtf::connection c;

@@ -353,6 +353,7 @@ test_appendtest_SOURCES = test/appendtest.cc
 test_appendtest_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 
 check_PROGRAMS += test/truncatetest
+noinst_PROGRAMS += test/truncatetest
 test_truncatetest_SOURCES = test/truncatetest.cc 
 test_truncatetest_LDADD = libwtf-client.la $(E_LIBS) -lpopt -larmnod
 

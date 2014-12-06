@@ -304,7 +304,7 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 }
 
 void
-file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len)
+file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len, uint64_t& file_offset, uint32_t& block_capacity)
 {
     block_map::iterator lbound = m_block_map.lower_bound(length);
     if (lbound == m_block_map.end())
@@ -315,8 +315,12 @@ file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len)
     {
         //Cut off last block
         size_t len = length - lbound->first + 1;
+        file_offset = lbound->first;
+        block_capacity = lbound->second->capacity();
+        std::cout << "BLOCK CAPACITY = " << block_capacity << std::endl;
         lbound->second->set_length(length);
         len = lbound->second->length();
+        std::cout << "BLOCK LENGTH = " << len << std::endl;
         bl = lbound->second->block_locations();
 
         //remove remaining whole blocks from the block map.

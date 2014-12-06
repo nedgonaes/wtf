@@ -135,7 +135,7 @@ worker_thread(const armnod::argparser& _f,
 
             if (reqid < 0)
             {
-                //WTF_TEST_FAIL(0, "XXX");;
+                WTF_TEST_FAIL(0, "XXX");;
                  
             }
 
@@ -195,7 +195,7 @@ worker_thread(const armnod::argparser& _f,
 
             if (reqid < 0)
             {
-                //WTF_TEST_FAIL(0, "XXX");;
+                WTF_TEST_FAIL(0, "XXX");;
                  
             }
 
@@ -232,9 +232,9 @@ worker_thread(const armnod::argparser& _f,
 
             }
 
-            if(std::string(buf) != v)
+            if(std::string(buf, buf_sz) != v)
             {
-                //WTF_TEST_FAIL(0, std::string(buf) << "!=" << v);;
+                WTF_TEST_FAIL(0, std::string(buf, buf_sz) << "!=" << v);;
             }
 
             rc = WTF_CLIENT_GARBAGE;
@@ -244,7 +244,7 @@ worker_thread(const armnod::argparser& _f,
 
             if (reqid < 0)
             {
-                //WTF_TEST_FAIL(0, "XXX");;
+                WTF_TEST_FAIL(0, "XXX");;
                  
             }
 
