@@ -144,7 +144,14 @@ pending_truncate :: handle_wtf_message(client* cl,
         bl = it->second;
     }
 
-    bl->add_replica(block_location(si.get(), bi));
+    if (bl->length() > 0)
+    {
+        bl->add_replica(block_location(si.get(), bi));
+    }
+    else
+    {
+        bl->add_replica(block_location());
+    }
 
     if (this->aggregation_done())
     {
