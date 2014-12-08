@@ -67,6 +67,7 @@ pending_truncate :: yield(wtf_client_returncode* status, e::error* err)
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
+    //assert(false);
     m_done = true;
     return true;
 }
@@ -176,6 +177,8 @@ pending_truncate :: do_op()
 
     m_file->truncate(m_length, bl, len, file_offset, block_capacity);
 
+    std::cout << "TRUNCATE RETURNED len = " << len << std::endl;
+
     if (bl[0] != block_location())
     {
         std::cout << "sending data" << std::endl;
@@ -244,6 +247,8 @@ pending_truncate :: send_metadata_update()
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
     uint64_t mode = m_file->mode;
     uint64_t directory = m_file->is_directory;
+
+    std::cout << *m_file << std::endl;
 
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();

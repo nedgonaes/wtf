@@ -33,18 +33,20 @@ using wtf::message_hyperdex_condput;
 message_hyperdex_condput :: message_hyperdex_condput(client* cl,
                                              const char* space,
                                              const char* key,
-                                             const struct hyperdex_ds_arena* arena,
+                                             const struct hyperdex_ds_arena* checks_arena,
                                              const hyperdex_client_attribute_check* checks,
                                              size_t checks_sz,
+                                             const struct hyperdex_ds_arena* attrs_arena,
                                              const hyperdex_client_attribute* attrs,
                                              size_t attrs_sz)
     : message(cl, OPCODE_HYPERDEX_PUT) 
     , m_space(space)
     , m_key(key)
-    , m_arena(arena)
+    , m_checks_arena(checks_arena)
     , m_status(HYPERDEX_CLIENT_GARBAGE)
     , m_checks(checks)
     , m_checks_sz(checks_sz)
+    , m_attrs_arena(attrs_arena)
     , m_attrs(attrs)
     , m_attrs_size(attrs_sz)
 {

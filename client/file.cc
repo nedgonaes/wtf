@@ -314,7 +314,7 @@ file :: truncate(size_t length, std::vector<block_location>& bl, uint32_t& len, 
     else
     {
         //Cut off last block
-        size_t len = length - lbound->first + 1;
+        len = length - lbound->first + 1;
         file_offset = lbound->first;
         block_capacity = lbound->second->capacity();
         std::cout << "BLOCK CAPACITY = " << block_capacity << std::endl;
