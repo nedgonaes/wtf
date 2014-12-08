@@ -61,6 +61,7 @@ pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f
     , m_next(NULL)
     , m_deferred(false)
     , m_retry(false)
+    , m_retried(false)
 {
     TRACE;
     set_status(WTF_CLIENT_SUCCESS);
@@ -152,18 +153,8 @@ pending_write :: handle_wtf_message(client* cl,
 
     if (this->aggregation_done())
     {
-        m_buffer_descriptor->remove_op();
-        m_buffer_descriptor->print();
-
         apply_metadata_update_locally();
         send_metadata_update(); 
-
-        if (m_next.get() != NULL)
-        {
-            m_next->do_op();
-            std::cout << "Running next op at offset " << m_file_offset << std::endl;
-        }
-
     }
 
     return true;
@@ -200,7 +191,7 @@ pending_write :: send_data()
     }
 
     std::cout << "BLOCK CAPACITY: " << m_block_capacity << std::endl;
-    std::cout << "FILE OFFSET: " << m_block_capacity << std::endl;
+    std::cout << "FILE OFFSET: " << m_file_offset << std::endl;
     std::cout << "BLOCK OFFSET: " << m_block_offset << std::endl;
 
     pa = pa << m_block_offset << m_block_capacity << m_file_offset;
@@ -246,9 +237,15 @@ pending_write :: do_op()
 
     m_old_blockmap = m_file->serialize_blockmap();
     //need to update block locations if we wrote new blocks
-    if (m_deferred)
+    if (m_deferred || m_retried)
     {
+        TRACE;
         m_file->copy_block_locations(m_file_offset, m_block_locations);
+
+        if (m_block_locations.empty())
+        {
+            std::cout << "BLOCK LOCATIONS LIST IS EMPTY" << std::endl;
+        }
 
         for (int i = 0; i < m_block_locations.size(); ++i)
         {
@@ -272,24 +269,45 @@ pending_write :: handle_hyperdex_message(client* cl,
                                     e::error* err)
 {
     TRACE;
-    //e::intrusive_ptr<message_hyperdex_put> msg = dynamic_cast<message_hyperdex_put*>(m_outstanding_hyperdex[0].get());
-    pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+    std::cout << "HYPERDEX RETURNED " << rc << std::endl;
 
     if (m_retry)
     {
         m_retry = false;
+        m_retried = true;
+
+        e::intrusive_ptr<message_hyperdex_get> msg = dynamic_cast<message_hyperdex_get*>(m_outstanding_hyperdex[0].get());
+        pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+
         handle_new_metadata(cl, reqid, rc, status, err);
         /*retry the op from beginning*/
-        try_op();
+        do_op();
     }
     else
     {
-        if (rc != HYPERDEX_CLIENT_SUCCESS)
+        e::intrusive_ptr<message_hyperdex_condput> msg = dynamic_cast<message_hyperdex_condput*>(m_outstanding_hyperdex[0].get());
+        pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+
+        std::cout << "CONDPUT STATUS WAS " << msg->status() << std::endl;
+        
+        if (rc != HYPERDEX_CLIENT_SUCCESS  || msg->status() != HYPERDEX_CLIENT_SUCCESS)
         {
             m_retry = true;
             get_new_metadata();
         }
+        else
+        {
+            m_buffer_descriptor->remove_op();
+            m_buffer_descriptor->print();
+
+            if (m_next.get() != NULL)
+            {
+                m_next->do_op();
+                std::cout << "Running next op at offset " << m_file_offset << std::endl;
+            }
+        }
     }
+
 
     return true;
 }

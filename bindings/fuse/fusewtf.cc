@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
 //    fusewtf_oper.link       = fusewtf_link;
 //    fusewtf_oper.chmod      = fusewtf_chmod;
 //    fusewtf_oper.chown      = fusewtf_chown;
-//    fusewtf_oper.truncate   = fusewtf_truncate;
+    fusewtf_oper.truncate   = fusewtf_truncate;
     fusewtf_oper.ftruncate  = fusewtf_ftruncate;
 //    fusewtf_oper.fsync      = fusewtf_fsync;
 #if FUSE_VERSION >= 25

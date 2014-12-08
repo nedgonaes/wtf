@@ -47,23 +47,27 @@ pending_truncate :: pending_truncate(client* cl, int64_t client_visible_id,
     , m_done(false)
     , m_changeset()
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_truncate :: ~pending_truncate() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_truncate :: can_yield()
 {
+    TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
 pending_truncate :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
@@ -75,6 +79,7 @@ pending_truncate :: yield(wtf_client_returncode* status, e::error* err)
 void
 pending_truncate :: handle_sent_to_hyperdex(e::intrusive_ptr<message> msg)
 {
+    TRACE;
     pending_aggregation::handle_sent_to_hyperdex(msg);
 }
 
@@ -85,6 +90,7 @@ pending_truncate :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     bool handled = pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     assert(handled);
 
@@ -104,6 +110,7 @@ pending_truncate :: handle_wtf_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     uint64_t bi;
     uint64_t file_offset;
     uint32_t block_capacity;
@@ -160,6 +167,7 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_truncate :: try_op()
 {
+    TRACE;
     //If there's some other op in front of this, put this in the list and wait
     //for that other op to run us
    
@@ -170,6 +178,7 @@ pending_truncate :: try_op()
 void
 pending_truncate :: do_op()
 {
+    TRACE;
     std::vector<block_location> bl;
     uint32_t len;
     uint32_t block_capacity;
@@ -198,6 +207,7 @@ pending_truncate :: do_op()
 bool
 pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset, uint32_t block_capacity)
 {
+    TRACE;
     uint32_t num_replicas = bl.size();
 
     size_t sz = WTF_CLIENT_HEADER_SIZE_REQ

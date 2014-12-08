@@ -117,6 +117,7 @@ class pending_write : public pending_aggregation
         e::intrusive_ptr<pending_write> m_next;
         bool m_deferred;
         bool m_retry;
+        bool m_retried;
 };
 
 }
