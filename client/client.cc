@@ -878,6 +878,9 @@ client :: write(int64_t fd, const char* buf,
         m_coord.config()->assign_random_block_locations(bl, m_addr);
         e::slice data = e::slice(buf+ buf_offset, len);
         op = new pending_write(this, client_id, f, data, bl, file_offset, bd, status);
+        bd->add_op();
+        f->add_pending_op(client_id);
+        bool result = op->try_op();
         rem -= len;
     }
 
