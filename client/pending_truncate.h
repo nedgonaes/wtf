@@ -60,7 +60,7 @@ class pending_truncate : public pending_aggregation
                                     e::error* error);
         bool try_op();
         void do_op();
-        bool send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset, uint32_t block_capacity);
+        bool send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset);
         void apply_metadata_update_locally();
         void send_metadata_update();
 

@@ -44,7 +44,6 @@ class pending_write : public pending_aggregation
     public:
         pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
                                e::slice& data, std::vector<block_location>& bl,
-                               uint32_t block_offset, uint32_t block_capacity,
                                uint64_t file_offset,
                                e::intrusive_ptr<buffer_descriptor> bd,
                                wtf_client_returncode* status);

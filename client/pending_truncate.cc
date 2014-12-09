@@ -187,19 +187,15 @@ pending_truncate :: do_op()
 {
     TRACE;
     std::vector<block_location> bl;
-    uint32_t len;
-    uint32_t block_capacity;
     uint64_t file_offset; 
 
-    m_file->truncate(m_length, bl, len, file_offset, block_capacity);
-
-    std::cout << "TRUNCATE RETURNED len = " << len << std::endl;
+    m_file->truncate(m_length);
 
     if (bl[0] != block_location())
     {
         std::cout << "sending data" << std::endl;
 
-        if (!send_data(bl, len, file_offset, block_capacity))
+        if (!send_data(bl, m_length, file_offset))
         {
             std::cout << "CANT SEND DATA!!!" << std::endl;
             PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
@@ -212,7 +208,7 @@ pending_truncate :: do_op()
 }
 
 bool
-pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset, uint32_t block_capacity)
+pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset)
 {
     TRACE;
     uint32_t num_replicas = bl.size();
@@ -221,7 +217,6 @@ pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint
         + sizeof(uint64_t) // m_token
         + sizeof(uint32_t) // number of block locations
         + num_replicas*block_location::pack_size()
-        + sizeof(uint32_t) //block_capacity
         + sizeof(uint64_t) //file_offset
         + sizeof(uint32_t); // len 
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
@@ -236,7 +231,7 @@ pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint
         servers.push_back(server_id(bl[i].si));
     }
 
-    pa = pa << block_capacity << file_offset << len;
+    pa = pa << file_offset << len;
 
 
     //SEND

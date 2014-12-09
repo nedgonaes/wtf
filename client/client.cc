@@ -871,6 +871,17 @@ client :: write(int64_t fd, const char* buf,
 
     e::intrusive_ptr<buffer_descriptor> bd(new buffer_descriptor(buf, 0));
 
+    while (rem > 0)
+    {
+        len = std::min(rem, f->block_size());
+        std::vector<block_location> bl;
+        m_coord.config()->assign_random_block_locations(bl, m_addr);
+        e::slice data = e::slice(buf+ buf_offset, len);
+        op = new pending_write(this, client_id, f, data, bl, file_offset, bd, status);
+        rem -= len;
+    }
+
+    /*
     while(rem > 0)
     {
         std::vector<block_location> bl;
@@ -886,6 +897,7 @@ client :: write(int64_t fd, const char* buf,
         f->add_pending_op(client_id);
         bool result = op->try_op();
     }
+    */
 
     return client_id;
 }

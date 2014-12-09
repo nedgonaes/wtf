@@ -42,7 +42,6 @@ using wtf::pending_write;
 
 pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
                                e::slice& data, std::vector<block_location>& bl, 
-                               uint32_t block_offset, uint32_t block_capacity,
                                uint64_t file_offset,
                                e::intrusive_ptr<buffer_descriptor> bd,
                                wtf_client_returncode* status)
@@ -50,8 +49,6 @@ pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f
     , m_cl(cl)
     , m_data(data)
     , m_block_locations(bl)
-    , m_block_offset(block_offset)
-    , m_block_capacity(block_capacity)
     , m_file_offset(file_offset)
     , m_buffer_descriptor(bd)
     , m_old_blockmap(f->serialize_blockmap())
@@ -175,8 +172,6 @@ pending_write :: send_data()
         + sizeof(uint32_t) // number of block locations
         + num_replicas*block_location::pack_size()
         + sizeof(uint64_t) // bl.bi (remote block number) 
-        + sizeof(uint32_t) // block_offset (remote block offset) 
-        + sizeof(uint32_t) // block_capacity 
         + sizeof(uint64_t) // file_offset 
         + m_data.size();     // user data 
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
@@ -191,11 +186,9 @@ pending_write :: send_data()
         servers.push_back(server_id(m_block_locations[i].si));
     }
 
-    std::cout << "BLOCK CAPACITY: " << m_block_capacity << std::endl;
     std::cout << "FILE OFFSET: " << m_file_offset << std::endl;
-    std::cout << "BLOCK OFFSET: " << m_block_offset << std::endl;
 
-    pa = pa << m_block_offset << m_block_capacity << m_file_offset;
+    pa = pa << m_file_offset;
     pa.copy(m_data);
 
 
