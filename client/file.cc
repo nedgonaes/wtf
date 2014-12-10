@@ -103,9 +103,9 @@ file :: add_pending_op(uint64_t client_id)
 }
 
 void
-file :: insert_block(e::intrusive_ptr<block> bl)
+file :: insert_block(uint64_t insert_address, wtf::slice& slc)
 {
-    m_block_map[bl->offset()] = bl;
+    m_block_map.insert(insert_address, slc);
 }
 
 void
@@ -130,25 +130,10 @@ file :: length() const
 std::auto_ptr<e::buffer>
 file :: serialize_blockmap()
 {
-    size_t sz = sizeof(uint64_t) //blockmap size
-              + sizeof(uint64_t) //file length
-              + sizeof(uint64_t); //block size 
-
-    for (file::block_map::iterator it = m_block_map.begin(); it != m_block_map.end(); ++it)
-    {
-        sz += it->second->pack_size();
-    }
-
-    std::auto_ptr<e::buffer> blockmap(e::buffer::create(sz));
+    std::auto_ptr<e::buffer> blockmap(e::buffer::create(pack_size()));
     e::buffer::packer pa = blockmap->pack_at(0); 
 
-    uint64_t num_blocks = m_block_map.size();
-    pa = pa << length() << m_block_size << num_blocks;
-
-    for (file::block_map::iterator it = m_block_map.begin(); it != m_block_map.end(); ++it)
-    {
-        pa = pa << it->second; 
-    }
+    pa = pa << *this;
 
     return blockmap;
 }
@@ -156,13 +141,8 @@ file :: serialize_blockmap()
 uint64_t
 file :: pack_size()
 {
-    uint64_t ret = sizeof(uint64_t) /* number of blocks */;
-
-    for (file::block_map::const_iterator it = m_block_map.begin();
-         it != m_block_map.end(); ++it)
-    {
-        ret += sizeof(uint64_t) + it->second->pack_size();
-    }
+    uint64_t ret = 2*sizeof(uint64_t) /* replicas, block_size */;
+    ret += m_block_map.pack_size();
 
     return ret;
 }

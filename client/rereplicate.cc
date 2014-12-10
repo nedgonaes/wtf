@@ -48,6 +48,7 @@ rereplicate :: ~rereplicate() throw ()
 int64_t
 rereplicate :: replicate_one(const char* path, uint64_t sid)
 {
+    /*
     wtf_client_returncode w_status;
     wtf_client_returncode l_status;
 
@@ -236,6 +237,7 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
             break;
         }
     }
+    */ 
     return 0;
 }
 

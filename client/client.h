@@ -213,7 +213,7 @@ class client
                            wtf_client_returncode* status,
                            int64_t wait_for);
 
-        void handle_disruption(const wtf::server_id& node);
+        void handle_disruption(const server_id& node);
 
         // Utilities
         uint64_t generate_token();

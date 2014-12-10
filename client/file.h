@@ -42,6 +42,8 @@
 #include "client/client.h"
 #include "common/block.h"
 #include "common/block_location.h"
+#include "common/interval_map.h"
+
 namespace wtf __attribute__ ((visibility("hidden")))
 {
 class pending_write;    
@@ -62,7 +64,7 @@ class file
         bool pending_ops_empty();
         int64_t pending_ops_pop_front();
         void add_pending_op(uint64_t client_id);
-        void insert_block(e::intrusive_ptr<block> b);
+        void insert_block(uint64_t insert_address, wtf::slice& slc);
         void apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset);
         void set_last_op(uint32_t block_offset, e::intrusive_ptr<wtf::pending_write> op);
         bool has_last_op(uint32_t block_offset);
@@ -94,7 +96,6 @@ class file
         void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
 
     private:
-        typedef std::map<uint64_t, e::intrusive_ptr<wtf::block> > block_map;
         typedef std::map<uint64_t, e::intrusive_ptr<wtf::pending_write> > op_map_t;
         file& operator = (const file&);
 
@@ -103,7 +104,7 @@ class file
         po6::pathname m_path;
         int64_t m_fd;
         std::list<int64_t> m_pending;
-        block_map m_block_map;
+        interval_map m_block_map;
         op_map_t m_last_op;
         size_t m_offset;
         size_t m_replicas;
@@ -117,10 +118,6 @@ class file
         uint64_t time;
         std::string owner;
         std::string group;
-
-    public:
-        std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator blocks_begin() { return m_block_map.begin(); }
-        std::map<uint64_t, e::intrusive_ptr<wtf::block> >::const_iterator blocks_end() { return m_block_map.end(); }
 };
 
 inline std::ostream& 
@@ -136,13 +133,7 @@ operator << (std::ostream& lhs, const file& rhs)
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
     lhs << "\tblock_size: " << rhs.m_block_size << std::endl;
     lhs << "\tblocks: " << std::endl;
-
-    for (file::block_map::const_iterator it = rhs.m_block_map.begin();
-            it != rhs.m_block_map.end(); ++it)
-    {
-        lhs << *it->second << std::endl;
-    }
-
+    lhs << rhs.m_block_map << std::endl;
     return lhs;
 } 
 
@@ -150,50 +141,20 @@ operator << (std::ostream& lhs, const file& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const file& rhs) 
 { 
-    uint64_t length = rhs.length();
     uint64_t block_size = rhs.m_block_size;
-    uint64_t sz = rhs.m_block_map.size();
-    pa = pa << length << block_size << sz;
-
-    for (file::block_map::const_iterator it = rhs.m_block_map.begin();
-            it != rhs.m_block_map.end(); ++it)
-    {
-        pa = pa << it->first << *it->second;
-    }
-
+    uint64_t replicas = rhs.m_replicas;
+    pa = pa << replicas << block_size << rhs.m_block_map;
     return pa;
 } 
 
 inline e::unpacker 
 operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs) 
 { 
-    uint64_t sz;
     uint64_t block_size;
-    uint64_t length;
-    up = up >> length >> block_size >> sz; 
-
+    uint64_t replicas;
+    up = up >> replicas >> block_size >> rhs->m_block_map; 
     rhs->m_block_size = block_size;
-
-    for (int i = 0; i < sz; ++i) 
-    {
-        e::intrusive_ptr<block> b = new block(0, 0, 0);
-        up = up >> *b;
-        rhs->m_block_map[b->offset()] =  b; 
-        rhs->m_replicas = b->size();
-    }
-
-    file::block_map::iterator it = rhs->m_block_map.lower_bound(rhs->m_offset);
-    
-    if (it == rhs->m_block_map.end() ||
-       (it != rhs->m_block_map.begin() &&
-        it != rhs->m_block_map.end() && 
-        it->second->offset() > rhs->m_offset))
-    {
-        it--;
-    }
-
-    e::intrusive_ptr<block> b = it->second;
-
+    rhs->m_replicas = replicas;
     return up; 
 }
 

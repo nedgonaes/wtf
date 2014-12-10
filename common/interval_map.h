@@ -120,6 +120,12 @@ operator >> (e::unpacker up, slice& rhs)
     rhs.location = locations;
 }
 
+inline std::ostream& 
+operator << (std::ostream& lhs, const slice& rhs) 
+{
+    return lhs;
+}
+
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const interval_map& rhs) 
 {
@@ -151,5 +157,10 @@ operator >> (e::unpacker up, interval_map& rhs)
     }
 }
 
+inline std::ostream& 
+operator << (std::ostream& lhs, const interval_map& rhs) 
+{
+    return lhs;
+}
 }
 #endif //interval_map_h_
