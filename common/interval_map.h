@@ -19,9 +19,12 @@ class slice
     ~slice() {};
 
     public:
-    block_location location;
-    unsigned int offset;
-    unsigned int length;
+    int64_t pack_size();
+
+    public:
+    std::vector<block_location> location;
+    uint64_t offset;
+    uint64_t length;
 };
 
 class interval_map
@@ -35,40 +38,41 @@ class interval_map
 
     private:
         void insert_contained (
-                unsigned int block_start_address,
-                unsigned int block_length,
-                unsigned int insert_address,
-                unsigned int insert_length);
+                uint64_t block_start_address,
+                uint64_t block_length,
+                uint64_t insert_address,
+                uint64_t insert_length);
         void insert_right(
-                unsigned int block_start_address,
-                unsigned int insert_address);
+                uint64_t block_start_address,
+                uint64_t insert_address);
         void insert_left(
-                unsigned int block_start_address,
-                unsigned int block_length,
-                unsigned int insert_address,
-                unsigned int insert_length);
+                uint64_t block_start_address,
+                uint64_t block_length,
+                uint64_t insert_address,
+                uint64_t insert_length);
         void insert_overwrite_interval(
-                unsigned int block_start_address);
+                uint64_t block_start_address);
         void insert_interval(
-                unsigned int insert_address,
-                unsigned int insert_length,
-                block_location insert_location);
+                uint64_t insert_address,
+                uint64_t insert_length,
+                std::vector<block_location>& insert_location);
 
     private:
-        typedef std::map<unsigned int, slice> slice_map_t;
-        typedef std::map<unsigned int, slice>::iterator slice_iter_t;
+        typedef std::map<uint64_t, slice> slice_map_t;
+        typedef std::map<uint64_t, slice>::iterator slice_iter_t;
         interval_map& operator = (const interval_map&);
 
     private:
         slice_map_t slice_map;
 
     public:
-        void insert(unsigned int insert_address, 
-                    unsigned int insert_length,
-                    block_location insert_location);
+        void insert(uint64_t insert_address, 
+                    uint64_t insert_length,
+                    std::vector<block_location>& insert_location);
         std::vector<slice> get_slices
-          (unsigned int request_address, unsigned int request_length);
+          (uint64_t request_address, uint64_t request_length);
         void clear();
+        int64_t pack_size();
 };
 }
 #endif //interval_map_h_
