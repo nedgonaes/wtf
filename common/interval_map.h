@@ -1,90 +1,84 @@
-// Copyright (c) 2013, Sean Ogden
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-//     * Redistributions of source code must retain the above copyright notice,
-//       this list of conditions and the following disclaimer.
-//     * Redistributions in binary form must reproduce the above copyright
-//       notice, this list of conditions and the following disclaimer in the
-//       documentation and/or other materials provided with the distribution.
-//     * Neither the name of WTF nor the names of its contributors may be
-//       used to endorse or promote products derived from this software without
-//       specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
-// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// POSSIBILITY OF SUCH DAMAGE.
-
-#ifndef wtf_interval_map_h_
-#define wtf_interval_map_h_
-
-// e
-#include <e/intrusive_ptr.h>
-
-// STL
+#ifndef interval_map_h_
+#define interval_map_h_
+#include <stdint.h>
 #include <map>
+#include <vector>
 
-namespace wtf __attribute__ ((visibility("hidden")))
+class block_location
 {
+    public:
+    block_location()
+        : sid(0)
+          , bid(0) {}
+
+    ~block_location() {};
+
+    public:
+    uint64_t sid;
+    uint64_t bid;
+};
+
+class slice
+{
+    public:
+    slice()
+        : location()
+        , offset()
+        , length() {}
+
+    ~slice() {};
+
+    public:
+    block_location location;
+    unsigned int offset;
+    unsigned int length;
+};
 
 class interval_map
 {
     public:
         interval_map();
-        ~interval_map() throw ();
-
-    private:
-        friend class file;
-        friend class e::intrusive_ptr<interval_map>;
-        friend std::ostream& 
-            operator << (std::ostream& lhs, const interval_map& rhs);
-        friend e::buffer::packer
-            operator << (e::buffer::packer pa, e::intrusive_ptr<interval_map>& rhs);
-        friend e::buffer::packer
-            operator << (e::buffer::packer pa, const interval_map& rhs);
-        friend e::unpacker
-            operator >> (e::unpacker up, interval_map& rhs);
-        friend e::unpacker
-            operator >> (e::unpacker up, e::intrusive_ptr<interval_map>& rhs);
-
+        ~interval_map();
 
     private:
         interval_map(const interval_map&);
 
     private:
-        void inc() { ++m_ref; }
-        void dec() { assert(m_ref > 0); if (--m_ref == 0) delete this; }
+        void insert_contained (
+                unsigned int block_start_address,
+                unsigned int block_length,
+                unsigned int insert_address,
+                unsigned int insert_length);
+        void insert_right(
+                unsigned int block_start_address,
+                unsigned int insert_address);
+        void insert_left(
+                unsigned int block_start_address,
+                unsigned int block_length,
+                unsigned int insert_address,
+                unsigned int insert_length);
+        void insert_overwrite_interval(
+                unsigned int block_start_address);
+        void insert_interval(
+                unsigned int insert_address,
+                unsigned int insert_length,
+                block_location insert_location);
 
     private:
+        typedef std::map<unsigned int, slice> slice_map_t;
+        typedef std::map<unsigned int, slice>::iterator slice_iter_t;
         interval_map& operator = (const interval_map&);
 
     private:
-        size_t m_ref;
+        slice_map_t slice_map;
+
+    public:
+        void insert(unsigned int insert_address, 
+                    unsigned int insert_length,
+                    block_location insert_location);
+        std::vector<slice> get_slices
+          (unsigned int request_address, unsigned int request_length);
+        void clear();
 };
 
-template <typename T>
-    std::ostream&
-operator << (std::ostream& lhs, const std::vector<T>& rhs)
-{
-    return lhs;
-}
-
-inline std::ostream& 
-operator << (std::ostream& lhs, const interval_map& rhs) 
-{ 
-    return lhs;
-} 
-
-
-}
-#endif // wtf_interval_map_h_
+#endif //interval_map_h_
