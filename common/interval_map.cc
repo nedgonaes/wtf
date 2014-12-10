@@ -1,6 +1,7 @@
 #include "interval_map.h"
 
 using wtf::interval_map;
+using wtf::slice;
 
 interval_map :: interval_map()
     : slice_map()
@@ -9,6 +10,12 @@ interval_map :: interval_map()
 
 interval_map :: ~interval_map()
 {
+}
+
+void
+interval_map :: insert(uint64_t insert_address, slice& slc)
+{
+    insert(insert_address, slc.length, slc.location);
 }
 
 void
@@ -295,9 +302,9 @@ interval_map :: clear()
 }
 
 int64_t
-wtf :: slice :: pack_size()
+slice :: pack_size()
 {
-    uint64_t ret = 3*sizeof(uint64_t);
+    uint64_t ret = 3*sizeof(uint64_t); //location, offset, location.size()
     ret += location.size() * block_location::pack_size();
     return ret;
 }
@@ -305,10 +312,12 @@ wtf :: slice :: pack_size()
 int64_t
 interval_map :: pack_size()
 {
+    int64_t ret = sizeof(int64_t); //slicemap.size()
+
     for (slice_iter_t it = slice_map.begin();
          it != slice_map.end(); ++it)
     {
+        ret += it->second.pack_size();
     }
-
 }
 
