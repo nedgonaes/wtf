@@ -117,14 +117,13 @@ file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 void
 file :: truncate(size_t length)
 {
-    //XXX implement
+    m_block_map.truncate(length);
 }
 
 uint64_t
 file :: length() const
 {
-    //XXX: implement
-    return 0;
+    return m_block_map.length();
 }
 
 std::auto_ptr<e::buffer>

@@ -82,6 +82,8 @@ class interval_map
                     std::vector<block_location>& insert_location);
         void insert(uint64_t insert_address,
                     wtf::slice& slc);
+        void truncate(uint64_t length);
+        uint64_t length() const;
         std::vector<slice> get_slices
           (uint64_t request_address, uint64_t request_length);
         void clear();

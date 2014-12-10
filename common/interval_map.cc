@@ -301,6 +301,44 @@ interval_map :: clear()
     slice_map.clear();
 }
 
+void
+interval_map :: truncate(uint64_t length)
+{
+    if (slice_map.empty())
+    {
+        return;
+    }
+
+    slice_iter_t it = slice_map.upper_bound(length);
+    --it;
+
+    if (it->first + it->second.length > length)
+    {
+        it->second.length = length - it->first;
+    }
+
+    ++it;
+
+    if (it != slice_map.end())
+    {
+        slice_map.erase(it, slice_map.end());
+    }
+}
+
+uint64_t
+interval_map :: length() const
+{
+    if (slice_map.empty())
+    {
+        return 0;
+    }
+
+    std::map<uint64_t, slice>::const_iterator it = slice_map.end();
+    --it;
+
+    return it->first + it->second.length;
+}
+
 int64_t
 slice :: pack_size()
 {
