@@ -3,20 +3,10 @@
 #include <stdint.h>
 #include <map>
 #include <vector>
+#include "common/block_location.h"
 
-class block_location
+namespace wtf __attribute__ ((visibility("hidden")))
 {
-    public:
-    block_location()
-        : sid(0)
-          , bid(0) {}
-
-    ~block_location() {};
-
-    public:
-    uint64_t sid;
-    uint64_t bid;
-};
 
 class slice
 {
@@ -80,5 +70,5 @@ class interval_map
           (unsigned int request_address, unsigned int request_length);
         void clear();
 };
-
+}
 #endif //interval_map_h_

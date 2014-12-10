@@ -1,14 +1,14 @@
 #include "interval_map.h"
 
+using wtf::interval_map;
+
 interval_map :: interval_map()
     : slice_map()
 {
-
 }
 
 interval_map :: ~interval_map()
 {
-
 }
 
 void
@@ -210,7 +210,7 @@ interval_map :: insert_interval(
 }
 
 //gets the slices associated with the request
-std::vector<slice>
+std::vector<wtf::slice>
 interval_map :: get_slices (
     unsigned int request_address, unsigned int request_length)
 {
