@@ -47,26 +47,31 @@ pending_truncate :: pending_truncate(client* cl, int64_t client_visible_id,
     , m_done(false)
     , m_changeset()
 {
+    TRACE;
     set_status(WTF_CLIENT_SUCCESS);
     set_error(e::error());
 }
 
 pending_truncate :: ~pending_truncate() throw ()
 {
+    TRACE;
 }
 
 bool
 pending_truncate :: can_yield()
 {
+    TRACE;
     return this->aggregation_done() && !m_done;
 }
 
 bool
 pending_truncate :: yield(wtf_client_returncode* status, e::error* err)
 {
+    TRACE;
     *status = WTF_CLIENT_SUCCESS;
     *err = e::error();
     assert(this->can_yield());
+    //assert(false);
     m_done = true;
     return true;
 }
@@ -74,6 +79,7 @@ pending_truncate :: yield(wtf_client_returncode* status, e::error* err)
 void
 pending_truncate :: handle_sent_to_hyperdex(e::intrusive_ptr<message> msg)
 {
+    TRACE;
     pending_aggregation::handle_sent_to_hyperdex(msg);
 }
 
@@ -84,6 +90,7 @@ pending_truncate :: handle_hyperdex_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     bool handled = pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
     assert(handled);
 
@@ -103,6 +110,7 @@ pending_truncate :: handle_wtf_message(client* cl,
                                     wtf_client_returncode* status,
                                     e::error* err)
 {
+    TRACE;
     uint64_t bi;
     uint64_t file_offset;
     uint32_t block_capacity;
@@ -136,7 +144,14 @@ pending_truncate :: handle_wtf_message(client* cl,
         bl = it->second;
     }
 
-    bl->add_replica(block_location(si.get(), bi));
+    if (bl->length() > 0)
+    {
+        bl->add_replica(block_location(si.get(), bi));
+    }
+    else
+    {
+        bl->add_replica(block_location());
+    }
 
     if (this->aggregation_done())
     {
@@ -159,6 +174,7 @@ typedef struct hyperdex_client_attribute* attr_t;
 bool
 pending_truncate :: try_op()
 {
+    TRACE;
     //If there's some other op in front of this, put this in the list and wait
     //for that other op to run us
    
@@ -169,18 +185,17 @@ pending_truncate :: try_op()
 void
 pending_truncate :: do_op()
 {
+    TRACE;
     std::vector<block_location> bl;
-    uint32_t len;
-    uint32_t block_capacity;
     uint64_t file_offset; 
 
-    m_file->truncate(m_length, bl, len, file_offset, block_capacity);
+    m_file->truncate(m_length);
 
     if (bl[0] != block_location())
     {
         std::cout << "sending data" << std::endl;
 
-        if (!send_data(bl, len, file_offset, block_capacity))
+        if (!send_data(bl, m_length, file_offset))
         {
             std::cout << "CANT SEND DATA!!!" << std::endl;
             PENDING_ERROR(IO) << "Couldn't send data to blockservers.";
@@ -193,15 +208,15 @@ pending_truncate :: do_op()
 }
 
 bool
-pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset, uint32_t block_capacity)
+pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint64_t file_offset)
 {
+    TRACE;
     uint32_t num_replicas = bl.size();
 
     size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
         + sizeof(uint64_t) // m_token
         + sizeof(uint32_t) // number of block locations
         + num_replicas*block_location::pack_size()
-        + sizeof(uint32_t) //block_capacity
         + sizeof(uint64_t) //file_offset
         + sizeof(uint32_t); // len 
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
@@ -216,7 +231,7 @@ pending_truncate :: send_data(std::vector<block_location> bl, uint32_t len, uint
         servers.push_back(server_id(bl[i].si));
     }
 
-    pa = pa << block_capacity << file_offset << len;
+    pa = pa << file_offset << len;
 
 
     //SEND
@@ -244,6 +259,8 @@ pending_truncate :: send_metadata_update()
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
     uint64_t mode = m_file->mode;
     uint64_t directory = m_file->is_directory;
+
+    std::cout << *m_file << std::endl;
 
     hyperdex_ds_returncode status;
     arena_t arena = hyperdex_ds_arena_create();

@@ -45,9 +45,10 @@ class message_hyperdex_condput : public message
         message_hyperdex_condput(client* cl,
             const char* space,
             const char* key,
-            const hyperdex_ds_arena* arena,
+            const hyperdex_ds_arena* checks_arena,
             const hyperdex_client_attribute_check* checks,
             size_t checks_sz,
+            const hyperdex_ds_arena* attrs_arena,
             const hyperdex_client_attribute* attrs, 
             size_t attrs_sz);
         virtual ~message_hyperdex_condput() throw ();
@@ -72,10 +73,11 @@ class message_hyperdex_condput : public message
     private:
         std::string m_space;
         std::string m_key;
-        const hyperdex_ds_arena* m_arena;
         hyperdex_client_returncode m_status;
+        const hyperdex_ds_arena* m_checks_arena;
         const hyperdex_client_attribute_check* m_checks;
         size_t m_checks_sz;
+        const hyperdex_ds_arena* m_attrs_arena;
         const hyperdex_client_attribute* m_attrs;
         size_t m_attrs_size;
 };

@@ -399,7 +399,15 @@ static int fusewtf_ftruncate(const char *path, off_t length, struct fuse_file_in
 {
     LOGENTRY;
     wtf_client_returncode status;
-    w->truncate(fi->fh, length, &status);
+    int64_t reqid = w->truncate(fi->fh, length, &status);
+
+    int64_t ret = w->loop(reqid, -1, &status);
+
+    if (ret < 0)
+    {
+        return -1;
+    }
+
     return 0;
 }
 

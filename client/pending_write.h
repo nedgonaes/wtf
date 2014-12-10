@@ -44,7 +44,6 @@ class pending_write : public pending_aggregation
     public:
         pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
                                e::slice& data, std::vector<block_location>& bl,
-                               uint32_t block_offset, uint32_t block_capacity,
                                uint64_t file_offset,
                                e::intrusive_ptr<buffer_descriptor> bd,
                                wtf_client_returncode* status);
@@ -93,6 +92,12 @@ class pending_write : public pending_aggregation
                               uint32_t& block_capacity,
                               uint64_t& file_offset,
                               size_t& slice_len);
+        void get_new_metadata();
+        bool handle_new_metadata(client*,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* error);
 
     private:
         client* m_cl;
@@ -110,6 +115,8 @@ class pending_write : public pending_aggregation
         int m_state;
         e::intrusive_ptr<pending_write> m_next;
         bool m_deferred;
+        bool m_retry;
+        bool m_retried;
 };
 
 }

@@ -59,22 +59,8 @@ class file
         po6::pathname path() { return m_path; }
         uint64_t replicas() { return m_replicas; }
         void set_replicas(size_t num_replicas) { m_replicas = num_replicas; }
-
-        block_location current_block_location();
-        size_t bytes_left_in_block();
-        size_t bytes_left_in_file();
-        size_t current_block_length();
-        size_t current_block_capacity();
-        size_t current_block_offset();
-        size_t current_block_start();
-        void copy_current_block_locations(std::vector<block_location>& bl);
-        void copy_block_locations(uint32_t file_offset, std::vector<block_location>& bl);
-        size_t advance_to_end_of_block(size_t len);
-        void move_to_next_block();
-        void reset_offset();
         bool pending_ops_empty();
         int64_t pending_ops_pop_front();
-        size_t get_block_length(size_t offset);
         void add_pending_op(uint64_t client_id);
         void insert_block(e::intrusive_ptr<block> b);
         void apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset);
@@ -82,28 +68,14 @@ class file
         bool has_last_op(uint32_t block_offset);
         e::intrusive_ptr<wtf::pending_write> last_op(uint32_t block_offset);
 
-
-        void add_command(int64_t op);
-        void set_offset(uint64_t offset) { 
-            std::cout << *m_current_block.get() << std::endl;
-            size_t rem = offset;
-            reset_offset();
-
-            while (rem > 0)
-            {
-                std::cout << "OFFSET " << m_offset << std::endl;
-                rem -= advance_to_end_of_block(rem);
-            }
-
-            std::cout << "OFFSET " << m_offset << std::endl;
-            std::cout << *m_current_block.get() << std::endl;
-        }
+        void set_offset(uint64_t offset) { m_offset = offset;}
         uint64_t offset() { return m_offset; }
         uint64_t pack_size();
-        uint64_t length();
+        uint64_t length() const;
         std::auto_ptr<e::buffer> serialize_blockmap();
-        void truncate();
-        void truncate(size_t length, std::vector<block_location>& bl, uint32_t& len, uint64_t& file_offset, uint32_t& block_capacity);
+        void truncate(size_t length);
+        size_t block_size() { return m_block_size; }
+        size_t bytes_left_in_file();
 
     private:
         friend class e::intrusive_ptr<file>;
@@ -133,12 +105,7 @@ class file
         std::list<int64_t> m_pending;
         block_map m_block_map;
         op_map_t m_last_op;
-        e::intrusive_ptr<block> m_current_block;
-        size_t m_bytes_left_in_block;
-        size_t m_bytes_left_in_file;
-        size_t m_current_block_length;
         size_t m_offset;
-        size_t m_file_length;
         size_t m_replicas;
         size_t m_block_size;
 
@@ -161,14 +128,13 @@ operator << (std::ostream& lhs, const file& rhs)
 { 
     lhs << "\tpath: " << rhs.m_path << std::endl;
     lhs << "\treplicas: " << rhs.m_replicas << std::endl;
-    lhs << "\tlength: " << rhs.m_file_length << std::endl;
+    lhs << "\tlength: " << rhs.length() << std::endl;
     lhs << "\tflags: " << rhs.flags << std::endl;
     lhs << "\tmode: " << rhs.mode << std::endl;
-    lhs << "\ttime: " << rhs.time<< std::endl;
-    lhs << "\toffset: " << rhs.m_offset<< std::endl;
+    lhs << "\ttime: " << rhs.time << std::endl;
+    lhs << "\toffset: " << rhs.m_offset << std::endl;
     lhs << "\tis_directory: " << rhs.is_directory << std::endl;
     lhs << "\tblock_size: " << rhs.m_block_size << std::endl;
-    lhs << "\tbytes left in file: " << rhs.m_bytes_left_in_file << std::endl;
     lhs << "\tblocks: " << std::endl;
 
     for (file::block_map::const_iterator it = rhs.m_block_map.begin();
@@ -184,7 +150,7 @@ operator << (std::ostream& lhs, const file& rhs)
 inline e::buffer::packer 
 operator << (e::buffer::packer pa, const file& rhs) 
 { 
-    uint64_t length = rhs.m_file_length;
+    uint64_t length = rhs.length();
     uint64_t block_size = rhs.m_block_size;
     uint64_t sz = rhs.m_block_map.size();
     pa = pa << length << block_size << sz;
@@ -207,7 +173,6 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
     up = up >> length >> block_size >> sz; 
 
     rhs->m_block_size = block_size;
-    rhs->m_file_length = length;
 
     for (int i = 0; i < sz; ++i) 
     {
@@ -217,7 +182,6 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
         rhs->m_replicas = b->size();
     }
 
-    rhs->m_bytes_left_in_file = rhs->m_file_length - rhs->m_offset;
     file::block_map::iterator it = rhs->m_block_map.lower_bound(rhs->m_offset);
     
     if (it == rhs->m_block_map.end() ||
@@ -229,12 +193,6 @@ operator >> (e::unpacker up, e::intrusive_ptr<file>& rhs)
     }
 
     e::intrusive_ptr<block> b = it->second;
-
-    rhs->m_bytes_left_in_block = b->offset() + b->capacity() - rhs->m_offset;
-    rhs->m_current_block_length = b->capacity();
-    rhs->m_current_block = b;
-
-    //std::cout << b->offset() << ", " << b->capacity() << ", " << rhs->m_offset << std::endl;
 
     return up; 
 }

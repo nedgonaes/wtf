@@ -36,13 +36,12 @@
 #include "client/pending_write.h"
 #include "common/response_returncode.h"
 #include "client/message_hyperdex_get.h"
-#include "client/message_hyperdex_put.h"
+#include "client/message_hyperdex_condput.h"
 
 using wtf::pending_write;
 
 pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
                                e::slice& data, std::vector<block_location>& bl, 
-                               uint32_t block_offset, uint32_t block_capacity,
                                uint64_t file_offset,
                                e::intrusive_ptr<buffer_descriptor> bd,
                                wtf_client_returncode* status)
@@ -50,16 +49,17 @@ pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f
     , m_cl(cl)
     , m_data(data)
     , m_block_locations(bl)
-    , m_block_offset(block_offset)
-    , m_block_capacity(block_capacity)
     , m_file_offset(file_offset)
     , m_buffer_descriptor(bd)
     , m_old_blockmap(f->serialize_blockmap())
     , m_file(f)
+    , m_changeset()
     , m_done(false)
     , m_state(0)
     , m_next(NULL)
     , m_deferred(false)
+    , m_retry(false)
+    , m_retried(false)
 {
     TRACE;
     set_status(WTF_CLIENT_SUCCESS);
@@ -151,18 +151,8 @@ pending_write :: handle_wtf_message(client* cl,
 
     if (this->aggregation_done())
     {
-        m_buffer_descriptor->remove_op();
-        m_buffer_descriptor->print();
-
         apply_metadata_update_locally();
         send_metadata_update(); 
-
-        if (m_next.get() != NULL)
-        {
-            m_next->do_op();
-            std::cout << "Running next op at offset " << m_file_offset << std::endl;
-        }
-
     }
 
     return true;
@@ -172,6 +162,9 @@ bool
 pending_write :: send_data()
 {
     TRACE;
+
+    std::cout << *m_file << std::endl;
+
     uint32_t num_replicas = m_block_locations.size();
 
     size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
@@ -179,8 +172,6 @@ pending_write :: send_data()
         + sizeof(uint32_t) // number of block locations
         + num_replicas*block_location::pack_size()
         + sizeof(uint64_t) // bl.bi (remote block number) 
-        + sizeof(uint32_t) // block_offset (remote block offset) 
-        + sizeof(uint32_t) // block_capacity 
         + sizeof(uint64_t) // file_offset 
         + m_data.size();     // user data 
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
@@ -195,11 +186,9 @@ pending_write :: send_data()
         servers.push_back(server_id(m_block_locations[i].si));
     }
 
-    std::cout << "BLOCK CAPACITY: " << m_block_capacity << std::endl;
-    std::cout << "FILE OFFSET: " << m_block_capacity << std::endl;
-    std::cout << "BLOCK OFFSET: " << m_block_offset << std::endl;
+    std::cout << "FILE OFFSET: " << m_file_offset << std::endl;
 
-    pa = pa << m_block_offset << m_block_capacity << m_file_offset;
+    pa = pa << m_file_offset;
     pa.copy(m_data);
 
 
@@ -240,10 +229,19 @@ pending_write :: do_op()
 {
     TRACE;
 
+    m_old_blockmap = m_file->serialize_blockmap();
+    m_changeset.clear();
     //need to update block locations if we wrote new blocks
-    if (m_deferred)
+    if (m_deferred || m_retried)
     {
+        TRACE;
         m_file->copy_block_locations(m_file_offset, m_block_locations);
+        m_cl->m_coord.config()->assign_random_block_locations(m_block_locations, m_cl->m_addr);
+
+        if (m_block_locations.empty())
+        {
+            std::cout << "BLOCK LOCATIONS LIST IS EMPTY" << std::endl;
+        }
 
         for (int i = 0; i < m_block_locations.size(); ++i)
         {
@@ -267,18 +265,47 @@ pending_write :: handle_hyperdex_message(client* cl,
                                     e::error* err)
 {
     TRACE;
-    //response from initial get
-    if (m_state == 0)
-    {
+    std::cout << "HYPERDEX RETURNED " << rc << std::endl;
 
+    if (m_retry)
+    {
+        m_retry = false;
+        m_retried = true;
+
+        e::intrusive_ptr<message_hyperdex_get> msg = dynamic_cast<message_hyperdex_get*>(m_outstanding_hyperdex[0].get());
+        pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+
+        handle_new_metadata(cl, reqid, rc, status, err);
+        /*retry the op from beginning*/
+        do_op();
     }
-    //response from final metadata update
     else
     {
-        e::intrusive_ptr<message_hyperdex_put> msg = dynamic_cast<message_hyperdex_put*>(m_outstanding_hyperdex[0].get());
+        e::intrusive_ptr<message_hyperdex_condput> msg = dynamic_cast<message_hyperdex_condput*>(m_outstanding_hyperdex[0].get());
         pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
-        return true;
+
+        std::cout << "CONDPUT STATUS WAS " << msg->status() << std::endl;
+        
+        if (rc != HYPERDEX_CLIENT_SUCCESS  || msg->status() != HYPERDEX_CLIENT_SUCCESS)
+        {
+            m_retry = true;
+            get_new_metadata();
+        }
+        else
+        {
+            m_buffer_descriptor->remove_op();
+            m_buffer_descriptor->print();
+
+            if (m_next.get() != NULL)
+            {
+                m_next->do_op();
+                std::cout << "Running next op at offset " << m_file_offset << std::endl;
+            }
+        }
     }
+
+
+    return true;
 }
 
  
@@ -296,49 +323,63 @@ void
 pending_write :: send_metadata_update()
 {
     TRACE;
-    //if (m_deferred)
-        std::cout << "Sending metadata update for block at offset " << m_file_offset << std::endl;
+    std::cout << "Sending metadata update for block at offset " << m_file_offset << std::endl;
+
     //XXX set attrs and attrs_sz to file metadata with new changes
     // see update_file_metadata in client.cc
 
     size_t sz;
+    hyperdex_ds_returncode status;
 
+    arena_t checks_arena = hyperdex_ds_arena_create();
+    hyperdex_client_attribute_check* checks = hyperdex_ds_allocate_attribute_check(checks_arena, 1);
+
+    /* Predicates */ 
+    checks[0].datatype = HYPERDATATYPE_STRING;
+    checks[0].predicate = HYPERPREDICATE_EQUALS;
+    hyperdex_ds_copy_string(checks_arena, "blockmap", 9,
+                            &status, &checks[0].attr, &sz);
+    hyperdex_ds_copy_string(checks_arena, 
+                            reinterpret_cast<const char*>(m_old_blockmap->data()), 
+                            m_old_blockmap->size(),
+                            &status, &checks[0].value, &checks[0].value_sz);
+
+    /* Attributes */
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
     uint64_t mode = m_file->mode;
     uint64_t directory = m_file->is_directory;
 
-    hyperdex_ds_returncode status;
-    arena_t arena = hyperdex_ds_arena_create();
-    attr_t attrs = hyperdex_ds_allocate_attribute(arena, 4);
+    arena_t attrs_arena = hyperdex_ds_arena_create();
+    attr_t attrs = hyperdex_ds_allocate_attribute(attrs_arena, 4);
 
     attrs[0].datatype = HYPERDATATYPE_INT64;
-    hyperdex_ds_copy_string(arena, "mode", 5,
+    hyperdex_ds_copy_string(attrs_arena, "mode", 5,
                             &status, &attrs[0].attr, &sz);
-    hyperdex_ds_copy_int(arena, mode, 
+    hyperdex_ds_copy_int(attrs_arena, mode, 
                             &status, &attrs[0].value, &attrs[0].value_sz);
 
     attrs[1].datatype = HYPERDATATYPE_INT64;
-    hyperdex_ds_copy_string(arena, "directory", 10,
+    hyperdex_ds_copy_string(attrs_arena, "directory", 10,
                             &status, &attrs[1].attr, &sz);
-    hyperdex_ds_copy_int(arena, directory, 
+    hyperdex_ds_copy_int(attrs_arena, directory, 
                             &status, &attrs[1].value, &attrs[1].value_sz);
 
     attrs[2].datatype = HYPERDATATYPE_STRING;
-    hyperdex_ds_copy_string(arena, "blockmap", 9,
+    hyperdex_ds_copy_string(attrs_arena, "blockmap", 9,
                             &status, &attrs[2].attr, &sz);
-    hyperdex_ds_copy_string(arena, 
+    hyperdex_ds_copy_string(attrs_arena, 
                             reinterpret_cast<const char*>(blockmap_update->data()), 
                             blockmap_update->size(),
                             &status, &attrs[2].value, &attrs[2].value_sz);
 
     attrs[3].datatype = HYPERDATATYPE_INT64;
-    hyperdex_ds_copy_string(arena, "time", 5,
+    hyperdex_ds_copy_string(attrs_arena, "time", 5,
                             &status, &attrs[3].attr, &sz);
-    hyperdex_ds_copy_int(arena, time(NULL), 
+    hyperdex_ds_copy_int(attrs_arena, time(NULL), 
                             &status, &attrs[3].value, &attrs[3].value_sz);
 
-    e::intrusive_ptr<message_hyperdex_put> msg = 
-        new message_hyperdex_put(m_cl, "wtf", m_file->path().get(), arena, attrs, 4);
+    e::intrusive_ptr<message_hyperdex_condput> msg = 
+        new message_hyperdex_condput(m_cl, "wtf", m_file->path().get(), checks_arena, checks, 1, attrs_arena, attrs, 4);
 
     if (msg->send() < 0)
     {
@@ -351,3 +392,101 @@ pending_write :: send_metadata_update()
         pending_aggregation::handle_sent_to_hyperdex(m);
     }
 }
+
+void
+pending_write :: get_new_metadata()
+{
+    TRACE;
+    /* Get the file metadata from HyperDex */
+    const char* path = m_file->path().get();
+    e::intrusive_ptr<message_hyperdex_get> msg =
+        new message_hyperdex_get(m_cl, "wtf", path); 
+       
+    if (msg->send() < 0)
+    {
+        PENDING_ERROR(IO) << "Couldn't get from HyperDex: " << msg->status();
+    }
+    else
+    {
+        TRACE;
+        m_cl->add_hyperdex_op(msg->reqid(), this);
+        e::intrusive_ptr<message> m = msg.get();
+        handle_sent_to_hyperdex(m);
+    }
+
+}
+
+bool
+pending_write :: handle_new_metadata(client* cl,
+                                    int64_t reqid,
+                                    hyperdex_client_returncode rc,
+                                    wtf_client_returncode* status,
+                                    e::error* err)
+{
+    TRACE;
+    e::intrusive_ptr<message_hyperdex_get> msg = 
+        dynamic_cast<message_hyperdex_get*>(m_outstanding_hyperdex[0].get());
+
+    const hyperdex_client_attribute* attrs = msg->attrs();
+    size_t attrs_sz = msg->attrs_sz();
+
+    for (size_t i = 0; i < attrs_sz; ++i)
+    {
+        if (strcmp(attrs[i].attr, "blockmap") == 0)
+        {
+            bool append = false;
+
+            if (m_file->flags & O_APPEND)
+            {
+                append = true;
+            }
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+
+            if (attrs[i].value_sz == 0)
+            {
+                continue;
+            }
+
+            up = up >> m_file;
+
+            if (append)
+            {
+                std::cout << "Setting offset to " << m_file->length() << std::endl;
+                m_file->set_offset(m_file->length());
+            }
+
+        }
+        else if (strcmp(attrs[i].attr, "directory") == 0)
+        {
+            uint64_t is_dir;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+            up = up >> is_dir;
+            e::unpack64be((uint8_t*)&is_dir, &is_dir);
+
+            if (is_dir == 0)
+            {
+                m_file->is_directory = false;
+            }
+            else
+            {
+                m_file->is_directory = true;
+            }
+        }
+        else if (strcmp(attrs[i].attr, "mode") == 0)
+        {
+            uint64_t mode;
+
+            e::unpacker up(attrs[i].value, attrs[i].value_sz);
+            up = up >> mode;
+            e::unpack64be((uint8_t*)&mode, &mode);
+            m_file->mode = mode;
+        }
+    }
+
+    std::cout << *m_file << std::endl;
+    pending_aggregation::handle_hyperdex_message(cl, reqid, rc, status, err);
+    return true;
+}
+
