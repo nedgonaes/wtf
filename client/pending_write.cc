@@ -231,11 +231,12 @@ pending_write :: do_op()
 
     m_old_blockmap = m_file->serialize_blockmap();
     m_changeset.clear();
+
     //need to update block locations if we wrote new blocks
     if (m_deferred || m_retried)
     {
         TRACE;
-        m_file->copy_block_locations(m_file_offset, m_block_locations);
+        //m_file->copy_block_locations(m_file_offset, m_block_locations);
         m_cl->m_coord.config()->assign_random_block_locations(m_block_locations, m_cl->m_addr);
 
         if (m_block_locations.empty())

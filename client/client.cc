@@ -193,27 +193,6 @@ client :: maintain_coord_connection(wtf_client_returncode* status)
     return true;
 }
 
-void
-client :: prepare_write_op(e::intrusive_ptr<file> f, 
-                              size_t& rem, 
-                              std::vector<block_location>& bl,
-                              size_t& buf_offset,
-                              uint32_t& block_offset,
-                              uint32_t& block_capacity,
-                              uint64_t& file_offset,
-                              size_t& slice_len)
-{
-    f->copy_current_block_locations(bl);
-    m_coord.config()->assign_random_block_locations(bl, m_addr);
-    block_offset = f->current_block_offset();
-    block_capacity = f->current_block_capacity();
-    file_offset = f->current_block_start();
-    std::cout << "XXX FILE OFFSET: " << file_offset << std::endl;
-    slice_len = f->advance_to_end_of_block(rem);
-    buf_offset += slice_len;
-    rem -= slice_len;
-}
-
 int64_t
 client :: perform_aggregation(const std::vector<server_id>& servers,
                               e::intrusive_ptr<pending_aggregation> _op,
@@ -867,40 +846,26 @@ client :: write(int64_t fd, const char* buf,
     e::intrusive_ptr<pending_write> op;
 
     size_t rem = *buf_sz;
-    size_t next_buf_offset = 0;
+    size_t buf_offset = 0;
+    uint64_t file_offset = f->offset();
 
     e::intrusive_ptr<buffer_descriptor> bd(new buffer_descriptor(buf, 0));
 
     while (rem > 0)
     {
-        len = std::min(rem, f->block_size());
+        uint64_t len = std::min(rem, f->block_size());
         std::vector<block_location> bl;
         m_coord.config()->assign_random_block_locations(bl, m_addr);
-        e::slice data = e::slice(buf+ buf_offset, len);
+        e::slice data = e::slice(buf + buf_offset, len);
         op = new pending_write(this, client_id, f, data, bl, file_offset, bd, status);
         bd->add_op();
         f->add_pending_op(client_id);
         bool result = op->try_op();
         rem -= len;
+        buf_offset += len;
+        file_offset += len;
+        f->set_offset(file_offset);
     }
-
-    /*
-    while(rem > 0)
-    {
-        std::vector<block_location> bl;
-        size_t buf_offset = next_buf_offset;
-        uint32_t block_offset;
-        uint32_t block_capacity;
-        uint64_t file_offset;
-        size_t slice_len;
-        prepare_write_op(f, rem, bl, next_buf_offset, block_offset, block_capacity, file_offset, slice_len);
-        e::slice data = e::slice(buf+ buf_offset, slice_len);
-        op = new pending_write(this, client_id, f, data, bl, block_offset, block_capacity, file_offset, bd, status);
-        bd->add_op();
-        f->add_pending_op(client_id);
-        bool result = op->try_op();
-    }
-    */
 
     return client_id;
 }
@@ -952,28 +917,6 @@ client :: read(int64_t fd, char* buf,
         return -1;
     }	
 
-}
-
-void
-client :: prepare_read_op(e::intrusive_ptr<file> f, 
-                              size_t& rem, 
-                              size_t& buf_offset,
-                              block_location& bl, 
-                              uint32_t& block_length,
-                              e::intrusive_ptr<pending_read> op, 
-                              std::vector<server_id>& servers)
-{
-	TRACE;
-    block_length = f->current_block_length();
-    size_t block_offset = f->current_block_offset(); 
-    bl = f->current_block_location();
-    servers.push_back(server_id(bl.si));
-
-    size_t advance = f->advance_to_end_of_block(rem);
-    op->set_offset(bl.si, bl.bi, buf_offset, block_offset, advance);
-
-    buf_offset += advance;
-    rem -= advance;
 }
 
 int64_t

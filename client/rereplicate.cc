@@ -120,7 +120,6 @@ rereplicate :: replicate_one(const char* path, uint64_t sid)
             }
             if (match)
             {
-                std::cout << "Re-replicating " << path << " block [" << it->second->offset() << "," << it->second->offset() + it->second->length() << ") (capacity = " << it->second->capacity() << ")" << std::endl;
 
                 size_t buf_sz = it->second->length();
                 char buf[buf_sz];

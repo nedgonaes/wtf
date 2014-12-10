@@ -146,7 +146,7 @@ pending_read :: handle_hyperdex_message(client* cl,
         const hyperdex_client_attribute* attrs = msg->attrs();
         size_t attrs_sz = msg->attrs_sz();
         parse_metadata(attrs, attrs_sz);
-        size_t rem = std::min(*m_buf_sz, m_file->bytes_left_in_file());
+        size_t rem = std::min(*m_buf_sz, m_file->length() - m_file->offset());
 
         size_t buf_offset = 0;
         *m_buf_sz = 0;
@@ -156,7 +156,7 @@ pending_read :: handle_hyperdex_message(client* cl,
             block_location bl;
             uint32_t block_length;
             std::vector<server_id> servers;
-            m_cl->prepare_read_op(m_file, rem, buf_offset, bl, block_length, this, servers);
+            //m_cl->prepare_read_op(m_file, rem, buf_offset, bl, block_length, this, servers);
             size_t sz = WTF_CLIENT_HEADER_SIZE_REQ
                 + sizeof(uint64_t) // bl.bi (local block number) 
                 + sizeof(uint32_t); //block_length
