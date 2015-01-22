@@ -102,6 +102,7 @@ pending_getattr :: handle_hyperdex_message(client* cl,
         {
             if (strcmp(attrs[i].attr, "blockmap") == 0)
             {
+                TRACE;
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
 
                 if (attrs[i].value_sz == 0)
@@ -113,6 +114,7 @@ pending_getattr :: handle_hyperdex_message(client* cl,
             }
             else if (strcmp(attrs[i].attr, "directory") == 0)
             {
+                TRACE;
                 uint64_t is_dir;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
@@ -130,6 +132,7 @@ pending_getattr :: handle_hyperdex_message(client* cl,
             }
             else if (strcmp(attrs[i].attr, "mode") == 0)
             {
+                TRACE;
                 uint64_t mode = 0;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);
@@ -141,16 +144,19 @@ pending_getattr :: handle_hyperdex_message(client* cl,
             }
             else if (strcmp(attrs[i].attr, "owner") == 0)
             {
+                TRACE;
                 std::string owner(attrs[i].value, attrs[i].value_sz);
                 f->owner = owner;
             }
             else if (strcmp(attrs[i].attr, "group") == 0)
             {
+                TRACE;
                 std::string group(attrs[i].value, attrs[i].value_sz);
                 f->group = group;
             }
             else if (strcmp(attrs[i].attr, "time") == 0)
             {
+                TRACE;
                 uint64_t t = 0;
 
                 e::unpacker up(attrs[i].value, attrs[i].value_sz);

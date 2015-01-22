@@ -65,5 +65,11 @@ message_hyperdex_condput :: send()
     hyperdex::Client* hc = &m_cl->m_hyperdex_client;
     m_reqid = hc->cond_put(m_space.c_str(), m_key.data(), m_key.size(),
             m_checks, m_checks_sz, m_attrs, m_attrs_size, &m_status);
+
+    if (m_reqid < 0)
+    {
+        std::cout << "FAILED TO PUT TO HYPERDEX: " << m_status << std::endl;
+    }
+
     return m_reqid;
 }

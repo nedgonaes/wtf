@@ -40,6 +40,8 @@
 
 using wtf::pending_write;
 
+static int count = 0;
+
 pending_write :: pending_write(client* cl, uint64_t id, e::intrusive_ptr<file> f,
                                e::slice& data, std::vector<block_location>& bl, 
                                uint64_t file_offset,
@@ -75,6 +77,13 @@ bool
 pending_write :: can_yield()
 {
     TRACE;
+    if (!m_buffer_descriptor->done())
+        std::cout << "Buffer descripter not done" << std::endl;    
+    if (m_done)
+        std::cout << "m_done = true" << std::endl;
+    if (!this->aggregation_done())
+        std::cout << "aggregation not done" << std::endl;
+            
     return this->aggregation_done() && !m_done && m_buffer_descriptor->done();
 }
 
@@ -122,12 +131,11 @@ pending_write :: handle_wtf_message(client* cl,
     uint64_t block_length;
     e::intrusive_ptr<block> bl;
     response_returncode rc;
-    up = up >> rc >> bi >> file_offset >> block_capacity >> block_length;
+    up = up >> rc >> bi >> file_offset >> block_length;
 
     std::cout << "RECEIVED " << rc << std::endl;
     std::cout << "bi = " << bi << std::endl;
     std::cout << "file_offset = " << file_offset << std::endl;
-    std::cout << "block_capacity = " << block_capacity << std::endl;
     std::cout << "block_length = " << block_length << std::endl;
 
     *status = WTF_CLIENT_SUCCESS;
@@ -137,7 +145,7 @@ pending_write :: handle_wtf_message(client* cl,
 
     if (it == m_changeset.end())
     {
-        bl = new block(block_capacity, file_offset, 0);
+        bl = new block(block_length, file_offset, 0);
         bl->set_length(block_length);
         bl->set_offset(file_offset);
         m_changeset[file_offset] = bl;
@@ -153,6 +161,7 @@ pending_write :: handle_wtf_message(client* cl,
     {
         apply_metadata_update_locally();
         send_metadata_update(); 
+        TRACE;
     }
 
     return true;
@@ -171,7 +180,6 @@ pending_write :: send_data()
         + sizeof(uint64_t) // m_token
         + sizeof(uint32_t) // number of block locations
         + num_replicas*block_location::pack_size()
-        + sizeof(uint64_t) // bl.bi (remote block number) 
         + sizeof(uint64_t) // file_offset 
         + m_data.size();     // user data 
     std::auto_ptr<e::buffer> msg(e::buffer::create(sz));
@@ -230,6 +238,9 @@ pending_write :: do_op()
     TRACE;
 
     m_old_blockmap = m_file->serialize_blockmap();
+
+    std::cout << "ORIGINAL BLOCKMAP: " << std::endl << *m_file << std::endl;;
+
     m_changeset.clear();
 
     //need to update block locations if we wrote new blocks
@@ -346,7 +357,11 @@ pending_write :: send_metadata_update()
                             &status, &checks[0].value, &checks[0].value_sz);
 
     /* Attributes */
+    std::cout << "NEW BLOCKMAP: " << std::endl << *m_file << std::endl;
+
+    TRACE;
     std::auto_ptr<e::buffer> blockmap_update = m_file->serialize_blockmap();
+    TRACE;
     uint64_t mode = m_file->mode;
     uint64_t directory = m_file->is_directory;
 

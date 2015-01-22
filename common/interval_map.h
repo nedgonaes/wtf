@@ -25,7 +25,7 @@ class slice
         operator >> (e::unpacker up, slice& rhs);
 
     public:
-    int64_t pack_size();
+    uint64_t pack_size();
 
     public:
     std::vector<block_location> location;
@@ -75,6 +75,8 @@ class interval_map
         operator << (e::buffer::packer pa, const interval_map& rhs);
     friend e::unpacker 
         operator >> (e::unpacker up, interval_map& rhs);
+    friend std::ostream& 
+        operator << (std::ostream& lhs, const interval_map& rhs); 
 
     public:
         void insert(uint64_t insert_address, 
@@ -101,7 +103,7 @@ operator << (e::buffer::packer pa, const slice& rhs)
     {
         pa = pa << *it;
     }
-
+    return pa;
 }
 
 inline e::unpacker 
@@ -120,11 +122,20 @@ operator >> (e::unpacker up, slice& rhs)
     }
 
     rhs.location = locations;
+    return up;
 }
 
 inline std::ostream& 
 operator << (std::ostream& lhs, const slice& rhs) 
-{
+{    
+    for (std::vector<block_location>::const_iterator it = rhs.location.begin();
+         it != rhs.location.end(); ++it)
+    {
+        lhs << *it << std::endl;
+    }
+
+    lhs << std::endl;
+
     return lhs;
 }
 
@@ -140,6 +151,8 @@ operator << (e::buffer::packer pa, const interval_map& rhs)
     {
         pa = pa << it->second;
     }
+
+    return pa;
 }
 
 inline e::unpacker 
@@ -147,6 +160,8 @@ operator >> (e::unpacker up, interval_map& rhs)
 {
     uint64_t sz;
     uint64_t insert_address = 0;
+
+    rhs.clear();
 
     up = up >> sz;
 
@@ -157,11 +172,20 @@ operator >> (e::unpacker up, interval_map& rhs)
         rhs.insert(insert_address, slc);
         insert_address += slc.length;
     }
+
+    return up;
 }
 
 inline std::ostream& 
 operator << (std::ostream& lhs, const interval_map& rhs) 
 {
+    for (std::map<uint64_t, wtf::slice>::const_iterator it = rhs.slice_map.begin();
+         it != rhs.slice_map.end(); ++it)
+    {
+        lhs << "\t\t" << it->first << std::endl;
+        lhs << "\t\t\t" << it->second << std::endl;;
+    }
+
     return lhs;
 }
 }

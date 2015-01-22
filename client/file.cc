@@ -111,7 +111,15 @@ file :: insert_block(uint64_t insert_address, wtf::slice& slc)
 void
 file :: apply_changeset(std::map<uint64_t, e::intrusive_ptr<block> >& changeset)
 {
-    //XXX: implement    
+    std::map<uint64_t, e::intrusive_ptr<block> >::iterator it = changeset.begin();
+
+    for (; it != changeset.end(); ++it)
+    {
+        uint64_t insert_address = it->first;
+        uint64_t insert_length = it->second->length();
+        std::vector<block_location> bl = it->second->blocks();
+        m_block_map.insert(insert_address, insert_length, bl);
+    }
 }
 
 void
@@ -129,6 +137,7 @@ file :: length() const
 std::auto_ptr<e::buffer>
 file :: serialize_blockmap()
 {
+    std::cout << "Packing blockmap of size " << this->pack_size() << std::endl;
     std::auto_ptr<e::buffer> blockmap(e::buffer::create(pack_size()));
     e::buffer::packer pa = blockmap->pack_at(0); 
 

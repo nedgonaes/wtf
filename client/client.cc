@@ -207,6 +207,8 @@ client :: perform_aggregation(const std::vector<server_id>& servers,
     m_next_server_nonce += servers.size();
     uint64_t nonce = m_next_server_nonce;
 
+    std::cout << "Sending to " << servers.size() << " servers." << std::endl;
+    
     for (int i = servers.size()-1; i > -1; --i)
     {
         //std::cout << "SERVER COUNT IS " << servers.size() << std::endl;
@@ -422,6 +424,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
                 m_yielded = m_yielding;
                 m_yielding = NULL;
                 TRACE;
+                std::cout << "returning " << client_id << std::endl;
                 return client_id;
             }
 
@@ -467,6 +470,7 @@ client :: inner_loop(int timeout, wtf_client_returncode* status, int64_t wait_fo
             else if (m_pending_ops.empty() && m_pending_hyperdex_ops.empty())
             {
                 TRACE;
+                *status = WTF_CLIENT_NONEPENDING;
                 return -1;
             }
         }
@@ -854,7 +858,7 @@ client :: write(int64_t fd, const char* buf,
     while (rem > 0)
     {
         uint64_t len = std::min(rem, f->block_size());
-        std::vector<block_location> bl;
+        std::vector<block_location> bl(f->replicas());
         m_coord.config()->assign_random_block_locations(bl, m_addr);
         e::slice data = e::slice(buf + buf_offset, len);
         op = new pending_write(this, client_id, f, data, bl, file_offset, bd, status);
@@ -937,6 +941,8 @@ client :: close(int64_t fd, wtf_client_returncode* status)
     {
         int64_t client_id = f->pending_ops_pop_front();
 
+        std::cout << "POPPED " << client_id << std::endl;
+
         /*
          * This will only return a positive number if the
          * op was actually found and yielded successfully.
@@ -957,6 +963,7 @@ client :: close(int64_t fd, wtf_client_returncode* status)
         else if (ret < 0)
         {
             ERROR(IO) << "there was an IO error somewhere."; 
+            TRACE;
             retval = -1;
         }
         //XXX: return bad status if bad
@@ -967,6 +974,8 @@ client :: close(int64_t fd, wtf_client_returncode* status)
         *status = WTF_CLIENT_SUCCESS;
     }
 
+    TRACE;
+    std::cout << "returning " << retval << std::endl;
     return retval;
 }
 

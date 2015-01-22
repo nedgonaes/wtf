@@ -339,10 +339,13 @@ interval_map :: length() const
     return it->first + it->second.length;
 }
 
-int64_t
+uint64_t
 slice :: pack_size()
 {
     uint64_t ret = 3*sizeof(uint64_t); //location, offset, location.size()
+    std::cout << "Location list size is " << location.size() << std::endl;
+    std::cout << "each location size is " << block_location::pack_size() << std::endl;
+
     ret += location.size() * block_location::pack_size();
     return ret;
 }
@@ -357,5 +360,7 @@ interval_map :: pack_size()
     {
         ret += it->second.pack_size();
     }
+
+    return ret;
 }
 

@@ -803,9 +803,7 @@ daemon :: process_update(const wtf::connection& conn,
         block_locations.push_back(bl);
     }
 
-    up = up >> block_offset >> block_capacity >> file_offset;
-    LOG(INFO) << "block_offset = " << block_offset;
-    LOG(INFO) << "block_capacity = " << block_capacity;
+    up = up >> file_offset;
     LOG(INFO) << "file_offset= " << file_offset;
     e::slice data = up.as_slice();
     sid = m_us.get();
@@ -866,12 +864,11 @@ daemon :: process_update(const wtf::connection& conn,
     size_t sz = COMMAND_HEADER_SIZE + 
                 sizeof(uint64_t) + /* block id */
                 sizeof(uint64_t) + /* file_offset */
-                sizeof(uint32_t) + /* block_capacity */
                 sizeof(uint64_t);  /* block_len */
     std::auto_ptr<e::buffer> resp(e::buffer::create(sz));
     e::buffer::packer pa = resp->pack_at(BUSYBEE_HEADER_SIZE);
     pa = pa << RESP_UPDATE << nonce << rc 
-            << bid << file_offset << block_capacity << block_len;
+            << bid << file_offset << block_len;
 
     //Send an ack back to the client that originated the first transfer.
     wtf::connection c;

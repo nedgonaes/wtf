@@ -177,7 +177,7 @@ worker_thread(const armnod::argparser& _f,
 
             if (reqid < 0)
             {
-                WTF_TEST_FAIL(0, "XXX");;
+                WTF_TEST_FAIL(0, rc);;
                  
             }
 

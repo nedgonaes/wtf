@@ -59,6 +59,7 @@ class block
         std::vector<wtf::block_location> block_locations() { return m_block_list; }
         std::vector<wtf::block_location>::iterator blocks_begin() { return m_block_list.begin(); }
         std::vector<wtf::block_location>::iterator blocks_end() { return m_block_list.end(); }
+        std::vector<wtf::block_location> blocks() { return m_block_list; }
 
     private:
         friend class file;

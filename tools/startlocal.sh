@@ -1,6 +1,6 @@
 #!/usr/bin/zsh 
 
-WTF_DIR=${HOME}/checkouts/wtf
+WTF_DIR=${HOME}/src/wtf
 
 export WTF_COORD_LIB=${WTF_DIR}/.libs/libwtf-coordinator.so
 WTF_COORDINATOR=${WTF_DIR}/.wtf_coordinator_host
